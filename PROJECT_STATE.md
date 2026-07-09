@@ -1,0 +1,1604 @@
+# Project State
+
+> **Product name: Otto** (renamed 2026-07-08 from "Fincept Local Terminal"). "Fincept"
+> references below are clean-room heritage/boundary — the observed original, not this product.
+
+Last updated: 2026-06-03
+
+## Authority
+
+1. `AGENTS.md`
+2. `docs/planning/approved/prd-fincept-local-terminal-longrun-20260522.md`
+3. `docs/planning/approved/test-spec-fincept-local-terminal-longrun-20260522.md`
+4. `docs/planning/approved/execution-plan-fincept-local-terminal-longrun-20260522.md`
+5. `docs/planning/M22_MISSION_LEDGER.md`
+6. `docs/planning/M22_FINAL_NON_LIVE_PARITY_AUDIT.md`
+7. `docs/planning/M23_FED_H10_FX_REFERENCE.md`
+8. `docs/planning/M23_BANK_OF_CANADA_FX_REFERENCE.md`
+9. `docs/planning/M23_ALPHA_VANTAGE_FX_QUOTE_WATCHLIST.md`
+10. `docs/planning/M23_TWELVE_DATA_QUOTE_WATCHLIST.md`
+11. `docs/planning/M23_BEA_REGIONAL_CONTEXT.md`
+12. `docs/planning/M23_CENSUS_REGIONAL_CONTEXT.md`
+13. `docs/planning/M23_COMMAND_CENTER_RECOVERY_QUEUE.md`
+14. `docs/planning/M23_AGENT_ACTION_PREFLIGHT.md`
+15. `docs/planning/M23_AGENT_ACTIVITY_JOURNAL.md`
+16. `docs/planning/M23_ACTIVE_TASK_SUPERVISION.md`
+17. `docs/planning/M23_NYFED_SOFR_REFERENCE.md`
+18. `docs/planning/M23_COMMAND_CENTER_MISSION_LEDGER.md`
+19. `docs/planning/M23_SHELL_COMMAND_CENTER_STRIP.md`
+20. `docs/planning/M23_CFTC_COT_COMMODITY_POSITIONING.md`
+21. `docs/planning/M23_BACKTEST_STRATEGY_BREADTH.md`
+22. `docs/planning/M23_STOOQ_QUOTE_SNAPSHOT.md`
+23. `docs/planning/M23_NASDAQ_TRADER_SYMBOL_DIRECTORY.md`
+24. `docs/planning/M23_NASDAQ_SYMBOL_DISCOVERY.md`
+25. `docs/planning/M23_MOEX_QUOTE_SNAPSHOT.md`
+26. `docs/planning/M23_BACKTEST_COMPARISON_PACKET.md`
+27. `docs/planning/M23_NEWS_RESEARCH_BRIEF_INDEX.md`
+28. `docs/planning/M23_ADVANCED_OUTPUT_MANIFEST_INDEX.md`
+29. `docs/planning/M23_ADVANCED_OUTPUT_HEALTH_MATRIX.md`
+30. `docs/planning/M23_ARTIFACT_ROOT_SUPERVISION_MATRIX.md`
+31. `docs/planning/M23_BACKTEST_RUN_INDEX.md`
+32. `docs/planning/M23_MARKETS_QUOTE_REFERENCE_COVERAGE.md`
+33. `docs/planning/M23_AI_CHAT_CONTEXT_CONTRACT.md`
+34. `docs/planning/M23_ADVANCED_OUTPUT_IO_CONTRACT.md`
+35. `docs/planning/M23_BACKTEST_VOLATILITY_REVERSION.md`
+36. `docs/planning/M23_PORTFOLIO_REPORT_INDEX.md`
+37. `docs/planning/M23_FINNHUB_EQUITY_QUOTE_WATCHLIST.md`
+38. `docs/planning/M23_ADVANCED_OUTPUT_STATE_FILE_CLASSIFICATION.md`
+39. `docs/planning/M23_CBOE_DELAYED_QUOTE_GATE.md`
+40. `docs/planning/M23_FMP_QUOTE_WATCHLIST.md`
+41. `docs/planning/M23_PROVIDER_ACQUISITION_RESUME_CONTRACT.md`
+42. `docs/planning/M23_BACKTEST_DATA_READINESS.md`
+43. `docs/planning/M23_ALGO_SCAN_READINESS.md`
+44. `docs/planning/M23_NEWS_TOPIC_ENTITY_MAP.md`
+45. `docs/planning/M23_IEX_TOPS_MARKET_DATA_GATE.md`
+46. `docs/planning/M23_PROVIDER_GATE_CANDIDATE_DETAIL.md`
+47. `docs/planning/M23_BACKTEST_MOMENTUM_CONTINUATION.md`
+48. `docs/planning/M23_PORTFOLIO_EXPOSURE_MAP.md`
+49. `docs/planning/M23_COMMAND_CENTER_ACTION_MATRIX.md`
+50. `docs/planning/M23_MARKETS_QUOTE_SNAPSHOT_BOARD.md`
+51. `docs/planning/M23_COMMAND_CENTER_PREFLIGHT_MATRIX.md`
+52. `docs/planning/M23_TWSE_QUOTE_SNAPSHOT.md`
+53. `docs/planning/M23_EUROSTAT_HICP_CONTEXT.md`
+54. `docs/planning/M23_PROVIDER_REFRESH_SCHEDULE_PLAN.md`
+55. `docs/planning/M23_BACKTEST_ARTIFACT_HEALTH.md`
+56. `docs/planning/M23_OPENFIGI_IDENTIFIER_MAPPING.md`
+57. `docs/planning/M23_PORTFOLIO_REPORT_HEALTH.md`
+58. `docs/planning/M23_AI_CHAT_SESSION_HEALTH.md`
+59. `docs/planning/M23_NODES_WORKFLOW_HEALTH.md`
+60. `docs/planning/M23_CODE_ANALYSIS_HEALTH.md`
+61. `docs/planning/M23_QUANT_LAB_PREVIEW_HEALTH.md`
+62. `docs/planning/M23_QUANTLIB_CALCULATION_HEALTH.md`
+63. `docs/planning/M23_NASDAQ_DATA_LINK_GATE.md`
+64. `docs/planning/M23_QUANTLIB_IMPLIED_VOL_CALCULATOR.md`
+65. `docs/planning/M23_GLOBAL_COMMAND_CENTER_DRAWER.md`
+66. `docs/planning/M23_BACKTEST_RSI_REVERSION.md`
+67. `docs/planning/M23_JPX_JQUANTS_PROVIDER_GATE.md`
+68. `docs/planning/M23_QUANTLIB_OPTION_SCENARIO_GRID.md`
+69. `docs/planning/M23_YAHOO_FINANCE_PROVIDER_GATE.md`
+70. `docs/planning/M23_PROVIDER_QUOTE_BREADTH_CLOSURE.md`
+71. `docs/planning/M23_FINAL_NON_LIVE_COMPLETION_AUDIT.md`
+72. `docs/reference/` evidence and safe live Fincept UI observation
+
+## Completed Milestones
+
+- M0: Governance, source wall, stale-doc correction, and project state.
+- M1: Foundation and technology decision.
+- M2: Shell, navigation, global menus, settings, profile, and local layout storage.
+- M3: Dashboard workspace, widget catalog, alerts drawer, save/reset layout, and local status widgets.
+- M4: Markets public-data contract, local watchlist panels, column chooser, edit/delete flows, cache/offline fallback.
+- M5: Crypto paper workspace, local paper broker, order ticket, tabs, fills, and safety tests.
+- M6: Backtest workspace, local closed-candle strategy runner, result tabs, and artifact writer.
+- M7: Portfolio workspace, create/import/demo/export flows, local portfolio analytics, and paper-only BUY/SELL routing.
+- M8: News workspace, public RSS/local cache feed reader, filters, watch terms, clusters, and article detail view.
+- M9: AI Chat workspace, local chat sessions, rename/delete/select flows, read-only artifact links, JSONL message artifacts, and dry-run provider status.
+- M10: Algo workspace, local strategy builder/catalog, dry-run scanner, and closed-candle backtest handoff.
+- M11: Nodes workspace, local workflow definitions, node library, templates, import/export, and dry-run-only planning.
+- M12: Code workspace, local `.ipynb` notebook editing, import/export/save, sidebar cell/notebook selection, and execution-disabled safety gates.
+- M13: Quant Lab workspace, observed module catalog, local preview artifacts, and execution/deep-agent/live-signal disabled safety gates.
+- M14: QuantLib workspace, local JSON calculator presets, deterministic stdlib math, request/response artifacts, and external-runtime disabled safety gates.
+- M15: Forum workspace plus local Help/About/Diagnostics/Update support surfaces, local journal artifacts, and clean-room support safety gates.
+- M16: Live-trading safety PRD/test spec, disabled live-safety API surface, Settings safety contract panel, and paper/live isolation tests.
+- M17: Full QA, final handoff, clean-room product-surface cleanup, and final verification sweep.
+- M18: Clean-room visual style parity pass for compact dark terminal shell, top route rail, dense panels, and reference-like status/accent treatment.
+- M19.1: Theme token and dense shell repair, splitting the active terminal visual layer into low-contrast theme tokens and component-level shell/panel/table/status rules.
+- M19.2: Provider registry, cache freshness contract, provider status endpoints, and global source/freshness strip for the shell.
+- M19.3: Public crypto provider detail chain for Crypto and Backtest route cache use.
+- M19.4: Dashboard aggregator panels for provider freshness, public crypto market pulse, paper ledger, portfolio, news, backtest artifacts, and macro setup state.
+- M19.5: Markets provider expansion, source diagnostics, public crypto detail fallback, and removal of offline fixture prices from the Markets primary runtime.
+- M19.6: Crypto workspace depth, provider-backed quote/watchlist/chart/order book/trade panels, paper quote snapshots, and local paper event artifacts.
+- M19.7: Backtest provider provenance, public closed-candle cache snapshots, source/hash artifacts, and richer result/source tabs.
+- M19.8: Portfolio provider pricing, valuation provenance, pricing/artifact tabs, paper/backtest artifact links, and export manifest artifacts.
+- M19.9: News, macro, and fundamentals public provider wiring, SEC/DBnomics research caches, Dashboard/Markets research summaries, and News provider cards.
+- M19.10: Advanced routes data connection for AI Chat, Nodes, Code, Quant Lab, and QuantLib using shared provider cache/local artifact context with safety gates intact.
+- M19.11: Local governance route upgrade for Settings, Profile, Forum, and Help with provider setup, cache controls, source-wall diagnostics, local secret-status surfaces, artifact links, and local support diagnostics.
+- M19.12: Full parity QA and handoff audit for 15-route screenshot/workflow evidence, verification gates, clean-room safety, and M19 final handoff documents.
+- M20.1: Public U.S. Treasury rates provider for Markets Bonds/Rates, provider/cache/freshness registry coverage, rates API endpoints, and read-only advanced context linkage.
+- M20.2: Public ECB FX reference-rate provider for Markets FX, provider/cache/freshness registry coverage, FX API endpoints, shell freshness sync, and read-only advanced context linkage.
+- M20.3: Public World Bank commodity monthly provider for Markets Commodities, provider/cache/freshness registry coverage, commodity API endpoints, and read-only advanced context linkage.
+- M20.4: Public SEC EDGAR fundamentals workflow for Markets Stocks, route-specific stocks payload, refresh endpoint, source/cache attribution, and quote-provider safety gate.
+- M20.5: Public DBnomics macro context workflow for Markets Indexes and Regional, route-specific macro payloads, refresh endpoint aliases, source/cache attribution, and quote-provider safety gates.
+- M20.6: Public SEC fund ticker registry workflow for Markets ETF, route-specific ETF/fund registry payload, refresh endpoint, source/cache attribution, and quote-provider safety gate.
+- M20.7: Read-only local secret gate contract for optional-key data providers, redaction helpers, `/api/secret-gate`, Settings governance status, and tests proving no secret store is created.
+- M20.8: Backtest local strategy catalog, Channel Breakout closed-candle strategy, strategy-aware artifacts, and UI workflow selection.
+- M20.9: Algo-to-Backtest strategy handoff, saved Algo strategy engine selection, Channel Breakout artifact flow, and strategy-aware UI workflow.
+- M20.10: Backtest strategy parameter schema, schema-driven Backtest/Algo UI labels/defaults/bounds, and strategy schema artifact metadata.
+- M20.11: Backtest indicator rows, strategy signal rows, returns analysis, returns curve artifacts, and route tabs for indicator/signal/returns inspection.
+- M20.12: Portfolio Backtest context tab, Backtest signal/indicator/returns artifact linkage, and cross-route Backtest-to-Portfolio provenance.
+- M20.13: Portfolio local report/risk workflow, Performance/Risk/Report tabs, safe toolbar routing, and local report artifacts.
+- M20.14: AI Chat local context brief, focused provider/cache source summaries, linked artifact facts, and context artifact index surface.
+- M20.15: Nodes dry-run local output bundle, output summary, report/manifest artifacts, and UI artifact path surface.
+- M20.16: Code workspace static notebook analysis, local report/manifest artifacts, and UI analysis artifact surface.
+- M20.17: Quant Lab local context bundle, provider/cache source provenance, artifact input index, context/manifest artifacts, and UI bundle surface.
+- M20.18: QuantLib local provenance bundle, provider/cache source provenance, artifact input index, context/manifest artifacts, and UI bundle surface.
+- M20.19: Forum artifact health diagnostics, non-destructive derivative artifact repair workflow, and Help diagnostics linkage.
+- M20.20: Settings governance/cache diagnostics workflow, read-only provider/cache/source-wall/secret-gate artifact bundle, and UI artifact path surface.
+- M20.21: Profile local usage/build stats surface derived from repo-local artifacts without cloud, billing, credits, private identity, or content reads.
+- M20.22: Global public no-key provider refresh workflow, local refresh artifact bundle, freshness-strip UI action, and fallback-masking regression guard.
+- M20.23: Bounded manual public provider refresh job model, provider refresh service extraction, pollable job status, and freshness-strip job UI.
+- M20.24: Windows DPAPI-backed local secret store for eligible optional data-provider keys, scoped Settings setup UI, redacted API status, and paid/live/private provider blocks.
+- M20.25: FRED optional-key macro provider behind the local secret store, redacted refresh API, local `DGS10` cache, and News/Markets route surfaces.
+- M20.26: Alpha Vantage optional-key equity quote provider behind the local secret store, redacted `AAPL` quote cache, provider freshness, advanced context, and Markets Stocks quote surface.
+- M20.27: Alpha Vantage optional-key ETF quote provider surface behind the same local secret store, redacted `SPY` quote cache, provider freshness, advanced context, and Markets ETF quote workflow.
+- M21.1: M21 replication-depth governance artifacts, route gap report, provider research matrix, observation protocol, `.codegraph/` local-tooling exclusion, and read-only artifact lifecycle visibility for AI Agent operation.
+- M21.2: News route GDELT DOC 2.0 metadata enrichment, Fincept-observed News intel strip parity, provider-state cards, metadata-only article safety, and Windows extended-path storage regression fix.
+- M21.3: EIA Open Data optional-key energy context for Markets Commodities, local EIA cache/status surfaces, provider freshness, advanced context, and route-load race hardening.
+- M21.4: AI Agent operability contract for all 15 routes, stable route/workspace selectors, machine-readable action/error/artifact contracts, governance/help diagnostics coverage, and Settings discovery surface.
+- M21.5: Provider refresh lifecycle visibility, stale interrupted job classification, non-mutating recovery hints, governance/help diagnostics coverage, Settings discovery surface, and Provider Freshness lifecycle summary.
+- M21.6: Alpha Vantage optional-key quote watchlists for Markets Stocks and ETF, per-symbol local quote caches, provider freshness expansion, AI Agent watchlist refresh contracts, and dense Markets watchlist panels.
+- M21.7: Backtest fixed-parameter walk-forward workflow, closed-candle fold artifacts, UI command/tab enablement, and AI Agent action contract.
+- M21.8: Non-destructive artifact archive/prune plan workflow, metadata-only local plan bundles, Settings discovery surface, governance/help diagnostics checks, and AI Agent action contract.
+- M21.9: BLS public no-key macro/labor provider for Markets Indexes/Regional, local BLS cache, provider freshness/public refresh manifests, Markets BLS action, and AI Agent action contract.
+- M21.10: Macro aggregation headline contract for Markets Indexes/Regional, explicit `primary_provider`/`headline_series`/`provider_summaries`, UI rows, TypeScript contracts, and regression coverage.
+- M21.11: Markets macro source/provider panel split for Indexes/Regional, explicit Provider Stack and Source Contract panels, stable AI Agent selectors, and `macro_provider_stack` route state coverage.
+- M21.12: Markets provider/source contract panels for Stocks, ETF, FX, Commodities, and Bonds/Rates, reusable Provider Stack / Source Contract components, stable AI Agent selectors, and `provider_stack_panels` / `source_contract_panels` route state coverage.
+- M21.13: SEC public company ticker registry for Markets Stocks, local no-key issuer registry cache, provider freshness/public refresh lifecycle coverage, Stocks registry panel, and AI Agent `stock_company_registry` route state/action contract.
+- M21.14: Algo provider-cache scanner source contract, non-actionable scan evidence rows, local scan artifact mirror, and AI Agent `scan_source_contract` / `scan_artifacts` route/action contract.
+- M21.15: Algo scan artifact lifecycle health/repair, dedicated scan artifact mirror writer, non-destructive latest-scan repair endpoint, UI health rows, and AI Agent `scan_artifact_health` / `algo_scan_artifacts_repair` route/action contract.
+- M21.16: SEC company submissions provider for Markets Stocks, public no-key recent filing metadata cache, Stocks Recent Filings panel, provider freshness/public refresh coverage, and AI Agent `stock_company_filings` route state contract.
+- M21.17: Provider refresh result semantics, separating `cache_written_this_run`, `cache_available`, and `cache_reused` in public refresh manifests, Provider Freshness summary, lifecycle summaries, and AI Agent Settings contract.
+- M21.18: Markets Stocks status lanes, separating quote watchlist, company registry, recent filings, and company facts into AI-agent-readable lane state, Stocks gateway lane availability, dense UI lane panel, and action response contracts.
+- M21.19: Markets Stocks SEC filings watchlist, expanding recent filings from a single default company to bounded `AAPL/MSFT/NVDA` per-CIK caches, watchlist filing summaries, provider refresh cache paths, and AI Agent filings-watchlist contract.
+- M21.20: Markets Source Coverage Matrix / Provider Entry Gate across Stocks, ETF, FX, Commodities, Indexes/Regional, and Bonds/Rates, with `/api/markets` coverage rows, AI Agent state/action contracts, dense UI selectors, and explicit quote/reference/optional-key semantics.
+- M21.21: Backtest + Algo research loop depth, connecting a Markets `source_coverage_matrix` row into an Algo scan artifact, scan-seeded Backtest lineage/provenance, artifact manifests/source attribution, AI Agent contracts, and frontend/E2E evidence.
+- M21.22: Karpathy cleanup/refactor, preserving product behavior while splitting Markets source-state panels and low-churn frontend contracts, hardening source-row hash regression coverage, and stabilizing frontend E2E selectors/initial-load races.
+- M21.23: Karpathy cleanup/refactor continuation, preserving product behavior while extracting provider/governance/artifact/agent-contract and live-safety frontend type families from the central `frontend/src/types.ts` compatibility barrel.
+- M22.1: Mission ledger and anti-stall gate for the new long non-live goal, recording the M21.23 baseline, do-not-redo surfaces, status classes, stop gates, verification cadence, resume rules, and first milestone evidence in `docs/planning/M22_MISSION_LEDGER.md`.
+- M22.2: Command-center AI supervision backend contract, exposing `GET /api/command-center` as a read-only aggregation of existing agent route/action contracts, provider/source setup, artifact lifecycle, provider-refresh recovery, risk gates, provenance evidence, and future UI selectors without adding provider signup, credentials, live trading, destructive artifact actions, Fincept branding, or installed-source dependencies.
+- M22.3: Command-center UI supervision surface in Settings, exposing the M22.2 command-center payload through stable AI Agent selectors for activity, route/action contracts, provider/source state, artifact recovery, risk gates, and provenance evidence without adding a 16th route, global redesign, provider signup, credential output, live trading, artifact mutation, Fincept branding, or installed-source dependencies.
+- M22.4: Provider/data acquisition gate, exposing `GET /api/provider-acquisition-gate` and the Settings AI Agent `provider_acquisition_gate_inspect` action so future provider work starts from refreshed official-source evidence, public no-key priority, local-secret-only optional keys, no unused key hoarding, and explicit quote/reference semantics; the next implementation candidate is bounded SEC XBRL frames.
+- M22.5: Bounded SEC XBRL frames workflow for Markets Stocks, adding `sec_xbrl_frames_public` public no-key normalization/cache/freshness, Markets `fundamental_frames` source coverage row, Stocks frame status lane/UI, AI Agent `stock_xbrl_frames` contract coverage, and updated provider-acquisition status without treating fundamentals as executable quotes.
+- M22.6: Portfolio research packet workflow for scan-seeded Backtest/Algo lineage, adding Portfolio report `lineage.json` and `artifact_health.json` artifacts, Backtest-linked Portfolio `research_lineage` preservation, AI Agent `report_lineage` / `report_artifact_health` contract coverage, and non-destructive linked-artifact recovery hints without optimize/live/deploy.
+- M22.7: News research brief workflow, adding metadata-only local `brief.json`, `source_health.json`, `manifest.json`, and `brief.md` artifacts under `artifacts/news/research_briefs`, UI `BRIEF` action, and AI Agent `news_research_brief` contract coverage without article-body copy, AI summary calls, cloud/news subscription, provider signup, credential handling, or destructive recovery.
+- M22.8: Advanced local workflow output packet, adding `GET/POST /api/advanced-workflows/output-packet`, metadata-only diagnostics artifacts under `artifacts/diagnostics/advanced-output-packet-*`, Command Center `advanced_outputs` supervision, and AI Agent `advanced_workflow_output_packet` discovery for AI Chat, Nodes, Code, Quant Lab, and QuantLib without artifact content reads, execution, external runtime/network calls, credentials, route-output mutation, or live/private trading behavior.
+- M22.9: Final non-live parity audit, adding `docs/planning/M22_FINAL_NON_LIVE_PARITY_AUDIT.md`, updating the mission ledger, and moving Command Center to `M22.9 Final non-live parity audit` while explicitly classifying the long goal as `partial` instead of falsely complete where broad executable quote breadth, fresh unrestricted Fincept observation, destructive artifact lifecycle actions, external workflow runtimes, and live/private/payment/cloud surfaces remain unproven, blocked, or excluded.
+- M23.1: Federal Reserve H.10 FX reference breadth, adding `federal_reserve_h10_ddp_public`, local H.10 cache wiring, Markets `usd_reference_rates` source coverage, provider acquisition gate status, FX UI rows, AI Agent `fx.h10` refresh contract, and Command Center provenance without presenting reference rates as executable spot FX quotes.
+- M23.2: Alpha Vantage FX quote watchlist, adding bounded `EUR/USD`, `USD/JPY`, and `GBP/USD` optional-key FX quote caches, `/api/alpha-vantage/fx-quotes`, `/api/markets/fx/quote/refresh`, Markets `fx.quote_watchlist`, provider/source registry rows, AI Agent `markets_fx_quote_watchlist_refresh`, Command Center provenance, and hash-first shell restore stability while keeping quotes non-orderable and reference data separate.
+- M23.3: Command Center activity timeline, adding `activity_timeline` to `GET /api/command-center` and the Settings Command Center UI so AI Agent supervision exposes current milestone, route/action contract, provider state, artifact recovery, advanced outputs, risk gates, evidence, and recovery hints from existing local contracts without enabling execution or external session logging.
+- M23.4: Twelve Data quote watchlist, adding bounded optional-key `AAPL`, `SPY`, and `EUR/USD` quote caches under `market_data/quotes/twelve_data/`, `/api/twelve-data/quotes`, `/api/markets/twelve-data/quotes/refresh`, Markets `twelve_data_quotes` source coverage, provider/source registry rows, AI Agent `markets_twelve_data_quote_watchlist_refresh`, and Command Center provenance while keeping quotes non-orderable and outside public no-key refresh jobs.
+- M23.5: BEA Regional context, adding bounded optional-key official BEA Regional `SAGDP9N` state GDP context under `market_data/regional/bea/SAGDP9N_LINE1_STATE.json`, `/api/bea/regional`, `/api/markets/bea/refresh`, Markets Regional source coverage, provider/source registry rows, AI Agent `markets_bea_refresh`, and Command Center provenance while keeping rows `not_quote`, local-secret-gated, and outside public no-key refresh jobs.
+- M23.6: Census Regional context, adding bounded optional-key official Census ACS 5-year Data Profile state demographic/economic context under `market_data/regional/census/acs5_profile_state_2023.json`, `/api/census/acs-profile`, `/api/markets/census/refresh`, Markets Regional source coverage, provider/source registry rows, AI Agent `markets_census_refresh`, and Command Center provenance while keeping rows `not_quote`, local-secret-gated, and outside public no-key refresh jobs.
+- M23.7: Command Center recovery queue, adding a read-only AI Agent recovery queue to `GET /api/command-center`, Settings Command Center UI rows, stable selector `command-center-recovery-queue`, and Settings agent state `command_center_recovery_queue` while keeping recovery non-executing, non-destructive, local-only, and outside live/private/provider-signup flows.
+- M23.8: AI Agent action preflight, adding read-only `GET /api/agent-actions/{action_id}/preflight`, Agent Contract `preflight` discovery, and Command Center route/action preflight visibility so agents can check action readiness, stop gates, safety class, endpoint, confirmation requirements, and disabled status before attempting a local action.
+- M23.9: Agent Activity Journal, adding metadata-only `GET /api/agent-activity`, `POST /api/agent-activity/events`, local JSONL `artifacts/agent_activity/activity.jsonl`, AI Agent `agent_activity_event`, and Command Center `agent_activity` visibility while rejecting secret-like metadata and logging no request bodies.
+- M23.10: Active task supervision, deriving the current planned/running/blocked task from the metadata-only Agent Activity Journal, exposing Command Center top-level `active_task`, stable selector `command-center-active-task`, and Settings agent state `command_center_active_task` without adding request logging, action execution, recovery automation, provider signup, credentials, or live/private/destructive paths.
+- M23.11: NY Fed SOFR reference rates, adding public no-key `nyfed_sofr_public`, local SOFR cache under `market_data/rates/nyfed/sofr.json`, Markets Bonds/Rates `overnight_reference_rate` source coverage, AI Agent `rates_sofr_reference` / `rates.sofr` contract coverage, provider acquisition status, and Command Center provenance while keeping SOFR reference-only and non-orderable.
+- M23.12: Command Center mission ledger snapshot, adding machine-readable `mission_ledger` status/resume/do-not-redo/open-gap/stop-gate fields to `GET /api/command-center`, a `mission_ledger` activity timeline event, Settings selector `command-center-mission-ledger`, and Dashboard first-screen supervision summary while staying read-only and non-executing.
+- M23.13: Shell Command Center strip, adding a global read-only supervision strip above every workspace with current milestone, goal status, active task, recovery count, live/secret risk gates, and source-wall state sourced from `GET /api/command-center`.
+- M23.14: CFTC COT commodity positioning, adding public no-key `cftc_cot_legacy_public`, local COT cache under `market_data/commodities/cftc/cot_legacy_futures.json`, Markets Commodities `positioning_context` source coverage, AI Agent `commodity_cftc_cot_positioning` / `markets_cftc_cot_refresh` contract coverage, provider acquisition status, and Command Center provenance while keeping CFTC rows non-orderable context rather than executable spot/futures quotes.
+- M23.15: Backtest strategy breadth, adding `sma_mean_reversion` as a third local closed-candle long/flat Backtest strategy, Algo saved-strategy handoff support through the existing schema contract, local artifact/provenance coverage, and Command Center provenance while keeping optimize, live deploy, broker routing, real orders, shorts, derivatives, and provider-key behavior disabled.
+- M23.16: Stooq public quote snapshots, adding bounded `AAPL.US/SPY.US/^SPX/EURUSD` no-key CSV snapshot caches, `/api/stooq/quote-snapshots`, `/api/markets/stooq/quotes/refresh`, Markets `stooq_quotes` source coverage, provider/source registry rows, AI Agent `markets_stooq_quote_snapshot_refresh`, public refresh coverage, and Command Center provenance while keeping historical Stooq CAPTCHA/API-link downloads blocked and all quotes non-orderable.
+- M23.17: Nasdaq Trader symbol directory, adding official public no-key `nasdaq_trader_symbol_directory_public`, local symbol-directory cache under `market_data/reference/nasdaq_trader/symbol_directory.json`, `/api/nasdaq-trader/symbol-directory`, `/api/markets/nasdaq-trader/symbols/refresh`, Markets `nasdaq_symbols` source coverage, provider/source registry rows, AI Agent `markets_nasdaq_symbol_directory_refresh`, public refresh coverage, and Command Center provenance while keeping rows reference-only and non-orderable.
+- M23.18: Nasdaq Trader symbol discovery, adding local cache-only symbol search endpoints, Markets Stocks `Symbol Discovery` panel, Stocks symbol-directory lane state, AI Agent `markets_nasdaq_symbol_directory_search`, and Command Center provenance while keeping rows reference-only, `not_quote`, non-orderable, and outside broker/exchange/live/balance semantics.
+- M23.19: MOEX delayed quote snapshots, adding public no-key `moex_iss_delayed_quote_snapshot`, bounded `SBER/GAZP/MOEX` local quote caches under `market_data/quotes/moex/`, `/api/moex/quote-snapshots`, `/api/markets/moex/quotes/refresh`, Markets `moex_quotes` source coverage, provider/source registry rows, AI Agent `markets_moex_quote_snapshot_refresh`, public refresh coverage, and Command Center provenance while keeping snapshots delayed, non-orderable, and outside broker/exchange/live/balance semantics.
+- M23.20: Backtest comparison packet, adding `POST /api/backtest/comparison-packet`, bounded local comparison artifacts under `artifacts/backtests/comparisons/`, Backtest `Compare Runs` UI and `Comparison` tab, AI Agent `backtest_comparison_packet`, and Command Center provenance while keeping optimize, replay, live deploy, broker routing, real orders, and destructive artifact lifecycle execution disabled.
+- M23.21: News research brief index, adding metadata-only `GET /api/news/research-briefs`, News payload `research_brief_index`, News `INDEX` UI supervision strip, AI Agent `news_research_brief_index`, and Command Center provenance while keeping full article copy, AI summary providers, paid/cloud news, destructive recovery, credential reads, and live trading disabled.
+- M23.22: Advanced output manifest index, extending `GET /api/advanced-workflows/output-packet` and Command Center advanced-output supervision with artifact kind counts plus latest manifest/report/error-log paths for AI Chat, Nodes, Code, Quant Lab, and QuantLib while keeping artifact content reads, route execution, managed LLM calls, notebook/workflow runtimes, external QuantLib execution, destructive recovery, credentials, and live/private trading disabled.
+- M23.23: Advanced output health matrix, extending `GET /api/advanced-workflows/output-packet` and Command Center advanced-output supervision with route health states, expected artifact kinds, missing expected kinds, supervision-ready counts, and AI Agent `advanced_workflow_output_health` while keeping artifact content indexing, route execution, managed LLM calls, notebook/workflow runtimes, external QuantLib execution, route-output mutation, destructive recovery, credentials, and live/private trading disabled.
+- M23.24: Artifact root supervision matrix, extending `GET /api/artifact-lifecycle` and Command Center artifact recovery with per-root latest artifact paths, supervision-ready flags, recovery hints, root health counts, and AI Agent `artifact_lifecycle_root_health` while keeping artifact content indexing, automatic repair, archive/prune/delete/move/restore execution, credentials, external providers, and live/private trading disabled.
+- M23.25: Backtest run index, adding read-only `GET /api/backtest/runs`, Backtest route `run_index`, UI selector `backtest-run-index`, AI Agent `backtest_run_index`, and Command Center provenance so agents can choose recent local runs before comparison while keeping artifact writes, optimize, replay, deployment, broker routing, real orders, and destructive lifecycle actions disabled.
+- M23.26: Markets quote/reference coverage supervision, adding read-only `GET /api/markets/quote-reference-coverage`, Markets route `quote_reference_coverage`, UI selector `markets-quote-reference-coverage`, AI Agent `markets_quote_reference_coverage`, and Command Center provenance so agents can distinguish non-orderable quote lanes from reference/context rows without provider calls, secrets, orderability, broker routing, or live trading.
+- M23.27: AI Chat context contract, adding read-only `GET /api/ai-chat/context-contract`, AI Chat route `context_contract`, UI selector `ai-chat-context-contract`, AI Agent `ai_chat_context_contract`, and Command Center provenance so agents can inspect local context limits, source citations, artifact provenance, output state, and safety flags without provider calls, managed LLM execution, artifact content indexing, secrets, broker routing, or live trading.
+- M23.28: Advanced output IO contract, adding metadata-only `io_contract` rows to `GET /api/advanced-workflows/output-packet` and Command Center advanced-output supervision, Settings route state `advanced_output_io_contract`, AI Agent `advanced_workflow_io_contract`, and UI visibility for route IO contracts so agents can inspect safe inputs, output artifact kinds, error surfaces, latest output paths, blocked runtimes, and safety flags without route execution, artifact content reads, managed LLMs, provider calls, secrets, broker routing, or live trading.
+- M23.29: QuantLib fixed-income calculator, adding a bounded deterministic `bond-duration` quick action with local bond price, Macaulay duration, modified duration, convexity, basis-point value, existing request/response/context/manifest/report/error artifacts, frontend fallback visibility, and Command Center provenance while keeping external QuantLib runtime, provider calls, notebook/workflow execution, credentials, broker routing, real balances, derivatives execution, orders, and live/private behavior disabled.
+- M23.30: Code static outline, extending `POST /api/code/analyze` with AST-only imports/definitions/calls/syntax-error outline fields in `analysis_result`, `last_analysis`, `analysis.json`, `analysis_manifest.json`, report text, UI supervision, AI Agent contract, advanced-output IO contract, and Command Center provenance while keeping notebook execution, kernels, provider calls, artifact content reads/indexing, credentials, broker routing, real balances, derivatives execution, orders, and live/private behavior disabled.
+- M23.31: Bank of Canada FX reference, adding public no-key `bank_of_canada_valet_fx_reference_public`, local Valet FX cache under `market_data/fx/bank_of_canada/valet_fx_reference_rates.json`, Markets FX `cad_reference_rates` source coverage, BoC reference UI rows, public refresh coverage, provider-acquisition status, AI Agent `fx_bank_of_canada_reference_rates` / `fx.boc`, and Command Center provenance while keeping BoC rows reference-only and outside quote orderability, broker/exchange connectivity, balances, margin, derivatives, credentials, orders, and live/private behavior.
+- M23.32: Backtest volatility reversion, adding `volatility_reversion` as a fourth local closed-candle long/flat Backtest strategy, Backtest artifact engine `local_volatility_reversion_v1`, Algo saved-strategy handoff, frontend indicator visibility, and Command Center provenance while keeping optimize, deployment, broker routing, real orders, real balances, shorts, derivatives, credentials, and live/private behavior disabled.
+- M23.33: Portfolio report index, adding read-only `GET /api/portfolio/reports`, Portfolio `report_index`, UI selector `portfolio-report-index`, AI Agent `portfolio_report_index`, local report artifact presence/recovery metadata, and Command Center provenance while keeping report content indexing, automatic repair, destructive lifecycle actions, real balances, optimizer execution, credentials, and live/private behavior disabled.
+- M23.34: Finnhub equity quote watchlist, adding optional-key `AAPL/MSFT/NVDA/SPY` quote caches under `market_data/quotes/finnhub/`, `/api/finnhub/quotes`, `/api/markets/finnhub/quotes/refresh`, Markets `finnhub_quotes` source coverage, provider/source registry rows, AI Agent `markets_finnhub_quote_watchlist_refresh`, and Command Center provenance while keeping quotes non-orderable and outside public no-key refresh jobs, broker/exchange binding, balances, orders, and live/private behavior.
+- M23.35: Advanced output state-file classification, separating root-level route state files from real advanced output artifacts in `/api/advanced-workflows/output-packet`, Command Center advanced-output rows, and AI Agent contracts so recovery queues do not treat `*_state.json` files as partial AI Chat/Nodes/Code/Quant Lab/QuantLib outputs.
+- M23.36: Cboe delayed quote gate, adding `cboe_delayed_quotes_gate` to the provider acquisition gate as `blocked_official_terms` so AI Agents do not crawl Cboe delayed quote pages or treat the delayed quote API as an approved local adapter source.
+- M23.37: FMP quote watchlist, adding optional-key `AAPL/MSFT/NVDA/SPY` quote caches under `market_data/quotes/fmp/`, `/api/fmp/quotes`, `/api/markets/fmp/quotes/refresh`, Markets `fmp_quotes` source coverage, provider/source registry rows, AI Agent `markets_fmp_quote_watchlist_refresh`, and Command Center provenance while keeping quotes non-orderable and outside public no-key refresh jobs, provider signup, account/MCP integration, broker/exchange binding, balances, orders, and live/private behavior.
+- M23.38: Provider acquisition resume contract, adding machine-readable `resume_contract` and `resume_state` fields to the provider acquisition gate, exposing that gate through Command Center and the Command Center UI, and making the post-M23.37 anti-stall rule explicit without adding providers, signup, credentials, external fetches, or live/private behavior.
+- M23.39: Backtest data readiness, adding read-only `GET /api/backtest/data-readiness`, embedded Backtest `data_readiness`, UI selector `backtest-data-readiness`, AI Agent `backtest_data_readiness`, and Command Center provenance so agents can inspect closed-candle cache/fallback readiness before running Backtest actions without writing artifacts, refreshing providers, exposing secrets, optimizing, deploying, broker routing, or enabling live/private behavior.
+- M23.40: Algo scan readiness, adding read-only `GET /api/algo/scan-readiness`, embedded Algo `scan_readiness`, UI selector `algo-scan-readiness`, AI Agent `algo_scan_readiness`, and Command Center provenance so agents can inspect active strategy, provider/cache usefulness, symbol readiness, latest scan artifact health, and Backtest handoff state before scanner/backtest actions without running scans, refreshing providers, writing artifacts, exposing secrets, deploying, broker routing, or enabling live/private behavior.
+- M23.41: News topic/entity map, adding read-only `GET /api/news/topic-entity-map`, embedded News `topic_entity_map`, UI selector `news-topic-entity-map`, AI Agent `news_topic_entity_map`, and Command Center provenance so agents can inspect metadata-only topic/entity/edge coverage before brief/research actions without refreshing providers, reading article bodies, calling AI summarizers, writing artifacts, exposing secrets, or enabling paid/cloud/live/private behavior.
+- M23.42: IEX TOPS market data gate, adding `iex_tops_market_data_gate` to the provider acquisition gate as `blocked_official_terms` so AI Agents do not treat current IEX TOPS/DEEP exchange feeds as a public no-key REST quote source or implement feed/PCAP adapters without a licensed data contract.
+- M23.43: Provider gate candidate detail, exposing existing provider acquisition `candidates`, `rules`, and `stop_gates` through the frontend Command Center type/UI, stable candidate selectors, and Playwright coverage so human supervisors and AI Agents can see blocked provider-entry rows such as IEX/Cboe without adding providers, signup, credentials, external fetches, caches, adapters, or live/private behavior.
+- M23.44: Backtest momentum continuation, adding `momentum_continuation` as a fifth local closed-candle long/flat Backtest strategy, Algo saved-strategy handoff support, local artifact/provenance coverage, frontend/E2E indicator visibility, and Command Center provenance while keeping optimize, deployment, broker routing, real orders, real balances, shorts, derivatives, credentials, and live/private behavior disabled.
+- M23.45: Portfolio exposure map, adding local `exposure_map` rows, a Portfolio Exposure tab, `exposure.csv` report artifact, report manifest `exposure_row_count`, AI Agent contract coverage, and Command Center provenance while keeping optimizer, deployment, broker routing, real orders, real balances, shorts, derivatives, credentials, and live/private behavior disabled.
+- M23.46: Command Center action matrix, exposing existing AI Agent action contracts through Command Center `route_action_contract.actions`, per-action preflight endpoints, local mutation/artifact-write/confirmation counts, Settings UI selector `command-center-action-matrix`, and Command Center provenance while keeping action execution, request body logging, provider signup, credentials, artifact content reads, destructive recovery, broker routing, real orders, real balances, and live/private behavior disabled.
+- M23.47: Markets quote snapshot board, adding read-only `GET /api/markets/quote-snapshot-board`, embedded Markets `quote_reference_coverage.snapshot_board`, UI selector `markets-quote-snapshot-board`, AI Agent `markets_quote_snapshot_board`, and Command Center provenance so agents can inspect non-orderable quote-lane cache/preflight state without provider calls, artifact writes, secret reads, orderability, broker routing, real balances, or live/private behavior.
+- M23.48: Command Center preflight matrix, adding read-only `GET /api/command-center/preflight-matrix`, embedded Command Center `route_action_contract.preflight_status_matrix`, UI selector `command-center-preflight-status-matrix`, AI Agent `command_center_preflight_matrix`, and Command Center provenance so agents can inspect ready/confirmation/disabled action status without executing actions, calling providers, writing artifacts, exposing secrets, approving recovery/provider work, or enabling live/private behavior.
+- M23.49: TWSE daily quote snapshots, adding public no-key `twse_openapi_daily_quote_snapshot`, bounded `2330/2317/0050` local daily quote caches under `market_data/quotes/twse/`, `/api/twse/quote-snapshots`, `/api/markets/twse/quotes/refresh`, Markets `twse_quotes` source coverage, provider/source registry rows, AI Agent `markets_twse_quote_snapshot_refresh`, public refresh coverage, and Command Center provenance while keeping snapshots daily, non-orderable, and outside broker/exchange/live/balance semantics.
+- M23.50: Eurostat HICP macro context, adding official public no-key `eurostat_hicp_public`, bounded EA20 all-items HICP monthly index cache under `market_data/macro/eurostat/hicp_ea20_cp00_i15.json`, `/api/eurostat/hicp`, `/api/eurostat/hicp/refresh`, Markets macro aggregation/provider-source coverage, public refresh coverage, and Command Center provenance while keeping HICP rows `not_quote`, non-orderable, and outside broker/exchange/live/balance semantics.
+- M23.51: Provider refresh schedule plan, adding read-only `/api/providers/refresh-public/schedule-plan`, `refresh_schedule_plan` provider/governance payloads, Provider Freshness schedule visibility, and AI Agent `provider_refresh_schedule_plan_inspect` coverage while keeping automatic scheduling, provider calls, cache mutation, job starts, destructive cleanup, optional-key refresh, secrets, and live/private behavior disabled.
+- M23.52: Backtest artifact health matrix, adding read-only `/api/backtest/artifact-health`, embedded Backtest `artifact_health`, UI selector `backtest-artifact-health`, and AI Agent `backtest_artifact_health` coverage while keeping artifact content reads, automatic repair, Backtest reruns, optimization, deployment, broker routing, credentials, and live/private behavior disabled.
+- M23.53: OpenFIGI identifier mapping, adding public no-key OpenFIGI v3 mapping rows under `market_data/reference/openfigi/mapping.json`, `GET/POST /api/openfigi/mapping`, `POST /api/markets/openfigi/mapping/refresh`, Markets `identifier_mapping` source coverage, provider refresh/registry/storage coverage, and AI Agent `markets_openfigi_mapping_refresh` while keeping FIGI rows `not_quote`, context-only, non-orderable, and outside broker/exchange/live/balance semantics.
+- M23.54: Portfolio report health matrix, adding read-only `/api/portfolio/report-health`, embedded Portfolio `report_health`, UI selector `portfolio-report-health`, and AI Agent `portfolio_report_health` coverage while keeping report content reads, artifact text indexing, automatic repair, optimizer output, real balance access, broker routing, credentials, and live/private behavior disabled.
+- M23.55: AI Chat session health matrix, adding read-only `/api/ai-chat/session-health`, embedded AI Chat `session_health`, UI selector `ai-chat-session-health`, and AI Agent `ai_chat_session_health` coverage while keeping message content reads, request/response replay, managed LLM calls, provider calls, automatic repair, destructive lifecycle actions, credentials, broker routing, and live/private behavior disabled.
+- M23.56: Nodes workflow health matrix, adding read-only `/api/nodes/workflow-health`, embedded Nodes `workflow_health`, UI selector `nodes-workflow-health`, and AI Agent `nodes_workflow_health` coverage while keeping workflow execution, artifact content reads, provider calls, automatic repair, destructive lifecycle actions, credentials, broker routing, and live/private behavior disabled.
+- M23.57: Code analysis health matrix, adding read-only `/api/code/analysis-health`, embedded Code `analysis_health`, UI selector `code-analysis-health`, and AI Agent `code_analysis_health` coverage while keeping notebook execution, kernel processes, source return, artifact content reads/indexing, provider calls, automatic repair, destructive lifecycle actions, credentials, broker routing, and live/private behavior disabled.
+- M23.58: Quant Lab preview health matrix, adding read-only `/api/quant-lab/preview-health`, embedded Quant Lab `preview_health`, UI selector `quant-lab-preview-health`, and AI Agent `quant_lab_preview_health` coverage while keeping script execution, external runtimes, deep-agent execution, model training, artifact content reads/indexing, provider calls, automatic repair, destructive lifecycle actions, credentials, broker routing, and live/private behavior disabled.
+- M23.59: QuantLib calculation health matrix, adding read-only `/api/quantlib/calculation-health`, embedded QuantLib `calculation_health`, UI selector `quantlib-calculation-health`, and AI Agent `quantlib_calculation_health` coverage while keeping external QuantLib runtime, external APIs, provider calls, artifact content reads/indexing, automatic repair, destructive lifecycle actions, credentials, broker routing, derivatives execution, and live/private behavior disabled.
+- M23.60: Nasdaq Data Link provider gate, adding `nasdaq_data_link_dataset_gate` to the provider acquisition gate after official-doc review, blocking adapter/signup/key/cache behavior until a concrete free dataset product page, auth mode, API route, cache schema, quote semantics, and route need are reviewed while keeping provider signup, subscription/payment activation, unused-key collection, catalog crawling, broker routing, and live/private behavior disabled.
+- M23.61: QuantLib implied-volatility calculator, adding a bounded deterministic `implied-volatility` quick action using local Black-Scholes bisection, request/response/context/manifest/report/error artifacts, frontend fallback visibility, focused UI selection coverage, and Command Center provenance while keeping external QuantLib runtime, external APIs/provider calls, broker routing, derivatives execution, real orders, real balances, credentials, and live/private behavior disabled.
+- M23.62: Global Command Center drawer, adding a shell-strip CENTER control and route-independent drawer for active task, mission ledger, recovery queue, risk gates, timeline, preflight, and provenance supervision while reusing the read-only Command Center payload and keeping action execution, provider calls, artifact mutation, credentials, broker routing, and live/private behavior disabled.
+- M23.63: Backtest RSI reversion, adding `rsi_reversion` as another local closed-candle long/flat Backtest strategy, Algo saved-strategy handoff support, local artifact/provenance coverage, frontend/E2E indicator visibility, and Command Center provenance while keeping optimize, deployment, broker routing, real orders, real balances, shorts, derivatives, credentials, provider calls, and live/private behavior disabled.
+- M23.64: JPX/J-Quants provider gate, adding `jpx_jquants_market_data_gate` to the provider acquisition gate after official JPX/J-Quants review, blocking adapter/API-key/CSV-bulk/portal/monthly-file/cache behavior until a concrete allowed dataset, auth mode, route need, cache schema, quote semantics, and no-subscription boundary are reviewed while keeping provider signup, plan/payment activation, unused-key collection, portal crawling, broker routing, and live/private behavior disabled.
+- M23.65: QuantLib option scenario grid, adding bounded deterministic `option-scenario-grid` quick action with local Black-Scholes shock rows, request/response/context/manifest/report/error artifacts, frontend fallback visibility, E2E preset coverage, and Command Center provenance while keeping external QuantLib runtime, external APIs/provider calls, market-price fetching, broker routing, derivatives execution, real orders, real balances, credentials, and live/private behavior disabled.
+- M23.66: Yahoo Finance provider gate, adding `yahoo_finance_market_data_gate` to the provider acquisition gate after official Yahoo API terms/guidelines review, blocking query/chart/quote endpoint crawlers, crumb/cookie flows, caches, refresh rows, and source coverage until a concrete official finance market-data API contract, auth mode, cache schema, quote semantics, display/retention terms, route need, and no-subscription boundary are reviewed while keeping provider signup, credentials, web scraping, broker routing, and live/private behavior disabled.
+- M23.67: Provider quote breadth closure, adding provider acquisition `quote_breadth_closure` and Command Center visibility so AI Agents treat the 21 reviewed provider candidates, 16 implemented lanes, 5 blocked gates, and 0 approved next candidates as finite non-live/no-subscription evidence rather than retrying blocked providers or mislabeling non-orderable/reference rows as executable quotes.
+- M23.68: Final non-live completion audit, adding Command Center `final_goal_audit`, `complete_for_current_non_live_scope`, 12 completed current-scope requirement rows, 0 partial/unknown rows, and explicit blocked/excluded safety boundaries so AI Agents stop retrying completed scope unless a new provider-entry gate or separate reviewed safety contract opens it.
+
+## Current Status
+
+- Baseline commit exists: `c404d42 Establish clean-room local terminal baseline`.
+- M0 commit exists: `fbd9757 Align governance around local Fincept parity`.
+- M1 commit exists: `24d8627 Choose a local web foundation`.
+- M2 commit exists: `60593b6 Establish the local terminal shell`.
+- `AGENTS.md` makes local Fincept functional/workflow parity the governing product goal.
+- Approved RALPLAN artifacts are snapshotted under `docs/planning/approved/`.
+- `.omx/` may contain ignored local runtime copies and notes, but it is not a reviewable source of authority.
+- M0 verification passed: pytest, ruff, diff checks, source-wall scans, and code-review follow-up.
+- M1 selected Python FastAPI/Uvicorn plus React/TypeScript/Vite in `docs/architecture/ADR-0001-stack.md`.
+- M1 foundation app exposes local health and shell-contract API endpoints.
+- M1 frontend boot surface builds with Vite and reads `/api/health`.
+- M2 shell opens all 15 routes with first-use or gated states.
+- M2 File/Navigate/View/Help menus, Quick Switch, local settings, local profile, and default layout save/load are implemented.
+- Settings, profile, and layout writes stay in ignored repo-local JSON paths.
+- M3 dashboard exposes an observed 34-widget catalog, category filters, alert drawer, save action, and six reset templates.
+- M3 dashboard reads/writes ignored repo-local `workspace_layouts/dashboard.json`.
+- M3 dashboard shows local/offline/gated states instead of fake balances, fake market data, or reachable live trading paths.
+- M3 dashboard API owns active widget metadata and capability state; frontend static catalog is limited to offline fallback.
+- M3 code-review follow-ups for dashboard offline fallback and write-failure status handling are fixed.
+- M4 markets uses local panel config in `workspace_layouts/markets.json`.
+- M4 markets refresh path uses Binance public 24hr ticker data without private API keys and writes visible stale cache to `market_data/crypto_latest.json`.
+- M4 markets UI supports add-to-column panel creation, column chooser, edit modal, delete confirmation, asset tabs, and visible offline/stale/live status.
+- M4 code-review follow-ups for public-data preference, final-panel delete behavior, column placement, gated non-crypto tabs, and layout caps are fixed.
+- M5 crypto workspace is paper-only with exchange/symbol/timeframe controls, order ticket, order book, account summary, and Positions/Orders/History/My Trades/Fees/Depth/Market/Stats tabs.
+- M5 paper broker fills market orders, records working limit/stop intents, writes ignored local state to `artifacts/paper/paper_state.json`, and rejects oversell/negative-cash paths.
+- M5 safety payload and tests prove no real orders, no private API requirement, no margin, no leverage, no short exposure, and no derivatives execution.
+- M5 code-review follow-ups for unaffordable working BUY orders and non-finite/extreme numeric inputs are fixed.
+- M6/M7 must add a stricter validated paper-state reader before consuming mutable `paper_state.json` as portfolio/backtest evidence.
+- M6 backtest runs a local SMA crossover strategy on deterministic closed 15m candles.
+- M6 writes reproducible local artifacts under `artifacts/backtests/{run_id}/`: `config.json`, `data_snapshot.json`, `summary.json`, `trades.csv`, `report.md`, and `manifest.json`.
+- M6 tests prove open candles reject and fills execute on the next candle, not the signal candle.
+- M6 code-review follow-up for invalid backtest economics is fixed; zero/negative/non-finite/extreme inputs return 400 without writing artifacts.
+- M6 provider is explicitly `deterministic_local_closed_candle`; a public closed-candle provider remains a later enhancement before treating results as live-market research evidence.
+- M7 portfolio state writes ignored repo-local JSON to `artifacts/portfolio/portfolio_state.json`.
+- M7 portfolio API supports create-new, import JSON create-new, import JSON merge, load demo, and export JSON.
+- M7 portfolio API also supports read-only links from the local paper ledger and local backtest artifacts without submitting orders or bypassing paper gates.
+- M7 demo portfolio uses local sample data only; it does not read real balances, connect to cloud, or imply live holdings.
+- M7 portfolio view includes toolbar actions, value/P&L/risk metrics, performance, allocation, correlation, positions, and transactions.
+- M7 BUY/SELL toolbar actions route to the existing Crypto paper workspace; unsupported toolbar actions are disabled/gated and no reachable live order path was added.
+- M7 tests reject negative positions, transaction oversell, non-object rows, oversized imports, and inconsistent position/transaction snapshots without writing portfolio artifacts.
+- M7 tests prove corrupt existing portfolio state, including syntactically invalid JSON, blocks mutation without overwriting the corrupt local artifact.
+- M7 merge rejects position-only snapshot targets to avoid partial-ledger accounting ambiguity.
+- M8 news reads public RSS feeds through backend refresh, writes ignored local cache to `artifacts/news/news_cache.json`, reports partial source failures, and degrades through stale cache or offline fallback even when cache rows are malformed.
+- M8 news supports observed category filters ALL/MKT/EARN/ECO/TECH/NRG/CRPT/GEO, time filters 1H/6H/24H/48H/7D/30D, REL/NEW sorting, WIRE/CLST modes, watch terms, watch-only filtering, clusters, and detail pane.
+- M8 safety payload proves public read-only feed behavior: no private API, no cloud account, no subscription requirement, and AI summary disabled.
+- M9 AI Chat writes ignored local state to `artifacts/chat/chat_state.json` and per-session messages to `artifacts/chat/{session_id}/messages.jsonl`.
+- M9 AI Chat supports new chat, rename modal, backend-backed session selection, delete confirmation, dry-run message response, and read-only linked local artifacts from allowed artifact/cache paths.
+- M9 AI Chat provider status is local/dry-run only: no managed LLM, no cloud account, no subscription, no usage metering, no private API, no broker mutation, and no ledger mutation.
+- M9 AI Chat treats durable `messages.jsonl` as untrusted input: stored message reads reject unsafe effect values, broker mutation flags, session mismatches, credential-like content, unsafe artifact paths, missing/changed artifact metadata, and oversized linked artifact sets.
+- M10 Algo writes ignored local strategy state to `artifacts/algo/algo_state.json`.
+- M10 Algo supports Builder/My Strategies/Scanner/Dashboard tabs, local strategy save/select, catalog templates, dry-run scanner, and backtest handoff.
+- M10 Algo backtest handoff preserves the saved strategy timeframe; unsupported non-15m backtests fail through the M6 closed-candle contract without writing artifacts.
+- M10 Algo scanner does not emit trading-like signals from offline fixtures; stale/public cache is required before dry-run LONG/WATCH/FLAT rows are emitted.
+- M10 Algo treats durable `algo_state.json` as untrusted input: corrupt JSON, invalid saved strategies, malformed scan/backtest result state, credential-like content, unsupported symbols, unsafe paths, and invalid economics block mutation without overwrite.
+- M10 Algo safety payload proves no live deployment, no broker routing, no real orders, no private API, no real balance, no margin, no leverage, no short exposure, and no derivatives execution.
+- M11 Nodes writes ignored local workflow state to `artifacts/workflows/nodes_state.json` and mirrors active workflow definitions to `artifacts/workflows/{workflow_id}/definition.json`.
+- M11 Nodes supports a node library, template load, save/load/clear active canvas, selected-node property panel, import/export JSON workflow, and dry-run planning.
+- M11 Nodes keeps Deploy and Execute as disabled/tombstoned parity surfaces; `/api/nodes/deploy` and `/api/nodes/execute` return disabled safety responses.
+- M11 Nodes dry-run plans are non-mutating, mark runtime as not allowed, and label trading nodes as paper intent planning only.
+- M11 Nodes treats durable `nodes_state.json` as untrusted input: corrupt JSON, invalid workflows, malformed dry-run state, credential-like content, forbidden live/runtime config keys or values, unsupported node types, missing edge targets, and workflow-limit bypass attempts block mutation without overwrite.
+- M11 Nodes safety payload proves dry-run only, no deploy/execute, no live deployment, no broker routing, no real orders, no private API, no real balance, no margin, no leverage, no short exposure, no derivatives execution, and no external mutation.
+- M12 Code writes ignored local notebook state to `artifacts/code_workspace/code_state.json` and mirrors the active notebook to `artifacts/code_workspace/{notebook_id}.ipynb`.
+- M12 Code supports New/Open(import JSON)/Save/+ Cell/Clear Out/Export, notebook sidebar selection, cell sidebar selection, cell type toggle, move up/down, delete, and local `.ipynb` round-trip import/export.
+- M12 Code keeps Run and Run All disabled in the UI and API; `/api/code/run` and `/api/code/run-all` return disabled safety responses until a sandbox policy exists.
+- M12 Code treats durable `code_state.json` and imported notebooks as untrusted input: corrupt JSON, credential-like cell/source/output text, live runtime/order/balance/leverage intent, unsafe paths, unsupported cell types, tampered running states, and clear-output side-effect attempts block mutation without overwrite.
+- M12 Code safety payload proves local-files-only editing, no execution, no kernel process, no cloud execution, no external network, no private API, no broker mutation, no real orders, no real balance, no margin, no leverage, no short exposure, and no derivatives execution.
+- M12 code-review follow-ups for clear-output mutation boundary, notebook sidebar selection, pure export behavior, and shortcut text are fixed.
+- M12/M23.30 Code static analysis writes imports/definitions/calls/syntax-error outline metadata into `analysis.json`, `analysis_manifest.json`, `analysis_report.md`, `analysis_result`, and UI supervision without returning source text or running a kernel.
+- M13 Quant Lab writes ignored local preview state to `artifacts/quant_lab/quant_lab_state.json` and preview artifacts to `artifacts/quant_lab/{run_id}/`.
+- M13 Quant Lab exposes the observed 24-module catalog plus two observed subpages, with category grouping, module strip, module info, observed script labels as non-executable reference metadata, platform stats, and local preview controls.
+- M13 Quant Lab supports local preview artifacts for the P0/P1-safe modules: Backtesting, Feature Engineering, Portfolio Optimization, Factor Evaluation, Strategy Builder, Data Processors, Quant Reporting, Fetch Data, and Calendar.
+- M13 Quant Lab preview output writes `input.json`, `output.json`, `report.md`, and `error.log`, and rejects credential-like input keys/values, live order/balance/leverage/margin calls, and standalone margin/leverage/short/derivatives/futures/perpetual intent.
+- M13 Quant Lab keeps deferred/P2 modules catalog-only, and `/api/quant-lab/execute` plus `/api/quant-lab/deep-agent` return disabled safety responses.
+- M13 Quant Lab treats durable `quant_lab_state.json` as untrusted input: corrupt JSON, invalid run records, unsupported modules, invalid artifacts, and run-limit bypass attempts block mutation without overwrite.
+- M13 Quant Lab safety payload proves local artifacts only, no script execution, no external runtime/network, no cloud/subscription/private API requirement, no deep-agent/model-training/live-signal execution, no broker mutation, no real orders, no real balance, no margin, no leverage, no short exposure, and no derivatives execution.
+- M13 code-review follow-ups for Backtesting default preview inputs, run-limit orphan artifact prevention, full safety typing/UI coverage, and explicit observed script metadata are fixed.
+- M14 QuantLib writes ignored local calculator state to `artifacts/quantlib/quantlib_state.json` and request/response artifacts to `artifacts/quantlib/{calculation_id}/`.
+- M14/M23.29/M23.61 QuantLib exposes the observed 18-module tree and 590+ endpoint count, with quick-action presets for BS Price, GBM Sim, VaR, Bond Duration, Implied Vol, and Heston.
+- M14/M23.29/M23.61 QuantLib computes deterministic local results with stdlib math only: Black-Scholes price/greeks, fixed-seed GBM simulation, parametric VaR, fixed-income bond duration/convexity, Black-Scholes implied volatility by bisection, and a Heston-style local proxy.
+- M14 QuantLib writes `request.json`, `response.json`, `report.md`, and `error.log` for each calculation; custom request bodies remain visible after compute and preset selection resets the request body to the selected preset.
+- M14 QuantLib rejects credential-like request keys/values, live/order/balance/broker runtime intent, explicit empty request bodies, invalid numerics, path traversal, and sibling-prefix artifact paths.
+- M14 QuantLib treats durable `quantlib_state.json` as untrusted input: corrupt JSON, invalid calculations, unsupported action/status values, unsafe artifacts, and run-limit bypass attempts block mutation without overwrite.
+- M14 QuantLib safety payload proves local artifacts only, no external QuantLib runtime, no external API requirement, no cloud/subscription/private API requirement, no external network, no broker mutation, no real orders, no real balance, no margin, no leverage, no short exposure, and no derivatives execution.
+- M14 code-review follow-ups for empty-request defaulting, custom request persistence, preset switching, and artifact path boundary checks are fixed. Architecture review leaves a non-blocking WATCH item for future QuantLib artifact lifecycle/prune/archive UX before expanding calculator volume.
+- M15 Forum writes ignored local journal state to `artifacts/forum/forum_state.json` and per-post artifacts to `artifacts/forum/{post_id}/post.json`, `replies.json`, and `thread.md`.
+- M15 Forum exposes the observed four channels: Crypto Corner, General Discussion, Market Analysis, and Trading Strategies.
+- M15 Forum supports local post creation, channel selection, post opening/view counts, local replies, tags, linked local artifact paths, leaderboard, activity feed, and per-thread artifacts.
+- M15 Forum rejects credential-like post/reply content and unsafe linked artifact paths, and corrupt existing `forum_state.json` blocks mutation without overwriting the corrupt local artifact.
+- M15 Help menu now opens local Help Center, Diagnostics, About, Local Privacy, Local Terms, Attributions, and Updates surfaces inside the app instead of external/cloud support.
+- M15 Diagnostics writes ignored local artifacts to `artifacts/diagnostics/{run_id}/diagnostics.json`, `report.md`, and `error.log`, reporting route/menu/storage/safety checks without reading artifact contents.
+- M15 update check is local-manifest-only and performs no external update-server or browser handoff.
+- M15 Forum and Help safety payloads prove local-only support/journal behavior, no cloud account, no subscription, no billing/CR, no private API, no credential persistence, no external network, no broker mutation, no real orders, no real balance, no margin, no leverage, no short exposure, and no derivatives execution.
+- M15 code-review follow-ups for oversized forum state read-only degradation and complete Help safety flags are fixed.
+- M15 architecture review leaves a non-blocking WATCH item: forum `post.json`, `replies.json`, and `thread.md` are derivative artifacts; `forum_state.json` remains the source of truth, and a later forum lifecycle pass should add repair/prune behavior before growing journal volume.
+- M16 adds approved live-safety planning artifacts: `docs/planning/approved/live-safety-prd-20260522.md` and `docs/planning/approved/live-safety-test-spec-20260522.md`.
+- M16 `/api/live-safety` returns `disabled_no_safety_contract`, `contract_reviewed=false`, `security_reviewed=false`, `live_mode_enabled=false`, `paper_mode_enabled=true`, all required gates marked missing, and all forbidden live capabilities false.
+- M16 disabled live endpoints return 403 for live opt-in, private API storage, real balance read, real order submission, margin, leverage, short exposure, and derivatives execution, with tests proving no `settings/live_secrets.json`, `artifacts/live`, or `artifacts/live_orders` side effects.
+- M16 Settings renders a Live Safety Contract panel with required gates, blocked capabilities, and disabled action controls; no UI path posts a live action.
+- M17 adds `docs/planning/FINAL_HANDOFF.md` with start commands, local URLs, verification commands, safety boundaries, local data roots, and watch items.
+- M17 removes user-visible `placeholder` wording from Markets non-crypto tabs; those tabs are now explicitly gated while crypto public data remains active.
+- M17 removes product runtime/frontend Fincept-brand references from AI Chat and QuantLib safety surfaces, replacing them with neutral managed/external API and metering terms plus a source-wall regression test.
+- M18 keeps the product clean-room boundary while making the UI style materially closer to reference evidence: compact dark terminal shell, horizontal workspace route rail, low-radius controls, orange active states, muted borders, and green/red/cyan/yellow status accents.
+- M18 visual changes are CSS-only and do not add Fincept branding, assets, copied commercial copy, installed source references, or new trading/data capabilities.
+- M18 code-review follow-up for route rail overflow is fixed: the horizontal route rail now uses adaptive grid tracks instead of a fixed 15-column minimum.
+- M19.1 adds `frontend/src/theme.css` as the active low-contrast muted dark gray token source and `frontend/src/terminal-components.css` as the component-level shell, route rail, panel, table, form, and status-strip style layer.
+- M19.1 keeps product data behavior unchanged and does not add provider, trading, credential, billing, cloud, branding, asset, or installed-source capability.
+- M19.1 adds `tests/test_m19_theme_system.py` to prove the active M19 visual files load after legacy route CSS, expose required terminal tokens, and avoid the prior high-contrast M18 token values in the new source files.
+- M19.2 adds `src/local_terminal/providers.py` with the executable provider entry template, distinct provider error-state catalog, provider metadata, cache TTL/freshness math, and safety summary.
+- M19.2 exposes `/api/providers` and `/api/providers/cache` so route work can consume provider provenance, cache state, source attribution, and gated/disabled reasons instead of generic `Not connected` states.
+- M19.2 adds a global provider freshness strip to the shell using the M19.1 component CSS layer; it shows active/stale/gated counts plus source/cache/provider state for implemented, planned, optional-key, paid, and disabled-by-safety providers.
+- M19.2 keeps optional-key and live/private providers disabled: no local secret storage, real orders, private broker/exchange keys, real balances, margin, leverage, short, or derivatives path was added.
+- M19.3 adds `src/local_terminal/crypto_data.py` with public read-only crypto detail adapters for Binance primary plus Kraken/Coinbase fallback metadata and implementation paths for order book, recent trades, and closed candles.
+- M19.3 writes symbol/timeframe crypto detail snapshots under ignored `market_data/crypto/{symbol}/{timeframe}.json`, exposes that cache through provider freshness, and keeps deterministic/offline data as explicit fallback rather than the preferred visible state.
+- M19.3 wires Crypto to public detail provider provenance, depth, provider trades, closed candles, and detail-backed paper price fallback when the ticker cache is unavailable.
+- M19.3 lets Backtest consume public closed-candle cache when present and records provider/source timestamps in artifacts; deterministic closed candles remain available only as offline/test fallback.
+- M19.3 Dashboard now aggregates paper account state and market cache/provider freshness when available instead of always showing generic `Not connected` values.
+- M19.4 adds Dashboard route-state panels for provider freshness, public crypto market pulse, paper ledger, portfolio, news cache, backtest artifacts, and macro/provider setup state.
+- M19.4 extends `/api/dashboard` to aggregate market cache, crypto detail cache, paper state, portfolio state, news cache, provider registry/freshness, and local backtest artifacts instead of rendering widget-only text bodies.
+- M19.4 keeps Dashboard live/private/billing boundaries unchanged: no real orders, no private API keys, no real balances, no margin/leverage/short/derivatives path, no cloud/subscription/CR, and no installed Fincept source/assets.
+- M19.4 fixes provider freshness attribution so the shared crypto detail cache is assigned to the actual fallback provider when Kraken or Coinbase produces the public detail snapshot.
+- M19.5 removes offline fixture prices from Markets as the primary user-visible runtime; absent provider/cache data now returns `public_provider_unavailable` rows with `N/A` prices and explicit source diagnostics.
+- M19.5 expands Markets asset gateways to crypto, stocks, ETF, FX, commodities, bonds/rates, indexes, and regional groups with provider IDs, auth modes, setup/fallback states, and no fake non-crypto quotes.
+- M19.5 wires Markets to public Binance ticker cache/live metadata and public crypto detail cache fallback so crypto rows can show provider/source/cache attribution without private keys.
+- M19.5 adds Markets source diagnostics in the UI, including primary source summary, provider state, cache path, gateway cards, and low-contrast dense terminal styling.
+- M19.5 keeps optional-key and live/private paths disabled: no local secret storage, real order path, private broker/exchange key flow, real balance read, margin, leverage, short, or derivatives capability was added.
+- M19.5 updates Crypto, Algo, Portfolio, and E2E tests so paper orders and scanner behavior no longer depend on fake offline market prices. Markets auto-refresh defaults to off for route load; explicit refresh remains available.
+- M19.6 expands the Crypto payload with active symbol/timeframe, provider quote snapshot, provider watchlist rows, chart contract, paper ledger, artifact paths, and provider-backed stats.
+- M19.6 paper orders, fills, and ledger events now carry quote provenance fields: `quote_price`, `quote_source`, `quote_state`, `quote_provider_id`, `quote_retrieved_at`, and `quote_cache_path`.
+- M19.6 writes local derivative paper JSONL artifacts under `artifacts/paper/{date}/` for orders, fills, ledger, and account snapshots while keeping `artifacts/paper/paper_state.json` as the normalized source of truth.
+- M19.6 Crypto UI now shows provider-priced watchlist, candle chart, provider snapshot, populated order book, quote/cache status, ledger tab, and dense low-contrast panels; client fallback no longer exposes `offline_fixture` prices.
+- M19.6 keeps live/private boundaries unchanged: no real order path, private API key flow, real balance read, margin, leverage, short, derivatives execution, cloud, subscription, billing, or CR capability was added.
+- M19.7 Backtest uses public crypto detail cache as the preferred closed-candle runtime when present, records provider/source/cache provenance, and keeps deterministic local candles as offline/test fallback.
+- M19.7 Backtest artifacts now include `provenance.json`, provider/source metadata inside `data_snapshot.json`, cache snapshot hash, data hash, source timestamps, fallback reason, and deterministic-fallback flags in the manifest.
+- M19.7 Backtest UI now exposes provider source controls, gated advanced command buttons, Equity/Drawdown/Data Source/Artifacts tabs, and visible cache/data hashes in the result guard.
+- M19.7 keeps live/private boundaries unchanged: no real order path, private API key flow, real balance read, margin, leverage, short, derivatives execution, cloud, subscription, billing, or CR capability was added.
+- M19.8 Portfolio prices holdings from provider/cache when the public crypto market/detail cache has source-attributed data; crypto holdings without provider data report `provider_unavailable/unavailable`, and non-crypto holdings report `portfolio_snapshot/local_snapshot`.
+- M19.8 Portfolio payload exposes `pricing.status` and per-symbol `pricing.sources`; position rows carry `price_source`, `price_state`, provider id, retrieved timestamp, and cache path provenance.
+- M19.8 Portfolio ignores `offline_fixture` and `public_provider_unavailable` market-cache rows for crypto valuation so deterministic/default prices cannot become the primary user-visible runtime.
+- M19.8 Portfolio export writes local artifacts to `artifacts/portfolio/exports/{export_id}/portfolio.json` and `manifest.json`, with pricing provenance, artifact paths, and a portfolio hash.
+- M19.8 Portfolio links now surface M19.6 paper JSONL event artifacts and M19.7 backtest manifest/summary/trades/data/provenance artifacts when portfolios are created from paper or backtest sources.
+- M19.8 Portfolio UI adds Pricing and Artifacts tabs, source columns, provider-priced summary state, and low-contrast M19 terminal token styling for portfolio panels/tables.
+- M19.8 keeps live/private boundaries unchanged: no real order path, private API key flow, real balance read, margin, leverage, short, derivatives execution, cloud, subscription, billing, or CR capability was added.
+- M19.9 adds `src/local_terminal/research_data.py` with public no-key SEC EDGAR companyfacts and DBnomics macro adapters, gzip-aware public JSON fetch, normalized research payloads, provider metadata, and no credential collection.
+- M19.9 writes ignored local SEC/DBnomics caches under `market_data/fundamentals/sec/0000320193/companyfacts.json` and `market_data/macro/dbnomics/INSEE/IPC-2015/A.IPC.SO.00.00.INDICE.ENSEMBLE.FE.SO.BRUT.2015.FALSE.json`.
+- M19.9 News exposes source-attributed RSS plus SEC fundamentals, DBnomics macro, and optional-key FRED/NewsAPI/GDELT setup states without implementing local secret storage or key entry.
+- M19.9 Dashboard adds a macro/fundamentals panel, while Markets adds a research summary and source diagnostics so public research/cache state flows across routes instead of remaining route-local labels.
+- M19.9 keeps fake non-crypto quote prices out of the primary runtime and keeps live/private boundaries unchanged: no real order path, private API key flow, real balance read, margin, leverage, short, derivatives execution, cloud, subscription, billing, or CR capability was added.
+- M19.10 adds `src/local_terminal/advanced_context.py`, a read-only provider/cache/artifact context layer that indexes market/detail/news/research caches plus local route artifacts for advanced workspaces.
+- M19.10 AI Chat responses now reference provider/cache context and linked local artifacts while preserving read-only artifact handling and no broker/ledger mutation.
+- M19.10 Nodes adds a provider-context dry-run template, records provider/cache/artifact source usage in dry-run plans, and mirrors the plan to `artifacts/workflows/{workflow_id}/dry_run.json` without enabling deploy/execute/runtime mutation.
+- M19.10 Code adds a saved Provider Context Notebook under local `artifacts/code_workspace/`, exposing read-only cache paths and artifact summaries while execution remains disabled.
+- M19.10 Quant Lab and QuantLib can use provider/cache context as default local inputs and write output artifacts containing context provenance.
+- M19.10 frontend surfaces provider context panels on AI Chat, Nodes, Code, Quant Lab, and QuantLib, and Playwright now uses a per-run isolated state root to keep E2E repeatable.
+- M19.10 keeps live/private boundaries unchanged: no real order path, private API key flow, real balance read, margin, leverage, short, derivatives execution, cloud, subscription, billing, or CR capability was added.
+- M19.11 adds `src/local_terminal/governance.py` and `/api/governance` as the read-only local governance contract for provider setup, cache controls, local secret status, source-wall status, appearance token sources, storage paths, safety gates, profile scope, and route artifact links.
+- M19.11 documents the optional-key provider secret gate in `docs/planning/M19_LOCAL_SECRET_STORAGE_GATE.md`; no key entry forms are enabled and `settings/local_secrets.json` is not created.
+- M19.11 Settings now renders provider setup, cache controls, local secret status, source-wall diagnostics, appearance tokens, storage paths, and the existing live-safety panel in the muted dense terminal style.
+- M19.11 Profile now surfaces local-only profile governance and continues to sanitize cloud, billing, subscription, CR/credits, and private API identity flags.
+- M19.11 Forum now indexes suggested provider/cache/local artifact links from the shared context and accepts route artifacts from chat, code workspace, diagnostics, workflows, market data, and existing artifact roots without external publishing.
+- M19.11 Help/Diagnostics now includes governance summary, source-wall checks, secret-write disabled checks, and local diagnostics artifacts containing governance status.
+- M19.11 fixes a Code route initial-load race where a stale `/api/code` response could overwrite the post-NEW status during E2E; this preserves the existing notebook workflow without enabling execution.
+- M19.11 keeps live/private/credential boundaries unchanged: no real order path, private API key flow, real balance read, margin, leverage, short, derivatives execution, cloud, subscription, billing, or CR capability was added.
+- M19.12 adds `docs/planning/M19_FINAL_QA_AUDIT.md` and refreshes `docs/planning/FINAL_HANDOFF.md` plus `docs/planning/M19_SCREENSHOT_INDEX.md` so M19 handoff reflects the current provider/cache/artifact/governance state rather than the older M18-era status.
+- M19.12 confirms all 15 routes have ignored local screenshot evidence and Playwright workflow coverage, indexed in `docs/planning/M19_SCREENSHOT_INDEX.md`.
+- M19.12 keeps cleanup docs-only after the audit found no required product-code blocker; no runtime behavior, provider, credential, billing, cloud, or live-trading capability was added.
+- M20.1 adds `src/local_terminal/rates_data.py` with a public no-key U.S. Treasury daily yield curve adapter, local cache path `market_data/rates/treasury/daily_yield_curve.json`, provider registry entry `us_treasury_yield_public`, and cache freshness id `rates_treasury_yield_curve`.
+- M20.1 adds `/api/rates`, `/api/rates/refresh`, and `/api/markets/rates/refresh`, and makes Markets Bonds/Rates a selectable route-specific workflow with Treasury curve, summary, source, docs, cache, and no-key attribution.
+- M20.1 keeps optional-key FRED and paid multi-asset providers disabled behind existing secret/provider gates, and adds no live trading, private API, real balance, margin, leverage, short, derivatives, billing, subscription, CR, cloud, credential, or installed-source capability.
+- M20.2 adds `src/local_terminal/fx_data.py` with a public no-key ECB euro foreign exchange reference-rate adapter, local cache path `market_data/fx/ecb/eurofxref_daily.json`, provider registry entry `ecb_fx_reference_public`, and cache freshness id `fx_ecb_reference_rates`.
+- M20.2 adds `/api/fx`, `/api/fx/refresh`, and `/api/markets/fx/refresh`, and makes Markets FX a selectable route-specific workflow with EUR-base reference-rate rows, summary, source, docs, cache, no-key attribution, and reference-only status.
+- M20.2 refreshes the shell provider freshness strip after route-level Markets provider refreshes so the global provider state does not keep showing stale unavailable state after a cache write.
+- M20.2 keeps optional-key and paid spot FX providers disabled behind existing secret/provider gates, and adds no live trading, private API, real balance, margin, leverage, short, derivatives, billing, subscription, CR, cloud, credential, or installed-source capability.
+- M20.3 adds `src/local_terminal/commodity_data.py` with a public no-key World Bank Commodity Markets Pink Sheet monthly adapter, local cache path `market_data/commodities/world_bank/pink_sheet_monthly.json`, provider registry entry `world_bank_commodity_monthly_public`, and cache freshness id `commodities_world_bank_monthly`.
+- M20.3 adds `/api/commodities`, `/api/commodities/refresh`, and `/api/markets/commodities/refresh`, and makes Markets Commodities a selectable route-specific workflow with monthly energy/metals/agriculture rows, summary, source, docs, cache, no-key attribution, and monthly-reference status.
+- M20.3 keeps optional-key and paid spot/futures commodity providers disabled behind existing secret/provider gates, and adds no live trading, private API, real balance, margin, leverage, short, derivatives, billing, subscription, CR, cloud, credential, or installed-source capability.
+- M20.4 reuses the existing public no-key SEC EDGAR companyfacts provider to make Markets Stocks a selectable route-specific workflow instead of a setup-only tab.
+- M20.4 adds top-level Markets `stocks` payload state, `/api/markets/stocks/refresh`, SEC company/fact rows, source/cache/docs attribution, Stocks action button, and a three-panel Stocks fundamentals UI for companies, facts, and provider/quote-gate state.
+- M20.4 keeps stock quotes disabled behind the optional-key/paid provider and local secret-storage gates, and adds no live trading, private API, real balance, margin, leverage, short, derivatives, billing, subscription, CR, cloud, credential, or installed-source capability.
+- M20.5 reuses the existing public no-key DBnomics macro provider to make Markets Indexes and Regional selectable route-specific workflows instead of setup-only tabs.
+- M20.5 adds top-level Markets `indexes` and `regional` payload state, DBnomics-only `/api/markets/macro/refresh`, `/api/markets/indexes/refresh`, `/api/markets/regional/refresh`, DBnomics series/source/cache/docs attribution, MACRO action button, and dense macro series/context/source panels.
+- M20.5 keeps index and regional quote rows disabled behind optional-key/paid provider and local secret-storage gates, and adds no live trading, private API, real balance, margin, leverage, short, derivatives, billing, subscription, CR, cloud, credential, or installed-source capability.
+- M20.6 adds `src/local_terminal/fund_data.py` with a public no-key SEC `company_tickers_mf.json` adapter for ETF/fund CIK, series, class, and ticker reference rows.
+- M20.6 adds top-level Markets `etf` payload state, `/api/funds`, `/api/funds/refresh`, `/api/markets/etf/refresh`, SEC fund registry source/cache/docs attribution, ETF action button, and dense registry/context/source panels.
+- M20.6 keeps ETF quotes disabled behind optional-key/paid provider and local secret-storage gates, and adds no live trading, private API, real balance, margin, leverage, short, derivatives, billing, subscription, CR, cloud, credential, or installed-source capability.
+- M20.7 adds `src/local_terminal/secret_gate.py`, `/api/secret-gate`, governance/help propagation, Settings policy rows, redaction helpers, and tests for the optional-key provider secret gate.
+- M20.7 keeps all secret reads, writes, key entry forms, and persistence disabled; `settings/local_secrets.json` is not created, and broker/exchange private or live-trading use remains explicitly forbidden.
+- M20.8 adds a Backtest strategy catalog with `sma_cross` and `channel_breakout`, exposes catalog metadata through `/api/backtest`, and lets `/api/backtest/run` reject unsupported strategies before writing artifacts.
+- M20.8 Channel Breakout remains a local long/flat closed-candle strategy: signals use candle-close data, fills execute at the next candle open, shorts and live orders are unreachable, and artifacts record strategy id/label/engine plus provider/cache provenance.
+- M20.8 Backtest UI now shows a Strategy Catalog panel, strategy selector, strategy-specific parameter labels, and selected strategy summary output so the route is no longer limited to a single hard-coded runner.
+- M20.9 connects Algo strategy definitions to the Backtest catalog: Algo payloads expose `backtest_strategies`, saved strategies persist a validated `backtest.strategy`, and `/api/algo/run-backtest` passes that engine into Backtest artifacts while rejecting mismatched runtime engine overrides.
+- M20.9 Algo `last_backtest` and `backtest_result.strategy_definition` now record the selected Backtest strategy id/label, making the Algo Builder -> Backtest artifact handoff auditable.
+- M20.9 Algo UI adds a Backtest Strategy selector with strategy-specific parameter labels and verifies the Channel Breakout handoff through Playwright while keeping scanner/live deployment behavior dry-run/signal-only.
+- M20.10 closes the M20.9 strategy extensibility WATCH by adding Backtest catalog parameter metadata, defaults, bounds, constraints, artifact contract, and execution safety metadata before any third strategy family is added.
+- M20.10 Backtest and Algo both validate strategy windows through the same Backtest parameter schema; Backtest manifests now record `strategy_parameter_schema`, `strategy_constraints`, and `strategy_artifact_contract`.
+- M20.10 frontend routes share one offline fallback strategy schema helper and render parameter labels/defaults/bounds from catalog `parameters`, reducing fallback metadata drift between Backtest and Algo.
+- M20.10 hardens repo-local JSON/JSONL writes with unique temp files, short Windows `PermissionError` replace retries, and final-failure temp cleanup after Playwright exposed intermittent cache write locks.
+- M20.10 hardens existing Playwright action waits for Help diagnostics, AI Chat sessions, Quant Lab preview, and QuantLib compute so route workflows wait for sync and POST completion before asserting route-specific results.
+- M20.11 implements the reference-observed Backtest Indicators, Indicator Signals, and Returns Analysis workflow as local closed-candle analytics derived from the same data used by the strategy runner.
+- M20.11 Backtest artifacts now include `signals.csv`, `indicators.json`, `returns_analysis.json`, and `returns_curve.csv`, with manifest `artifact_files` entries and UI tabs for Indicators, Signals, and Returns Analysis.
+- M20.11 keeps Optimize and Walk-Forward gated; no provider, live/private, credential, billing, cloud, margin, leverage, short, derivatives, or installed-source capability was added.
+- M20.12 makes Portfolio consume M20.11 Backtest artifacts when linking a local Backtest run: the active portfolio stores sanitized `backtest_context`, adds a Backtest tab only for backtest-sourced portfolios, and lists signal/indicator/returns artifacts in the linked artifact table.
+- M20.12 treats Backtest manifest artifact paths as untrusted display metadata; Portfolio only links artifact paths that resolve inside the selected Backtest run directory and exist on disk.
+- M20.12 keeps the link read-only and local-artifact-only; no provider, live/private, credential, billing, cloud, margin, leverage, short, derivatives, or installed-source capability was added.
+- M20.13 turns safe Portfolio toolbar actions into local workflows: Performance now renders NAV/period-return rows, Risk exposes local risk context, and `REPORTS` writes `summary.json`, `risk.json`, `performance.csv`, `allocation.csv`, `report.md`, and `manifest.json` under `artifacts/portfolio/reports/{report_id}/`.
+- M20.13 keeps optimizer, live/private, credential, billing, cloud, margin, leverage, short, derivatives, and installed-source paths gated; report artifacts are local-only and read-only.
+- M20.14 makes AI Chat responses more useful while keeping the route local and dry-run: assistant messages now emit a local context brief with focused provider/cache sources, primary cache/latest price context, linked artifact facts, indexed local artifacts, and explicit read-only safety text.
+- M20.14 adds a Context Artifacts panel to AI Chat so the route surfaces indexed local artifacts alongside provider/cache sources instead of only showing a generic provider status.
+- M20.14 keeps managed LLM, cloud account, subscription, CR/credits, private API, credential persistence, broker mutation, ledger mutation, real balance reads, real orders, margin, leverage, short, derivatives, and installed-source paths disabled.
+- M20.15 turns Nodes dry-run output into a local artifact bundle: each dry-run now records `output_summary`, `artifact_files`, `dry_run.json`, `dry_run_report.md`, and `dry_run_manifest.json` under `artifacts/workflows/{workflow_id}/`.
+- M20.15 makes the Nodes property panel show output mode, provider-cache read count, context-source count, and artifact paths so the route surfaces local workflow evidence instead of only a generic plan state.
+- M20.15 keeps Deploy, Execute, runtime mutation, broker routing, credentials, live/private data, real balances, real orders, margin, leverage, short, derivatives, external mutation, cloud, billing, subscription, CR/credits, and installed-source paths disabled.
+- M20.16 turns Code workspace analysis into a local static report workflow: `ANALYZE` saves the current notebook, reads provider/cache and local artifact context, and writes `analysis.json`, `analysis_report.md`, and `analysis_manifest.json` under `artifacts/code_workspace/{notebook_id}/`.
+- M20.16 exposes the latest notebook analysis in the Code side panel with output mode, cell/source/context counts, and artifact paths, while keeping RUN/RUN ALL/kernel execution disabled.
+- M20.16 keeps notebook analysis static and local-only: no kernel process, script execution, external network, broker mutation, credential persistence, real balance read, real order, margin, leverage, short, derivatives, cloud, billing, subscription, CR/credits, or installed-source path was added.
+- M20.17 turns Quant Lab previews into local context bundles: each safe preview now records provider/cache source provenance, local artifact inputs, `context.json`, and `manifest.json` alongside the existing input/output/report/error artifacts.
+- M20.17 exposes the Quant Lab bundle in the route UI with output mode, context source counts, source rows, artifact input rows, and artifact paths so the workflow is not just a module preview shell.
+- M20.17 keeps Quant Lab within the existing safety boundary: no script execution, deep-agent execution, model training, external runtime, external network execution, broker mutation, credential persistence, real balance read, real order, margin, leverage, short, derivatives, cloud, billing, subscription, CR/credits, or installed-source path was added.
+- M20.18 turns QuantLib computations into local provenance bundles: each deterministic calculator result now records provider/cache source provenance, local artifact inputs, `context.json`, and `manifest.json` alongside the existing request/response/report/error artifacts.
+- M20.18 exposes the QuantLib bundle in the route UI with output mode, context source counts, source rows, artifact input rows, and artifact paths so saved calculator outputs show how provider/cache and local artifacts informed the request/response.
+- M20.18 keeps QuantLib within the existing safety boundary: no external QuantLib runtime, external API execution, external network execution, broker mutation, credential persistence, real balance read, real order, margin, leverage, short, derivatives execution, cloud, billing, subscription, CR/credits, or installed-source path was added.
+- M20.19 turns Forum derivative artifacts into an inspectable local lifecycle workflow: `/api/forum` now reports expected/missing thread artifacts, orphan review rows, and repair safety metadata based on `artifacts/forum/forum_state.json`.
+- M20.19 adds a non-destructive Forum repair action that rewrites `post.json`, `replies.json`, and `thread.md` from trusted local Forum state without deleting orphan directories or touching cloud/community surfaces.
+- M20.19 links Forum artifact health into Help diagnostics and the Forum UI, so local support can show artifact health, repairability, missing counts, and destructive-prune disabled status.
+- M20.20 turns Settings governance into a local artifact workflow: `/api/governance/diagnostics` writes `governance.json`, `provider_cache.json`, `source_wall.json`, `manifest.json`, `report.md`, and `error.log` under `artifacts/diagnostics/gov-{run_id}/`.
+- M20.20 surfaces that workflow in Settings with a read-only run action, artifact directory, manifest path, source-wall check status, and explicit safety row proving cache delete and secret writes remain disabled.
+- M20.20 keeps governance diagnostics non-destructive and credential-free: no cache pruning/deletion, no secret reads/writes, no external network, no private API flow, no live orders/balances, no broker mutation, and no installed-source read.
+- M20.21 turns Profile's account-like surface into local usage/build information: governance now exposes `profile_usage` with local artifact root counts, bytes, latest activity timestamp, build channel, and explicit billing/credits/cloud/private identity disabled flags.
+- M20.21 surfaces Profile local usage stats in the route UI with build version/channel, local file counts, latest activity, billing/credits disabled state, content-read safety, and per-artifact-root rows.
+- M20.21 keeps Profile read-only beyond the existing preference save path: usage stats inspect filesystem metadata only, do not read artifact contents, do not scan secrets, do not call network, and do not introduce cloud/billing/account identity.
+- M20.22 turns the global Provider Freshness `REFRESH SOURCES` action into a real public no-key refresh workflow through `/api/providers/refresh-public`, covering crypto ticker/detail, public RSS, SEC fundamentals, DBnomics macro, Treasury rates, ECB FX reference, World Bank commodities, and SEC fund ticker caches.
+- M20.22 writes each global refresh run to `artifacts/diagnostics/provider-refresh-{run_id}/` with `manifest.json`, `results.json`, `providers_after.json`, `report.md`, and `error.log`, then returns the refreshed provider registry plus `last_refresh` summary to the UI.
+- M20.22 keeps optional-key, paid, private broker/live execution, secret read/write, real balance/order, margin, leverage, short, derivatives, billing, subscription, cloud, branding, and installed-source paths disabled; regression coverage proves a crypto detail fallback cannot be counted as Binance ticker refresh success.
+- M20.23 extracts the public provider refresh orchestration from `server.py` into `src/local_terminal/provider_refresh.py` while preserving the legacy synchronous `/api/providers/refresh-public` compatibility endpoint.
+- M20.23 adds a bounded manual job API with `POST /api/providers/refresh-public/jobs` and `GET /api/providers/refresh-public/jobs/{run_id}`; each job writes `job_status.json` alongside `manifest.json`, `results.json`, `providers_after.json`, `report.md`, and `error.log` under `artifacts/diagnostics/provider-refresh-{run_id}/`.
+- M20.23 updates the Provider Freshness strip to start the job, poll status, show queued/running/failed state, reload route workspaces after completion, and keep optional-key, secret persistence, private API, live order, real balance, margin, leverage, short, derivatives, billing, subscription, cloud, branding, and installed-source paths disabled.
+- M20.24 adds `src/local_terminal/local_secrets.py` with a Windows current-user DPAPI store at ignored path `settings/local_secrets.json`, explicit consent phrase, provider allowlist, redacted status, store/delete helpers, and an internal read helper for future reviewed provider adapters.
+- M20.24 adds `/api/local-secrets/status`, `POST /api/local-secrets`, and `DELETE /api/local-secrets/{provider_id}`. The API never returns stored values; `api_secret_value_reads_enabled=false` remains explicit in `/api/secret-gate`, governance, Help, and diagnostics.
+- M20.24 enables Settings key-entry forms only for eligible optional data providers such as `fred_optional_local_key`; `premium_market_data_option` remains blocked by paid/plan gating, and broker/exchange/live-trading credentials remain forbidden by the live-safety contract.
+- M20.25 implements the first optional-key data-provider adapter behind the M20.24 local secret store: FRED `DGS10` series observations are fetched only after `fred_optional_local_key` is stored locally, normalized into source-attributed macro rows, and cached at `market_data/macro/fred/DGS10.json`.
+- M20.25 adds `/api/fred`, `/api/fred/refresh`, and route refresh surfaces for News/Markets. Without a stored local key the runtime returns `key_required` and does not create fixture/default macro values; with a stored key the server reads the sealed value internally and never returns it over HTTP.
+- M20.25 connects cached FRED macro data into research summaries, Markets Index/Regional macro panels, News provider cards, provider freshness, local-state storage paths, and advanced context while keeping paid providers, broker/exchange keys, live orders, real balances, margin, leverage, short, derivatives, billing, subscription, cloud, branding, and installed-source paths blocked.
+- M20.26 adds `src/local_terminal/alpha_vantage_data.py` for Alpha Vantage `GLOBAL_QUOTE` equity quote snapshots behind the existing local secret store. The adapter fetches and normalizes default `AAPL` quote data only when `alphavantage_global_quote_optional_key` is stored locally, then caches it at `market_data/equities/alphavantage/global_quote/AAPL.json`.
+- M20.26 adds `/api/alpha-vantage/equity-quote`, `/api/alpha-vantage/equity-quote/refresh`, and `/api/markets/stocks/quote/refresh`. Without a stored local key the runtime returns `key_required`; it does not create fixture/default stock prices and it is not included in public no-key provider refresh jobs.
+- M20.26 connects cached Alpha Vantage quotes into Markets research summaries, Stocks quote status rows, provider freshness, local-state storage paths, and advanced context while keeping paid/realtime entitlement activation, broker/exchange keys, live orders, real balances, margin, leverage, short, derivatives, billing, subscription, cloud, branding, and installed-source paths blocked.
+- M20.27 extends that Alpha Vantage `GLOBAL_QUOTE` adapter to the Markets ETF workspace for default `SPY` quote snapshots behind the same local secret store. The adapter writes `market_data/equities/alphavantage/global_quote/SPY.json`, exposes `/api/alpha-vantage/etf-quote`, `/api/alpha-vantage/etf-quote/refresh`, and `/api/markets/etf/quote/refresh`, and keeps SEC fund ticker registry as the no-key reference source.
+- M20.27 keeps ETF quotes explicit: no stored local key returns `key_required`, stale/rate-limited cache stays labeled as cache, no fixture/default ETF prices are created, and the optional-key provider remains out of public no-key refresh jobs.
+- M21.1 records the first M21 replication-depth package in `docs/planning/M21_TOOLING_GOVERNANCE_PREFLIGHT.md`, `M21_ROUTE_GAP_REPORT.md`, `M21_PROVIDER_RESEARCH_MATRIX.md`, `M21_OBSERVATION_AND_COMPARISON_PROTOCOL.md`, and `M21_SELECTED_SLICE.md`.
+- M21.1 keeps `.codegraph/` as local tooling by adding it to `.gitignore`; CodeGraph remains a read-only clean-room index for `D:\FinceptLocalTerminal`, not product data or Fincept installed-source inspection.
+- M21.1 adds `src/local_terminal/artifact_lifecycle.py` and `/api/artifact-lifecycle`, exposing metadata-only artifact root lifecycle rows, provider-refresh/governance/help diagnostic run summaries, and read-only safety flags for AI Agent operation.
+- M21.1 connects artifact lifecycle state into governance, Help diagnostics, governance diagnostics bundles, Settings UI, and Playwright coverage while keeping prune/archive/delete/recover/content-read actions disabled.
+- M21.1 does not add a provider adapter, live trading path, private broker/exchange key flow, real balance read, credential output, Fincept branding, installed-source read, or fixture-primary runtime claim.
+- M21.2 records a sanitized live Fincept News observation in `docs/planning/M21_NEWS_GDELT_DOC.md`; no Fincept screenshot is retained because the surrounding shell exposed account/credit toolbar surfaces, and REFRESH/AI controls were not clicked.
+- M21.2 adds no-key GDELT DOC ArticleList metadata to public News refresh, provider-state rows, the `intel` contract with FEEDS/ARTS/CLST/SRCS/SENT/WATCHES counters, topic/source clustering, and selected-item provider/domain/locale metadata.
+- M21.2 public provider refresh now tracks `gdelt_doc_public`; public GDELT HTTP 429 or other degraded behavior falls back through partial, stale, or offline states instead of blocking the route.
+- M21.2 fixes Windows extended-prefix path normalization in local storage after E2E server logs exposed a `\\?\` path mismatch in repo-local artifact paths.
+- M21.2 keeps News metadata-only: no article body storage, no full article page fetch, no GDELT Cloud paid/API-key path, no live/private/broker/trading/credential path, no Fincept branding, no installed-source read, and no fixture-primary runtime claim.
+- M21.3 records Markets Commodities EIA context evidence in `docs/planning/M21_EIA_ENERGY_CONTEXT.md`; a live installed-app observation attempt reached a locked terminal state, so no credentials were entered and no new Fincept screenshot was retained.
+- M21.3 adds `eia_open_data_optional_key` as an optional local-key provider using official EIA Open Data docs, with local cache path `market_data/commodities/eia/energy_series.json` and endpoints `/api/eia/energy`, `/api/eia/energy/refresh`, and `/api/markets/eia/refresh`.
+- M21.3 surfaces EIA WTI, Brent, and Henry Hub context in Markets Commodities through the `ENERGY` action, EIA Energy Context panel, provider freshness, local-state storage paths, and advanced context.
+- M21.3 keeps EIA reference-only: no public no-key refresh, no fixture/default energy values, no paid provider activation, no broker/exchange keys, no live orders, no real balances, no margin, no leverage, no short exposure, no derivatives, no Fincept branding, and no installed-source read.
+- M21.3 also hardens frontend route-loading races found by full Playwright E2E so Backtest/Algo forms and Nodes template loading are not overwritten or opened from fallback state before local API sync.
+- M21.4 records sanitized advanced-route/agent-operation observation in `docs/planning/M21_AGENT_OPERABILITY_CONTRACT.md`; no reference screenshot is retained because account/commercial toolbar surfaces were visible, and only route/action/panel behavior is preserved as text.
+- M21.4 adds `src/local_terminal/agent_contract.py` and `/api/agent-contract`, exposing all 15 routes, primary endpoints, stable route/workspace selectors, safe local actions, disabled safety gates, artifact roots, output contracts, and agent recovery error codes.
+- M21.4 connects the Agent Operability contract into governance, Help diagnostics, governance diagnostics bundles, Settings UI, and Playwright coverage so an AI Agent can discover local workflow boundaries without scraping screenshots.
+- M21.4 keeps the contract read-only and neutral: no provider credential flow, no secret value reads, no cloud/account behavior, no commercial mechanics, no live trading, no broker mutation, no external execution, no destructive artifact action, no Fincept branding, and no installed-source read.
+- M21.4 review follow-up adds FastAPI route-registry parity tests for contracted primary/action endpoints and marks optional data-provider secret setup as a confirmation-required local-only action rather than an autonomous agent credential step.
+- M21.5 records a sanitized installed-app observation limit in `docs/planning/M21_PROVIDER_REFRESH_LIFECYCLE.md`: the app opened to a locked terminal screen, no credential/PIN was entered, no screenshot was retained, and existing sanitized M21 evidence was used only for abstract refresh/status workflow guidance.
+- M21.5 adds `provider_refresh_lifecycle_payload()` and `/api/providers/refresh-public/lifecycle`, classifying queued, running, completed, failed, stale interrupted, manifest-only, and corrupt refresh lifecycle states without mutating job status or provider caches.
+- M21.5 surfaces `refresh_lifecycle` through `/api/providers`, governance, Help diagnostics, governance diagnostic bundles, Settings, the Provider Freshness strip, and the AI Agent contract action `provider_refresh_lifecycle_inspect`.
+- M21.5 keeps recovery non-mutating: no automatic scheduling, no job-status rewrite, no prune/archive/delete/recover mutation, no optional-key refresh, no credential read, no live trading, no broker mutation, and no installed-source read.
+- M21.6 records the Alpha Vantage quote watchlist scope in `docs/planning/M21_ALPHA_VANTAGE_QUOTE_WATCHLIST.md` after refreshing official Alpha Vantage documentation on 2026-05-24. `GLOBAL_QUOTE` remains one ticker per request, while bulk quote access is premium and not implemented.
+- M21.6 expands the existing optional-key Alpha Vantage quote adapter from single `AAPL` and `SPY` snapshots to bounded default watchlists: Stocks `AAPL/MSFT/NVDA` and ETF `SPY/QQQ/IWM`, with capped sanitized agent overrides.
+- M21.6 adds `/api/alpha-vantage/equity-quotes`, `/api/alpha-vantage/equity-quotes/refresh`, `/api/alpha-vantage/etf-quotes`, and `/api/alpha-vantage/etf-quotes/refresh`, while existing Markets `QUOTE` and `ETF QTE` actions now refresh watchlists by default.
+- M21.6 updates provider freshness, Markets research summaries, the AI Agent contract, and Markets UI watchlist panels with row counts, cached/live/stale counts, cache paths, source attribution, and explicit `key_required` states.
+- M21.6 remains optional-key/local-secret-gated: no public no-key Alpha Vantage refresh job, no fixture/default quote primary runtime, no returned credential material, no paid bulk endpoint, no broker/exchange key flow, no real balance read, no live orders, no margin, no leverage, no short exposure, no derivatives, and no installed-source read.
+- M21.7 records the Backtest walk-forward scope in `docs/planning/M21_BACKTEST_WALK_FORWARD.md` using existing sanitized Backtest UI logs plus a non-screenshot installed-app process/window check.
+- M21.7 adds fixed-parameter local walk-forward validation through `/api/backtest/walk-forward`, reusing the same closed-candle data/provenance path as `/api/backtest/run` and writing `walk_forward_summary.json`, `walk_forward_folds.csv`, `walk_forward_folds.json`, `report.md`, `manifest.json`, and provenance artifacts under `artifacts/backtests/{run_id}/`.
+- M21.7 updates the Backtest UI so `Walk-Forward` is a reachable local workflow with a result tab and artifact list, while Optimize and live-style commands remain gated.
+- M21.7 updates the AI Agent contract with `backtest_walk_forward_run` and removes `walk_forward` from disabled Backtest actions because the new workflow is local, fixed-parameter, and closed-candle only.
+- M21.7 records `train_usage: metadata_only_no_fit_no_warmup` so future optimizer work cannot treat these folds as already-trained or indicator-warmed walk-forward analysis.
+- M21.7 does not add optimize, paid data, private provider keys, broker/exchange key flows, live orders, real balance reads, margin, leverage, short exposure, derivatives, Fincept branding, installed-source reads, or fixture-primary runtime claims.
+- M21.14 records the Algo scanner parity slice in `docs/planning/M21_ALGO_PROVIDER_CACHE_SCAN.md` using sanitized Fincept Scanner evidence already stored under `docs/reference/fincept-platform-test/`.
+- M21.14 makes Algo scans provider/cache-attributed and AI-agent-operable: rows now include source/cache state, provider id, cache path, price/change evidence when present, and `actionable: false`.
+- M21.14 mirrors each latest scan into `artifacts/algo/scans/{scan_id}/scan.json`, `scan_report.md`, and `manifest.json`, while `/api/agent-contract` advertises the new `scan_source_contract` and `scan_artifacts` fields.
+- M21.14 keeps the scanner local research-only: no live deployment, broker routing, private provider key flow, real balance, order path, margin, leverage, short exposure, derivatives, paid data activation, Fincept branding, installed-source read, or fixture-primary runtime claim was added.
+- M21.15 records the Algo scan artifact lifecycle slice in `docs/planning/M21_ALGO_SCAN_ARTIFACT_LIFECYCLE.md` and closes the M21.14 scan-artifact writer watch.
+- M21.15 exposes `scan_artifact_health` with expected/present/missing counts, per-file state, non-destructive safety flags, and a repair action for the latest scan mirror.
+- M21.15 adds `/api/algo/scan-artifacts` and `/api/algo/scan-artifacts/repair`; repair rewrites only the expected latest-scan `scan.json`, `scan_report.md`, and `manifest.json` files from normalized local state.
+- M21.15 reports tampered latest-scan state as `invalid_scan_state` instead of collapsing it into `no_scan`; repair rejects invalid state and exposes the validation reason without attempting a write.
+- M21.15 keeps archive, replay, prune, delete, restore, live deployment, broker routing, private keys, paid data, fixture-primary runtime, and installed-source dependencies blocked.
+- M21.16 records the SEC company submissions slice in `docs/planning/M21_SEC_COMPANY_SUBMISSIONS.md` using official SEC EDGAR API documentation and existing sanitized Markets/News observation evidence.
+- M21.16 adds `sec_company_submissions_public` as a public no-key recent-filing metadata provider for Stocks, with cache path `market_data/fundamentals/sec/0000320193/submissions.json`.
+- M21.16 surfaces filing count, latest form/date, accession rows, filing links, provider freshness, public refresh lifecycle results, and `stock_company_filings` in the AI Agent route contract.
+- M21.16 keeps filings reference-only: no real-time quotes, paid data, private keys, broker/exchange key flow, live order path, real balances, margin, leverage, short exposure, derivatives, Fincept branding, installed-source reads, or fixture-primary runtime claim was added.
+- M21.17 records the provider refresh result semantics slice in `docs/planning/M21_PROVIDER_REFRESH_RESULT_SEMANTICS.md`, using safe installed-app Settings observation plus local Provider Freshness browser evidence.
+- M21.17 separates current-run writes from cache availability in provider refresh results: `cache_written_this_run`, `cache_available`, `cache_reused`, and `cache_write_status` are now explicit result fields, while `cache_written` remains a compatibility alias for current-run writes.
+- M21.17 updates public refresh summaries, lifecycle run summaries, refresh reports, Provider Freshness UI text, and the AI Agent Settings contract action `provider_refresh_public_start`.
+- M21.17 keeps manual public no-key refresh bounded: no automatic scheduling, destructive recovery, provider credential handling, optional-key refresh, paid data, live trading, broker/exchange key flow, real balance read, margin, leverage, short exposure, derivatives, Fincept branding, installed-source read, or fixture-primary runtime claim was added.
+- M21.18 separates the Markets Stocks workspace into quote watchlist, SEC company registry, SEC recent filings, and SEC company facts status lanes with AI-agent-readable lane state and Source Contract rows.
+- M21.19 expands the SEC recent filings lane from one default-company submissions cache into bounded `AAPL/MSFT/NVDA` per-CIK caches, filing-symbol summaries, a symbol column in Recent Filings, provider refresh watchlist cache evidence, and `stock_company_filings_watchlist` in the AI Agent contract.
+- M21.19 keeps filings reference-only public metadata and adds no provider signup, credentials, paid data, live trading, broker/exchange keys, real balances, order paths, margin, leverage, short exposure, derivatives, Fincept branding, installed-source reads, commercial copy, or fixture-primary runtime.
+- M21.19 code-review follow-up fixed per-CIK cache summary drift so each submissions cache records its own symbol, latest filing date, and cache path rather than inheriting aggregate watchlist summary fields.
+- M21.20 adds `source_coverage_matrix` to `/api/markets`, covering Stocks, ETF, FX, Commodities, Indexes, Regional, and Bonds/Rates with asset family, runtime role, provider ID, auth mode, state, cache path, retrieval time, row count, TTL, docs URL, quote semantics, gated reason, safe action ID, and next safe action.
+- M21.20 adds `source_coverage_matrix` to the Markets AI Agent route contract and expands Markets action contracts so public no-key refreshes, optional-key quote/context refreshes, and BLS macro refreshes return the matrix.
+- M21.20 adds a dense Markets Provider Entry Gate table with stable `markets-source-coverage-*` selectors and explicit `reference only`, `not quote`, and `quote, not orderable` semantics.
+- M21.20 does not add a new provider adapter, provider signup, key acquisition, paid/bulk data, broker/exchange key flow, live trading, real balances, order paths, margin, leverage, short exposure, derivatives, Fincept branding, installed-source reads, commercial copy, or fixture-primary runtime.
+- M21.21 adds deterministic Markets source-row identity (`markets_source_row_id` + row hash) and a canonical `research_lineage` contract for local Markets -> Algo -> Backtest handoff.
+- M21.21 lets `/api/algo/scan` bind one validated Markets source row to the local scan artifact, scan report, and manifest while keeping results signal-only, non-actionable, and `live_action_enabled: false`.
+- M21.21 lets `/api/algo/run-backtest` consume the latest local scan seed and writes Backtest config/provenance/manifest lineage while keeping closed-candle Backtest data provenance separate from contextual Markets source attribution.
+- M21.21 hardens direct `/api/backtest/run` lineage handling so supplied lineage must match the latest local Algo scan seed before Backtest artifacts are written.
+- M21.21 updates Markets/Algo/Backtest UI and Playwright coverage so the browser evidence demonstrates the Fincept-style local research loop: source row -> scanner -> scan artifacts -> scan-seeded Backtest lineage.
+- M21.21 updates AI Agent contracts and artifact lifecycle metadata for `research_lineage`, `scan_seed`, `source_row_identity`, and metadata-only lineage manifest support.
+- M21.21 does not add a new provider adapter, provider signup, credential/key acquisition, secret-storage changes, paid/bulk data, broker/exchange keys, real balances, live orders, margin, leverage, short exposure, derivatives, optimize/live deployment, archive/prune/delete/restore execution, Fincept branding, installed-source reads, commercial copy, or fixture-primary runtime.
+- M21.22 moves the Markets workspace into `frontend/src/components/markets/MarketsWorkspace.tsx` and extracts source-state UI into `SourceCoverageMatrixPanel`, `ProviderStackPanel`, `SourceContractPanel`, `sourceCoverage`, and `marketText` helpers without changing visible panel order, selectors, provider semantics, or route payload shapes.
+- M21.22 extracts `MarketSourceCoverageRow` and `ResearchLineage` into low-churn frontend route-family type files while preserving `frontend/src/types.ts` re-export compatibility for existing imports.
+- M21.22 adds regression coverage proving Markets source-row hashes track source/cache contract fields while keeping row IDs stable and `backtest_data_eligible` / `live_action_enabled` false.
+- M21.22 fixes a narrow Algo initial-load race so stale `/api/algo` responses cannot overwrite user-edited drafts, and tightens existing E2E selectors/waits for Dashboard offline fallback, Crypto paper order status, and Algo form editing.
+- M21.22 is a behavior-preserving cleanup milestone. It does not add a provider adapter, provider expansion, UI redesign, Fincept branding/assets/source copying, credentials/key acquisition/account creation/secret changes, live orders, broker/exchange key flows, real balances, margin, leverage, short exposure, derivatives, optimize/live controls, archive/prune/delete/restore execution, or fixture-primary runtime.
+- M21.23 continues the Karpathy cleanup by moving provider freshness, governance, artifact lifecycle, local-secret status, profile usage, and AI Agent contract TypeScript types into `frontend/src/types/governance.ts`.
+- M21.23 moves live-safety TypeScript types into `frontend/src/types/liveSafety.ts` and keeps `frontend/src/types.ts` as the stable compatibility barrel for existing `../types` imports.
+- M21.23 is type-only and behavior-preserving: it changes no API paths, backend code, payload fields, data-testid selectors, panel order, provider behavior, local-secret behavior, live-safety behavior, or Fincept-like visible workflow.
+- M21.23 does not add a provider adapter, provider expansion, UI redesign, Fincept branding/assets/source copying, credentials/key acquisition/account creation/secret changes, live orders, broker/exchange key flows, real balances, margin, leverage, short exposure, derivatives, optimize/live controls, archive/prune/delete/restore execution, installed-source reads, commercial copy, or fixture-primary runtime.
+
+## Latest Verification
+
+- M23.68 focused Command Center/ledger gate `.\.venv\Scripts\python.exe -m pytest -q tests\test_m22_command_center_contract.py tests\test_m22_mission_ledger.py --basetemp .omx\pytest-tmp\m23-68-focused-final` -> 8 passed.
+- M23.68 full backend gate `.\.venv\Scripts\python.exe -m pytest -q --basetemp .omx\pytest-tmp\m23-68-full-final-rerun` -> 381 passed.
+- M23.68 full ruff `.\.venv\Scripts\python.exe -m ruff check .` -> passed.
+- M23.68 frontend `npm run lint`, `npm run build`, focused shell E2E, and full `npm run e2e` in `frontend/` -> passed; build kept only the existing Vite chunk-size warning, focused shell E2E passed after exposing final-audit mode and enough requirement rows, and full E2E result was 15 passed.
+- M23.68 source-wall/live-safety/local-secret/provider gate `.\.venv\Scripts\python.exe -m pytest -q tests\test_clean_room_source_wall.py tests\test_m16_live_safety.py tests\test_m20_local_secret_gate.py tests\test_m22_provider_acquisition_gate.py --basetemp .omx\pytest-tmp\m23-68-safety-final` -> 22 passed.
+- M23.68 FastAPI TestClient smoke confirmed Command Center milestone `M23.68 Final non-live completion audit`, milestone path `docs/planning/M23_FINAL_NON_LIVE_COMPLETION_AUDIT.md`, mission-ledger and final-audit status `complete_for_current_non_live_scope`, requirements `12`, completed `12`, partial `0`, unknown `0`, blocked/excluded `5`, provider candidates `21`, approved next `0`, quote closure `closed_until_new_official_provider_gate`, action count `73`, preflight rows `73`, no secret values returned, live trading disabled, and installed-source read disabled.
+- M23.68 added-line credential scan found zero high-risk value matches; `settings/local_secrets.json` did not exist; `git diff --check` passed with Git CRLF working-copy warnings only.
+- M23.67 focused provider/Command Center/ledger gate `.\.venv\Scripts\python.exe -m pytest -q tests\test_m22_provider_acquisition_gate.py tests\test_m22_command_center_contract.py tests\test_m22_mission_ledger.py --basetemp .omx\pytest-tmp\m23-67-focused` -> 10 passed.
+- M23.67 full backend gate `.\.venv\Scripts\python.exe -m pytest -q --basetemp .omx\pytest-tmp\m23-67-full` -> 380 passed.
+- M23.67 full ruff `.\.venv\Scripts\python.exe -m ruff check .` -> passed.
+- M23.67 frontend `npm run lint`, `npm run build`, focused shell E2E, and full `npm run e2e` in `frontend/` -> passed; build kept only the existing Vite chunk-size warning, focused shell E2E passed, and full E2E result was 15 passed.
+- M23.67 source-wall/live-safety/local-secret/provider gate `.\.venv\Scripts\python.exe -m pytest -q tests\test_clean_room_source_wall.py tests\test_m16_live_safety.py tests\test_m20_local_secret_gate.py tests\test_m22_provider_acquisition_gate.py --basetemp .omx\pytest-tmp\m23-67-safety` -> 22 passed.
+- M23.67 FastAPI TestClient smoke confirmed `/api/provider-acquisition-gate` `quote_breadth_closure.mode=non_live_quote_breadth_closure_v1`, status `closed_until_new_official_provider_gate`, candidate count `21`, implemented-or-blocked count `21`, blocked count `5`, approved next count `0`, blocked gate ids for Cboe/IEX/Nasdaq Data Link/JPX-J-Quants/Yahoo Finance, Command Center milestone `M23.67 Provider quote breadth closure`, milestone path `docs/planning/M23_PROVIDER_QUOTE_BREADTH_CLOSURE.md`, action count `73`, preflight rows `73`, and no local secret-store file was created.
+- M23.66 focused provider/Command Center/ledger gate `.\.venv\Scripts\python.exe -m pytest -q tests\test_m22_provider_acquisition_gate.py tests\test_m22_command_center_contract.py tests\test_m22_mission_ledger.py --basetemp .omx\pytest-tmp\m23-66-focused` -> 10 passed.
+- M23.66 full backend gate `.\.venv\Scripts\python.exe -m pytest -q --basetemp .omx\pytest-tmp\m23-66-full` -> 380 passed.
+- M23.66 full ruff `.\.venv\Scripts\python.exe -m ruff check .` -> passed.
+- M23.66 frontend `npm run lint`, `npm run build`, focused shell E2E, focused Code E2E rerun, and full `npm run e2e` final rerun in `frontend/` -> passed; build kept only the existing Vite chunk-size warning, focused shell E2E passed, focused Code E2E rerun passed after the first full E2E run hit a transient Code notebook toast wait, and full E2E final rerun was 15 passed.
+- M23.66 source-wall/live-safety/local-secret/provider gate `.\.venv\Scripts\python.exe -m pytest -q tests\test_clean_room_source_wall.py tests\test_m16_live_safety.py tests\test_m20_local_secret_gate.py tests\test_m22_provider_acquisition_gate.py --basetemp .omx\pytest-tmp\m23-66-safety` -> 22 passed.
+- M23.66 FastAPI TestClient smoke confirmed `/api/provider-acquisition-gate` candidate count `21`, blocked count `5`, Yahoo Finance status `blocked_terms_credentials_gate`, auth `application_id_or_api_credentials_required`, quote semantics `quote_blocked_by_terms_credentials`, `implementation_allowed=false`, `resume_state=backlog_exhausted_needs_research`, Command Center milestone `M23.66 Yahoo Finance provider gate`, milestone path `docs/planning/M23_YAHOO_FINANCE_PROVIDER_GATE.md`, action count `73`, preflight rows `73`, and no local secret-store file was created.
+- M23.66 added-line credential scan found zero high-risk value matches.
+- M23.66 `git diff --check` -> passed with Git CRLF working-copy warnings only.
+- M23.65 focused QuantLib scenario gate `.\.venv\Scripts\python.exe -m pytest -q tests\test_m14_quantlib.py::test_quantlib_option_scenario_grid_preset_writes_local_artifacts tests\test_m14_quantlib.py::test_quantlib_all_quick_action_defaults_compute_locally tests\test_m14_quantlib.py::test_quantlib_initial_payload_reports_module_tree_presets_and_safety --basetemp .omx\pytest-tmp\m23-65-quantlib-focused-rerun` -> 3 passed.
+- M23.65 focused QuantLib/Command Center/ledger gate `.\.venv\Scripts\python.exe -m pytest -q tests\test_m14_quantlib.py tests\test_m22_command_center_contract.py tests\test_m22_mission_ledger.py --basetemp .omx\pytest-tmp\m23-65-focused` -> 21 passed.
+- M23.65 full backend gate `.\.venv\Scripts\python.exe -m pytest -q --basetemp .omx\pytest-tmp\m23-65-full-rerun` -> 380 passed.
+- M23.65 full ruff `.\.venv\Scripts\python.exe -m ruff check .` -> passed.
+- M23.65 frontend `npm run lint`, `npm run build`, focused QuantLib E2E, and full `npm run e2e` in `frontend/` -> passed; build kept only the existing Vite chunk-size warning, focused QuantLib E2E confirmed Scenario Grid preset selection, and full E2E result was 15 passed.
+- M23.65 source-wall/live-safety/local-secret/provider gate `.\.venv\Scripts\python.exe -m pytest -q tests\test_clean_room_source_wall.py tests\test_m16_live_safety.py tests\test_m20_local_secret_gate.py tests\test_m22_provider_acquisition_gate.py --basetemp .omx\pytest-tmp\m23-65-safety` -> 22 passed.
+- M23.65 FastAPI TestClient smoke confirmed `quick_actions=7`, `option-scenario-grid`, response kind `black_scholes_scenario_grid`, scenario count `5`, one complete QuantLib health row, Command Center milestone `M23.65 QuantLib option scenario grid`, milestone path `docs/planning/M23_QUANTLIB_OPTION_SCENARIO_GRID.md`, action count `73`, preflight rows `73`, and no local secret-store file was created.
+- M23.65 added-line credential scan found zero high-risk value matches.
+- M23.65 `git diff --check` -> passed with Git CRLF working-copy warnings only.
+- M23.64 focused provider/Command Center/ledger gate `.\.venv\Scripts\python.exe -m pytest -q tests\test_m22_provider_acquisition_gate.py tests\test_m22_command_center_contract.py tests\test_m22_mission_ledger.py --basetemp .omx\pytest-tmp\m23-64-focused` -> 10 passed.
+- M23.64 full backend gate `.\.venv\Scripts\python.exe -m pytest -q --basetemp .omx\pytest-tmp\m23-64-full` -> 379 passed.
+- M23.64 full ruff `.\.venv\Scripts\python.exe -m ruff check .` -> passed.
+- M23.64 frontend `npm run lint`, `npm run build`, focused shell E2E, and full `npm run e2e` in `frontend/` -> passed; build kept only the existing Vite chunk-size warning, focused shell E2E passed after updating one stale M23.62 Command Center assertion, and full E2E result was 15 passed.
+- M23.64 source-wall/live-safety/local-secret/provider gate `.\.venv\Scripts\python.exe -m pytest -q tests\test_clean_room_source_wall.py tests\test_m16_live_safety.py tests\test_m20_local_secret_gate.py tests\test_m22_provider_acquisition_gate.py --basetemp .omx\pytest-tmp\m23-64-safety` -> 22 passed.
+- M23.64 FastAPI TestClient smoke confirmed `/api/provider-acquisition-gate` candidate count `20`, blocked count `4`, JPX/J-Quants status `blocked_account_plan_gate`, auth `api_key_or_plan_required`, quote semantics `quote_blocked_by_account_plan`, `implementation_allowed=false`, `resume_state=backlog_exhausted_needs_research`, Command Center milestone `M23.64 JPX/J-Quants provider gate`, milestone path `docs/planning/M23_JPX_JQUANTS_PROVIDER_GATE.md`, action count `73`, preflight rows `73`, and no local secret-store file was created.
+- M23.64 added-line credential scan found zero high-risk value matches.
+- M23.64 `git diff --check` -> passed with Git CRLF working-copy warnings only.
+- M23.63 focused RSI smoke `.\.venv\Scripts\python.exe -m pytest -q tests\test_m6_backtest.py::test_rsi_reversion_strategy_writes_artifacts tests\test_m6_backtest.py::test_rsi_reversion_rejects_open_candles_and_prevents_same_candle_fills tests\test_m10_algo.py::test_algo_runs_rsi_reversion_backtest_from_saved_strategy --basetemp .omx\pytest-tmp\m23-63-rsi-focused-rerun` -> 3 passed after fixing the RSI rolling-window helper.
+- M23.63 focused Backtest/Algo/Command Center/ledger gate `.\.venv\Scripts\python.exe -m pytest -q tests\test_m6_backtest.py tests\test_m10_algo.py tests\test_m22_command_center_contract.py tests\test_m22_mission_ledger.py --basetemp .omx\pytest-tmp\m23-63-focused-rerun` -> 64 passed.
+- M23.63 agent operability contract gate `.\.venv\Scripts\python.exe -m pytest -q tests\test_m21_agent_operability_contract.py --basetemp .omx\pytest-tmp\m23-63-agent-contract` -> 5 passed.
+- M23.63 full backend gate `.\.venv\Scripts\python.exe -m pytest -q --basetemp .omx\pytest-tmp\m23-63-full` -> 379 passed.
+- M23.63 full ruff `.\.venv\Scripts\python.exe -m ruff check .` -> passed.
+- M23.63 frontend `npm run lint`, `npm run build`, focused Backtest E2E, and full `npm run e2e` in `frontend/` -> passed; build kept only the existing Vite chunk-size warning, focused Backtest E2E passed after tightening the RSI column assertion to exact matching, and full E2E result was 15 passed after updating stale M23.62 milestone assertions in shell, drawer, and dashboard Command Center checks.
+- M23.63 source-wall/live-safety/local-secret/provider gate `.\.venv\Scripts\python.exe -m pytest -q tests\test_clean_room_source_wall.py tests\test_m16_live_safety.py tests\test_m20_local_secret_gate.py tests\test_m22_provider_acquisition_gate.py --basetemp .omx\pytest-tmp\m23-63-safety` -> 22 passed.
+- M23.63 FastAPI TestClient smoke confirmed Backtest strategy count `6`, `rsi_reversion`, artifact engine `local_rsi_reversion_v1`, indicator keys `exit_sma,rsi,rsi_distance,rsi_entry_threshold,rsi_exit_threshold`, same-candle fills false, strategy live orders false, strategy broker routing false, Command Center current milestone/provenance, action count `73`, preflight rows `73`, and no local secret-store creation.
+- M23.63 added-line credential scan found zero high-risk value matches.
+- M23.63 `git diff --check` -> passed with Git CRLF working-copy warnings only.
+- M23.62 focused Command Center/ledger gate `.\.venv\Scripts\python.exe -m pytest -q tests\test_m22_command_center_contract.py tests\test_m22_mission_ledger.py --basetemp .omx\pytest-tmp\m23-62-focused` -> 7 passed.
+- M23.62 frontend `npm run lint`, `npm run build`, focused shell E2E, focused Code E2E, and full `npm run e2e` in `frontend/` -> passed; build kept only the existing Vite chunk-size warning, focused Code E2E passed after renaming the global drawer button from `OPEN` to `CENTER`, and full E2E result was 15 passed.
+- M23.62 full backend gate `.\.venv\Scripts\python.exe -m pytest -q --basetemp .omx\pytest-tmp\m23-62-full-rerun` -> 376 passed after the first full run timed out while parallelized.
+- M23.62 full ruff `.\.venv\Scripts\python.exe -m ruff check .` -> passed.
+- M23.62 source-wall/live-safety/local-secret/provider gate `.\.venv\Scripts\python.exe -m pytest -q tests\test_clean_room_source_wall.py tests\test_m16_live_safety.py tests\test_m20_local_secret_gate.py tests\test_m22_provider_acquisition_gate.py --basetemp .omx\pytest-tmp\m23-62-safety` -> 22 passed.
+- M23.62 FastAPI TestClient smoke confirmed Command Center current milestone/provenance, timeline rows `10`, action count `73`, preflight rows `73`, disabled live/secret gates, and no local secret-store creation.
+- M23.62 changed-diff secret scan found no personal-account email literals, password/PIN literals, provider-key assignments, protected-value payload assignments, or credential assignments.
+- M23.62 `git diff --check` -> passed with Git CRLF working-copy warnings only.
+- M23.61 focused QuantLib/Agent/Command Center/ledger gate `.\.venv\Scripts\python.exe -m pytest -q tests\test_m14_quantlib.py tests\test_m21_agent_operability_contract.py tests\test_m22_command_center_contract.py tests\test_m22_mission_ledger.py --basetemp .omx\pytest-tmp\m23-61-focused` -> 25 passed after fixing near-zero pricing-error formatting.
+- M23.61 full backend gate `.\.venv\Scripts\python.exe -m pytest -q --basetemp .omx\pytest-tmp\m23-61-full` -> 376 passed.
+- M23.61 full ruff `.\.venv\Scripts\python.exe -m ruff check .` -> passed.
+- M23.61 frontend `npm run lint`, `npm run build`, focused QuantLib E2E, and full `npm run e2e` in `frontend/` -> passed; build kept only the existing Vite chunk-size warning and full E2E result was 15 passed after updating stale M23.60 milestone assertions.
+- M23.61 source-wall/live-safety/local-secret/provider gate `.\.venv\Scripts\python.exe -m pytest -q tests\test_clean_room_source_wall.py tests\test_m16_live_safety.py tests\test_m20_local_secret_gate.py tests\test_m22_provider_acquisition_gate.py --basetemp .omx\pytest-tmp\m23-61-safety` -> 22 passed.
+- M23.61 FastAPI TestClient smoke confirmed `quick_actions=6`, `black_scholes_implied_volatility`, implied volatility `0.200000`, one complete health row, Command Center current milestone/provenance, action count `73`, preflight rows `73`, and no local secret-store creation.
+- M23.61 changed-diff secret scan found no personal-account email literals, password/PIN literals, provider-key assignments, protected-value payload assignments, or credential assignments.
+- M23.61 `git diff --check` -> passed with Git CRLF working-copy warnings only.
+- M23.27 focused AI Chat/agent/command-center gate `.\.venv\Scripts\python.exe -m pytest tests\test_m9_ai_chat.py tests\test_m21_agent_operability_contract.py tests\test_m22_command_center_contract.py -q --basetemp .omx\pytest-tmp\m23-27-focused-initial` -> 16 passed.
+- M23.27 focused docs/ledger gate `.\.venv\Scripts\python.exe -m pytest tests\test_m9_ai_chat.py tests\test_m21_agent_operability_contract.py tests\test_m22_command_center_contract.py tests\test_m22_mission_ledger.py -q --basetemp .omx\pytest-tmp\m23-27-docs` -> 20 passed.
+- M23.27 focused ruff `.\.venv\Scripts\python.exe -m ruff check src\local_terminal\chat.py src\local_terminal\server.py src\local_terminal\agent_contract.py src\local_terminal\command_center.py tests\test_m9_ai_chat.py tests\test_m21_agent_operability_contract.py tests\test_m22_command_center_contract.py` -> passed.
+- M23.27 full backend gate `.\.venv\Scripts\python.exe -m pytest -q --basetemp .omx\pytest-tmp\m23-27-full` with repo-local TEMP/TMP -> 323 passed.
+- M23.27 full ruff `.\.venv\Scripts\python.exe -m ruff check .` -> passed.
+- M23.27 frontend `npm run lint`, `npm run build`, and `npm run e2e` in `frontend/` -> passed; build kept only the existing Vite chunk-size warning and E2E result was 15 passed.
+- M23.27 source-wall/live-safety/local-secret/ledger gate `.\.venv\Scripts\python.exe -m pytest tests\test_clean_room_source_wall.py tests\test_m16_live_safety.py tests\test_m20_local_secret_gate.py tests\test_m22_mission_ledger.py -q --basetemp .omx\pytest-tmp\m23-27-safety` -> 23 passed.
+- M23.27 FastAPI TestClient smoke confirmed embedded AI Chat `context_contract`, dedicated context-contract endpoint, `2` local transcript messages after one dry-run prompt, safety flags denying provider calls / managed LLM / artifact content read / real orders, Command Center current milestone, AI Agent action contract, and no local secret-store creation.
+- M23.27 changed-diff secret scan found no personal-account email literals, password/PIN literals, provider-key assignments, bearer-token values, private-key blocks, protected-value payload assignments, or credential assignments.
+- M23.27 `git diff --check` -> passed with Git CRLF working-copy warnings only.
+- M23.28 focused advanced-output/agent/command-center gate `.\.venv\Scripts\python.exe -m pytest tests\test_m22_advanced_workflow_outputs.py tests\test_m21_agent_operability_contract.py tests\test_m22_command_center_contract.py -q --basetemp .omx\pytest-tmp\m23-28-focused-initial` -> 9 passed.
+- M23.28 focused docs/ledger gate `.\.venv\Scripts\python.exe -m pytest tests\test_m22_advanced_workflow_outputs.py tests\test_m21_agent_operability_contract.py tests\test_m22_command_center_contract.py tests\test_m22_mission_ledger.py -q --basetemp .omx\pytest-tmp\m23-28-docs` -> 13 passed.
+- M23.28 focused ruff `.\.venv\Scripts\python.exe -m ruff check src\local_terminal\advanced_outputs.py src\local_terminal\agent_contract.py src\local_terminal\command_center.py tests\test_m22_advanced_workflow_outputs.py tests\test_m21_agent_operability_contract.py tests\test_m22_command_center_contract.py` -> passed.
+- M23.28 full backend gate `.\.venv\Scripts\python.exe -m pytest -q --basetemp .omx\pytest-tmp\m23-28-full` with repo-local TEMP/TMP -> 323 passed.
+- M23.28 full ruff `.\.venv\Scripts\python.exe -m ruff check .` -> passed.
+- M23.28 frontend `npm run lint`, `npm run build`, and `npm run e2e` in `frontend/` -> passed; build kept only the existing Vite chunk-size warning and E2E result was 15 passed.
+- M23.28 source-wall/live-safety/local-secret/ledger gate `.\.venv\Scripts\python.exe -m pytest tests\test_clean_room_source_wall.py tests\test_m16_live_safety.py tests\test_m20_local_secret_gate.py tests\test_m22_mission_ledger.py -q --basetemp .omx\pytest-tmp\m23-28-safety` -> 23 passed.
+- M23.28 FastAPI TestClient smoke confirmed advanced output packet `io_contract_route_count=5`, Nodes `nodes_advanced_output_io_v1`, IO safety flags denying content read/execution, Command Center current milestone and IO route count, AI Agent action contract, and no local secret-store creation.
+- M23.28 changed-diff secret scan found no personal-account email literals, password/PIN literals, provider-key assignments, bearer-token values, private-key blocks, protected-value payload assignments, or credential assignments.
+- M23.28 `git diff --check` -> passed with Git CRLF working-copy warnings only.
+- M23.29 focused QuantLib gate `.\.venv\Scripts\python.exe -m pytest tests\test_m14_quantlib.py -q` -> 11 passed; first run also exposed a non-blocking Windows temp cleanup warning because the repo-local temp directory was not pre-created.
+- M23.29 focused QuantLib/Command Center gate `.\.venv\Scripts\python.exe -m pytest tests\test_m14_quantlib.py tests\test_m22_command_center_contract.py -q --basetemp .omx\pytest-tmp\m23-29-focused` with repo-local TEMP/TMP -> 13 passed.
+- M23.29 focused docs/ledger gate `.\.venv\Scripts\python.exe -m pytest tests\test_m14_quantlib.py tests\test_m22_command_center_contract.py tests\test_m22_mission_ledger.py -q --basetemp .omx\pytest-tmp\m23-29-docs` with repo-local TEMP/TMP -> 17 passed.
+- M23.29 focused ruff `.\.venv\Scripts\python.exe -m ruff check src\local_terminal\quantlib.py src\local_terminal\command_center.py tests\test_m14_quantlib.py tests\test_m22_command_center_contract.py` -> passed.
+- M23.29 full backend gate `.\.venv\Scripts\python.exe -m pytest -q --basetemp .omx\pytest-tmp\m23-29-full` with repo-local TEMP/TMP -> 324 passed.
+- M23.29 full ruff `.\.venv\Scripts\python.exe -m ruff check .` -> passed.
+- M23.29 frontend `npm run lint`, `npm run build`, and `npm run e2e` in `frontend/` -> passed; build kept only the existing Vite chunk-size warning and E2E result was 15 passed after updating milestone text assertions.
+- M23.29 source-wall/live-safety/local-secret/ledger gate `.\.venv\Scripts\python.exe -m pytest tests\test_clean_room_source_wall.py tests\test_m16_live_safety.py tests\test_m20_local_secret_gate.py tests\test_m22_mission_ledger.py -q --basetemp .omx\pytest-tmp\m23-29-safety` with repo-local TEMP/TMP -> 23 passed.
+- M23.29 FastAPI TestClient smoke confirmed `quick_actions=5`, `bond-duration` response kind `fixed_income_duration`, Command Center current milestone, and no local secret-store creation.
+- M23.29 changed-diff secret scan found no personal-account email literals, password/PIN literals, provider-key assignments, bearer-token values, private-key blocks, protected-value payload assignments, or credential assignments.
+- M23.29 `git diff --check` -> passed with Git CRLF working-copy warnings only.
+- M23.30 focused Code gate `.\.venv\Scripts\python.exe -m pytest tests\test_m12_code_workspace.py -q --basetemp .omx\pytest-tmp\m23-30-code-focused` with repo-local TEMP/TMP -> 9 passed.
+- M23.30 focused Code/Agent/advanced-output/Command Center gate `.\.venv\Scripts\python.exe -m pytest tests\test_m12_code_workspace.py tests\test_m21_agent_operability_contract.py tests\test_m22_advanced_workflow_outputs.py tests\test_m22_command_center_contract.py -q --basetemp .omx\pytest-tmp\m23-30-focused` with repo-local TEMP/TMP -> 18 passed.
+- M23.30 focused ruff `.\.venv\Scripts\python.exe -m ruff check src\local_terminal\code_workspace.py src\local_terminal\agent_contract.py src\local_terminal\advanced_outputs.py src\local_terminal\command_center.py tests\test_m12_code_workspace.py tests\test_m21_agent_operability_contract.py tests\test_m22_advanced_workflow_outputs.py tests\test_m22_command_center_contract.py` -> passed.
+- M23.30 frontend typecheck `npm run lint` in `frontend/` -> passed.
+- M23.30 focused docs/ledger gate `.\.venv\Scripts\python.exe -m pytest tests\test_m12_code_workspace.py tests\test_m21_agent_operability_contract.py tests\test_m22_advanced_workflow_outputs.py tests\test_m22_command_center_contract.py tests\test_m22_mission_ledger.py -q --basetemp .omx\pytest-tmp\m23-30-docs` with repo-local TEMP/TMP -> 22 passed.
+- M23.30 full backend gate `.\.venv\Scripts\python.exe -m pytest -q --basetemp .omx\pytest-tmp\m23-30-full-final` with repo-local TEMP/TMP -> 324 passed.
+- M23.30 full ruff `.\.venv\Scripts\python.exe -m ruff check .` -> passed.
+- M23.30 frontend `npm run lint`, `npm run build`, and `npm run e2e` in `frontend/` -> passed; build kept only the existing Vite chunk-size warning and E2E result was 15 passed.
+- M23.30 source-wall/live-safety/local-secret/ledger gate `.\.venv\Scripts\python.exe -m pytest tests\test_clean_room_source_wall.py tests\test_m16_live_safety.py tests\test_m20_local_secret_gate.py tests\test_m22_mission_ledger.py -q --basetemp .omx\pytest-tmp\m23-30-safety` with repo-local TEMP/TMP -> 23 passed.
+- M23.30 FastAPI TestClient smoke confirmed Code `static_outline` imports/definitions/calls, Command Center current milestone/provenance, and no local secret-store creation.
+- M23.30 changed-diff secret scan found no personal-account email literals, password/PIN literals, provider-key assignments, bearer-token values, private-key blocks, protected-value payload assignments, or credential assignments.
+- M23.30 `git diff --check` -> passed with Git CRLF working-copy warnings only.
+- M23.31 focused ruff `.\.venv\Scripts\python.exe -m ruff check src\local_terminal\fx_data.py src\local_terminal\storage.py src\local_terminal\server.py src\local_terminal\markets.py src\local_terminal\providers.py src\local_terminal\provider_acquisition.py src\local_terminal\provider_refresh.py src\local_terminal\agent_contract.py tests\test_m20_ecb_fx_provider.py tests\test_m21_markets_source_coverage_matrix.py tests\test_m19_provider_registry.py tests\test_m22_provider_acquisition_gate.py tests\test_m21_agent_operability_contract.py tests\test_m2_local_state.py` -> passed.
+- M23.31 focused provider/source/agent/storage gate `.\.venv\Scripts\python.exe -m pytest tests\test_m20_ecb_fx_provider.py tests\test_m21_markets_source_coverage_matrix.py tests\test_m19_provider_registry.py tests\test_m22_provider_acquisition_gate.py tests\test_m21_agent_operability_contract.py tests\test_m2_local_state.py -q --basetemp .omx\pytest-tmp\m23-31-focused` with repo-local TEMP/TMP -> 42 passed.
+- M23.31 focused provider/docs/command-center/ledger gate `.\.venv\Scripts\python.exe -m pytest tests\test_m20_ecb_fx_provider.py tests\test_m21_markets_source_coverage_matrix.py tests\test_m19_provider_registry.py tests\test_m22_provider_acquisition_gate.py tests\test_m21_agent_operability_contract.py tests\test_m2_local_state.py tests\test_m22_command_center_contract.py tests\test_m22_mission_ledger.py -q --basetemp .omx\pytest-tmp\m23-31-docs` with repo-local TEMP/TMP -> 48 passed.
+- M23.31 full backend gate `.\.venv\Scripts\python.exe -m pytest -q --basetemp .omx\pytest-tmp\m23-31-full-final` with repo-local TEMP/TMP -> 325 passed.
+- M23.31 full ruff `.\.venv\Scripts\python.exe -m ruff check .` -> passed.
+- M23.31 frontend `npm run lint`, `npm run build`, and `npm run e2e` in `frontend/` -> passed; build kept only the existing Vite chunk-size warning and E2E result was 15 passed.
+- M23.31 source-wall/live-safety/local-secret/ledger gate `.\.venv\Scripts\python.exe -m pytest tests\test_clean_room_source_wall.py tests\test_m16_live_safety.py tests\test_m20_local_secret_gate.py tests\test_m22_mission_ledger.py -q --basetemp .omx\pytest-tmp\m23-31-safety` with repo-local TEMP/TMP -> 23 passed.
+- M23.31 live no-write BoC normalization smoke parsed provider `bank_of_canada_valet_fx_reference_public`, date `2026-05-25`, 5 rows, and first row `CHF/CAD reference_only=True`.
+- M23.31 FastAPI TestClient smoke confirmed `/api/command-center` returns `M23.31 Bank of Canada FX reference` and `/api/markets` exposes FX `cad_reference_rates` for `bank_of_canada_valet_fx_reference_public`.
+- M23.31 changed-diff secret scan found only historical verification text and negative `api_key=` style response assertions; no credential values, provider-key assignments, bearer-token values, personal credential literals, PIN assignments, or private-key blocks were added.
+- M23.31 `git diff --check` -> passed with Git CRLF working-copy warnings only.
+- M23.32 focused ruff `.\.venv\Scripts\python.exe -m ruff check src\local_terminal\backtest.py src\local_terminal\command_center.py tests\test_m6_backtest.py tests\test_m10_algo.py tests\test_m22_command_center_contract.py tests\test_m22_mission_ledger.py` -> passed.
+- M23.32 focused Backtest/Algo/Command Center/docs gate `.\.venv\Scripts\python.exe -m pytest tests\test_m6_backtest.py tests\test_m10_algo.py tests\test_m22_command_center_contract.py tests\test_m22_mission_ledger.py -q --basetemp .omx\pytest-tmp\m23-32-focused` with repo-local TEMP/TMP -> 52 passed.
+- M23.32 full backend gate `.\.venv\Scripts\python.exe -m pytest -q --basetemp .omx\pytest-tmp\m23-32-full-final-rerun` with repo-local TEMP/TMP -> 328 passed.
+- M23.32 full ruff `.\.venv\Scripts\python.exe -m ruff check .` -> passed.
+- M23.32 frontend `npm run lint`, `npm run build`, and `npm run e2e` in `frontend/` -> passed; build kept only the existing Vite chunk-size warning and E2E result was 15 passed after tightening the new `lower_band` header assertion to exact matching.
+- M23.32 source-wall/live-safety/local-secret/ledger gate `.\.venv\Scripts\python.exe -m pytest tests\test_clean_room_source_wall.py tests\test_m16_live_safety.py tests\test_m20_local_secret_gate.py tests\test_m22_mission_ledger.py -q --basetemp .omx\pytest-tmp\m23-32-safety` with repo-local TEMP/TMP -> 23 passed.
+- M23.32 FastAPI TestClient smoke confirmed `/api/backtest` exposes `volatility_reversion`, `/api/backtest/run` and `/api/algo/run-backtest` both write `local_volatility_reversion_v1`, `/api/command-center` returns `M23.32 Backtest volatility reversion`, and no local secret-store directory is created.
+- M23.32 changed-diff secret scan found only historical verification text and pre-existing negative secret-blocking test fixtures; no credential values, provider-key assignments, bearer-token values, personal credential literals, PIN assignments, or private-key blocks were added.
+- M23.32 `git diff --check` -> passed with Git CRLF working-copy warnings only.
+- M23.33 focused ruff `.\.venv\Scripts\python.exe -m ruff check src\local_terminal\portfolio.py src\local_terminal\server.py src\local_terminal\agent_contract.py src\local_terminal\command_center.py tests\test_m7_portfolio.py tests\test_m21_agent_operability_contract.py tests\test_m22_command_center_contract.py` -> passed.
+- M23.33 focused Portfolio/agent/Command Center gate `.\.venv\Scripts\python.exe -m pytest tests\test_m7_portfolio.py tests\test_m21_agent_operability_contract.py tests\test_m22_command_center_contract.py -q --basetemp .omx\pytest-tmp\m23-33-focused` with repo-local TEMP/TMP -> 24 passed.
+- M23.33 focused docs/ledger gate `.\.venv\Scripts\python.exe -m pytest tests\test_m7_portfolio.py tests\test_m21_agent_operability_contract.py tests\test_m22_command_center_contract.py tests\test_m22_mission_ledger.py -q --basetemp .omx\pytest-tmp\m23-33-docs-focused` with repo-local TEMP/TMP -> 28 passed.
+- M23.33 full backend gate `.\.venv\Scripts\python.exe -m pytest -q --basetemp .omx\pytest-tmp\m23-33-full-final` with repo-local TEMP/TMP -> 330 passed.
+- M23.33 full ruff `.\.venv\Scripts\python.exe -m ruff check .` -> passed.
+- M23.33 frontend `npm run lint`, `npm run build`, and `npm run e2e` in `frontend/` -> passed; build kept only the existing Vite chunk-size warning and E2E result was 15 passed after updating the Command Center action count to 56.
+- M23.33 source-wall/live-safety/local-secret/ledger gate `.\.venv\Scripts\python.exe -m pytest tests\test_clean_room_source_wall.py tests\test_m16_live_safety.py tests\test_m20_local_secret_gate.py tests\test_m22_mission_ledger.py -q --basetemp .omx\pytest-tmp\m23-33-safety` with repo-local TEMP/TMP -> 23 passed.
+- M23.33 FastAPI TestClient smoke confirmed `/api/portfolio/reports` returns one complete report row, `/api/portfolio` embeds `report_index`, `/api/command-center` returns `M23.33 Portfolio report index`, and no local secret-store directory is created.
+- M23.33 changed-diff secret scan found historical verification text, negative `api_key=` response assertions, and the pre-existing Portfolio denylist term `pin:`; no credential values, provider-key assignments, bearer-token values, personal credential literals, PIN assignments, or private-key blocks were added.
+- M23.33 `git diff --check` -> passed with Git CRLF working-copy warnings only.
+- M23.34 focused ruff over Finnhub adapter, server, Markets, providers, storage, agent contract, provider acquisition, Command Center, advanced context, and focused tests -> passed.
+- M23.34 focused provider/source/agent/docs gate `.\.venv\Scripts\python.exe -m pytest tests\test_m23_finnhub_quote_provider.py tests\test_m21_agent_operability_contract.py tests\test_m22_command_center_contract.py tests\test_m22_provider_acquisition_gate.py tests\test_m19_provider_registry.py tests\test_m2_local_state.py tests\test_m21_markets_source_coverage_matrix.py tests\test_m22_mission_ledger.py -q --basetemp .omx\pytest-tmp\m23-34-focused-2` with repo-local TEMP/TMP -> 48 passed.
+- M23.34 full backend gate `.\.venv\Scripts\python.exe -m pytest -q --basetemp .omx\pytest-tmp\m23-34-full` with repo-local TEMP/TMP -> 335 passed.
+- M23.34 full ruff `.\.venv\Scripts\python.exe -m ruff check .` -> passed.
+- M23.34 frontend `npm run lint`, `npm run build`, and `npm run e2e` in `frontend/` -> passed; build kept only the existing Vite chunk-size warning and E2E result was 15 passed after updating the Command Center milestone/action count.
+- M23.34 source-wall/live-safety/local-secret/ledger gate `.\.venv\Scripts\python.exe -m pytest tests\test_clean_room_source_wall.py tests\test_m16_live_safety.py tests\test_m20_local_secret_gate.py tests\test_m22_mission_ledger.py -q --basetemp .omx\pytest-tmp\m23-34-safety` with repo-local TEMP/TMP -> 23 passed.
+- M23.34 FastAPI TestClient smoke confirmed Finnhub, Markets, agent-contract, providers, provider-acquisition, Command Center, and local-state endpoints return 200; Finnhub stays `key_required`, source coverage stays `quote_not_orderable`, AI Agent action count is 57, provider count is 30, and no local secret-store file is created.
+- M23.34 exact sensitive-literal and credential-assignment scans found no personal-account literals, provider-key assignments, auth-header token values, private-key blocks, protected-value payload assignments, or credential assignments.
+- M23.34 `git diff --check` -> passed with Git CRLF working-copy warnings only.
+- M23.35 focused ruff over advanced outputs, Command Center, agent contract, mission-ledger test, and focused tests -> passed.
+- M23.35 focused advanced-output/Command Center/agent/docs gate `.\.venv\Scripts\python.exe -m pytest tests\test_m22_advanced_workflow_outputs.py tests\test_m22_command_center_contract.py tests\test_m21_agent_operability_contract.py tests\test_m22_mission_ledger.py -q --basetemp .omx\pytest-tmp\m23-35-focused-2` with repo-local TEMP/TMP -> 14 passed.
+- M23.35 full backend gate `.\.venv\Scripts\python.exe -m pytest -q --basetemp .omx\pytest-tmp\m23-35-full` with repo-local TEMP/TMP -> 336 passed.
+- M23.35 full ruff `.\.venv\Scripts\python.exe -m ruff check .` -> passed.
+- M23.35 source-wall/live-safety/local-secret/ledger gate `.\.venv\Scripts\python.exe -m pytest tests\test_clean_room_source_wall.py tests\test_m16_live_safety.py tests\test_m20_local_secret_gate.py tests\test_m22_mission_ledger.py -q --basetemp .omx\pytest-tmp\m23-35-safety` -> 23 passed.
+- M23.35 frontend `npm run lint`, `npm run build`, and `npm run e2e` in `frontend/` -> passed; build kept only the existing Vite chunk-size warning and E2E result was 15 passed.
+- M23.35 FastAPI TestClient smoke confirmed `/api/advanced-workflows/output-packet` now reports `routes_with_outputs=0`, `routes_health_missing=5`, `state_artifact_file_count=2`, and Command Center current milestone `M23.35 Advanced output state-file classification`; `quant_lab_state.json` and `quantlib_state.json` are state artifacts, not partial outputs.
+- M23.35 exact sensitive-literal and credential-assignment scans found no personal-account literals, password/PIN literals, provider-key assignments, bearer-token values, private-key blocks, or credential assignments.
+- M23.35 `git diff --check` -> passed with Git CRLF working-copy warnings only.
+- M23.36 focused ruff over provider acquisition, Command Center, and focused tests -> passed.
+- M23.36 focused provider-gate/Command Center/ledger gate `.\.venv\Scripts\python.exe -m pytest tests\test_m22_provider_acquisition_gate.py tests\test_m22_command_center_contract.py tests\test_m22_mission_ledger.py -q --basetemp .omx\pytest-tmp\m23-36-focused-1` -> 9 passed.
+- M23.36 full backend gate `.\.venv\Scripts\python.exe -m pytest -q --basetemp .omx\pytest-tmp\m23-36-full` with repo-local TEMP/TMP -> 336 passed.
+- M23.36 full ruff `.\.venv\Scripts\python.exe -m ruff check .` -> passed.
+- M23.36 source-wall/live-safety/local-secret/provider-gate gate `.\.venv\Scripts\python.exe -m pytest tests\test_clean_room_source_wall.py tests\test_m16_live_safety.py tests\test_m20_local_secret_gate.py tests\test_m22_mission_ledger.py tests\test_m22_provider_acquisition_gate.py -q --basetemp .omx\pytest-tmp\m23-36-safety` -> 26 passed.
+- M23.36 frontend `npm run lint`, `npm run build`, and `npm run e2e` in `frontend/` -> passed; build kept only the existing Vite chunk-size warning and E2E result was 15 passed.
+- M23.36 FastAPI TestClient smoke confirmed `/api/provider-acquisition-gate` reports `candidate_count=13`, `implemented_count=12`, `blocked_count=1`, `next_candidate_id=''`, Cboe `status=blocked_official_terms`, and Command Center current milestone `M23.36 Cboe delayed quote gate`.
+- M23.36 exact sensitive-literal and credential-assignment scans found no personal-account literals, password/PIN literals, provider-key assignments, bearer-token values, private-key blocks, or credential assignments.
+- M23.36 `git diff --check` -> passed with Git CRLF working-copy warnings only.
+- M23.37 focused ruff over FMP adapter, server, Markets, providers, storage, agent contract, provider acquisition, advanced context, Command Center, and focused tests -> passed.
+- M23.37 focused provider/source/agent/docs gate `.\.venv\Scripts\python.exe -m pytest tests\test_m23_fmp_quote_provider.py tests\test_m21_agent_operability_contract.py tests\test_m21_markets_source_coverage_matrix.py tests\test_m19_provider_registry.py tests\test_m22_provider_acquisition_gate.py tests\test_m2_local_state.py tests\test_m20_local_secret_gate.py tests\test_m22_command_center_contract.py tests\test_m22_mission_ledger.py -q --basetemp .omx\pytest-tmp\m23-37-focused-1` with repo-local TEMP/TMP -> 55 passed.
+- M23.37 full backend gate `.\.venv\Scripts\python.exe -m pytest -q --basetemp .omx\pytest-tmp\m23-37-full-2` with repo-local TEMP/TMP -> 341 passed.
+- M23.37 full ruff `.\.venv\Scripts\python.exe -m ruff check .` -> passed.
+- M23.37 source-wall/live-safety/local-secret/provider-gate gate `.\.venv\Scripts\python.exe -m pytest tests\test_clean_room_source_wall.py tests\test_m16_live_safety.py tests\test_m20_local_secret_gate.py tests\test_m22_mission_ledger.py tests\test_m22_provider_acquisition_gate.py -q --basetemp .omx\pytest-tmp\m23-37-safety` -> 26 passed.
+- M23.37 frontend `npm run lint`, `npm run build`, and `npm run e2e` in `frontend/` -> passed; build kept only the existing Vite chunk-size warning and E2E result was 15 passed after the `BRIEF` test selector was stabilized to exact matching.
+- M23.37 FastAPI TestClient smoke confirmed FMP, Markets, agent-contract, providers, provider-acquisition, Command Center, and local-state endpoints return 200; FMP stays `key_required`, source coverage stays `quote_not_orderable`, `live_action_enabled=false`, provider count is 31, candidate count is 14, implemented count is 13, AI Agent action count is 58, and no local secret-store file is created.
+- M23.37 exact sensitive-literal and changed-diff secret-assignment scans found no personal-account literals, password/PIN literals, provider-key assignments, bearer-token values, private-key blocks, protected-value payload assignments, or credential assignments in changed lines; broad repo matches are existing synthetic tests/negative assertions.
+- M23.37 `git diff --check` -> passed with Git CRLF working-copy warnings only.
+- M23.38 focused provider/command-center/ledger gate `.\.venv\Scripts\python.exe -m pytest tests\test_m22_provider_acquisition_gate.py tests\test_m22_command_center_contract.py tests\test_m22_mission_ledger.py -q --basetemp .omx\pytest-tmp\m23-38-focused-initial` -> 9 passed.
+- M23.38 focused ruff over provider acquisition, Command Center, and focused tests -> passed.
+- M23.38 frontend `npm run lint`, `npm run build`, and `npm run e2e` in `frontend/` -> passed; build kept only the existing Vite chunk-size warning and E2E result was 15 passed.
+- M23.38 source-wall/live-safety/local-secret/provider-gate gate `.\.venv\Scripts\python.exe -m pytest tests\test_clean_room_source_wall.py tests\test_m16_live_safety.py tests\test_m20_local_secret_gate.py tests\test_m22_mission_ledger.py tests\test_m22_provider_acquisition_gate.py -q --basetemp .omx\pytest-tmp\m23-38-safety-initial` -> 26 passed.
+- M23.38 full backend gate `.\.venv\Scripts\python.exe -m pytest -q --basetemp .omx\pytest-tmp\m23-38-full` -> 341 passed.
+- M23.38 full ruff `.\.venv\Scripts\python.exe -m ruff check .` -> passed.
+- M23.38 FastAPI TestClient smoke confirmed provider acquisition `resume_state=backlog_exhausted_needs_research`, `implementation_allowed=false`, `requires_official_research=true`, candidate count is 14, implemented count is 13, blocked count is 1, Command Center current milestone is `M23.38 Provider acquisition resume contract`, the provider-gate timeline event is present, and no local secret-store file is created.
+- M23.38 staged changed-diff secret-assignment scan found no provider-key assignments, bearer-token values, private-key blocks, protected-value payload assignments, or credential assignments in changed lines.
+- M23.38 `git diff --check` -> passed with Git CRLF working-copy warnings only.
+- M23.39 focused Backtest/agent/Command Center gate `.\.venv\Scripts\python.exe -m pytest tests\test_m6_backtest.py tests\test_m21_agent_operability_contract.py tests\test_m22_command_center_contract.py -q --basetemp .omx\pytest-tmp\m23-39-focused` -> 33 passed.
+- M23.39 focused ruff over Backtest readiness, server, agent contract, Command Center, and focused tests -> passed.
+- M23.39 frontend `npm run build` in `frontend/` -> passed with the existing Vite chunk-size warning.
+- M23.39 frontend `npm run lint` -> passed; `npm run e2e` -> 15 passed after updating stale M23.38 milestone assertions.
+- M23.39 source-wall/live-safety/local-secret/ledger gate `.\.venv\Scripts\python.exe -m pytest tests\test_clean_room_source_wall.py tests\test_m16_live_safety.py tests\test_m20_local_secret_gate.py tests\test_m22_mission_ledger.py -q --basetemp .omx\pytest-tmp\m23-39-safety` -> 23 passed.
+- M23.39 full backend gate `.\.venv\Scripts\python.exe -m pytest -q --basetemp .omx\pytest-tmp\m23-39-full-final` -> 343 passed.
+- M23.39 full ruff `.\.venv\Scripts\python.exe -m ruff check .` -> passed.
+- M23.39 FastAPI TestClient coverage confirmed `/api/backtest/data-readiness` and embedded `/api/backtest.data_readiness` report selected `BTCUSDT 15m` deterministic fallback readiness, safe `backtest_run_closed_candle` / `markets_refresh_public` recommended actions, no artifact writes, no provider refresh, and no local secret-store creation.
+- M23.39 local smoke confirmed backend health 200, frontend root 200, live `/api/backtest/data-readiness` payload `backtest_data_readiness_v1`, and browser-visible Backtest selector `backtest-data-readiness` with shell milestone `M23.39 Backtest data readiness`.
+- M23.40 focused Algo/agent/Command Center gate `.\.venv\Scripts\python.exe -m pytest tests\test_m10_algo.py tests\test_m21_agent_operability_contract.py tests\test_m22_command_center_contract.py -q --basetemp .omx\pytest-tmp\m23-40-focused-initial` -> 31 passed.
+- M23.40 focused ruff over Algo readiness, server, agent contract, Command Center, and focused tests -> passed.
+- M23.40 frontend `npm run build` in `frontend/` -> passed with the existing Vite chunk-size warning.
+- M23.40 frontend `npm run lint` -> passed.
+- M23.40 frontend `npm run e2e` -> 15 passed after updating stale M23.39 shell milestone/action-count assertions to M23.40 / 60 actions.
+- M23.40 docs/ledger gate `.\.venv\Scripts\python.exe -m pytest tests\test_m10_algo.py tests\test_m21_agent_operability_contract.py tests\test_m22_command_center_contract.py tests\test_m22_mission_ledger.py -q --basetemp .omx\pytest-tmp\m23-40-docs` -> 35 passed.
+- M23.40 source-wall/live-safety/local-secret/ledger gate `.\.venv\Scripts\python.exe -m pytest tests\test_clean_room_source_wall.py tests\test_m16_live_safety.py tests\test_m20_local_secret_gate.py tests\test_m22_mission_ledger.py -q --basetemp .omx\pytest-tmp\m23-40-safety-rerun` -> 23 passed after rerunning sequentially outside a concurrent Playwright `frontend/test-results` file race.
+- M23.40 full backend gate `.\.venv\Scripts\python.exe -m pytest -q --basetemp .omx\pytest-tmp\m23-40-full` -> 345 passed.
+- M23.40 full ruff `.\.venv\Scripts\python.exe -m ruff check .` -> passed.
+- M23.40 FastAPI TestClient coverage confirmed `/api/algo/scan-readiness` and embedded `/api/algo.scan_readiness` report no-active-strategy and provider-cache-ready states, safe action recommendations, no scan execution, no provider refresh, no scan artifact writes, and no local secret-store creation.
+- M23.40 local smoke confirmed backend health 200, frontend root 200, live `/api/algo/scan-readiness` payload `algo_scan_readiness_v1`, and browser-visible Algo selector `algo-scan-readiness` with shell milestone `M23.40 Algo scan readiness`.
+- M23.41 focused News/agent/Command Center gate `.\.venv\Scripts\python.exe -m pytest tests\test_m8_news.py tests\test_m21_agent_operability_contract.py tests\test_m22_command_center_contract.py -q --basetemp .omx\pytest-tmp\m23-41-focused-initial` -> 19 passed.
+- M23.41 focused ruff over News topic map, server, agent contract, Command Center, and focused tests -> passed.
+- M23.41 frontend `npm run lint` -> passed.
+- M23.41 docs/ledger gate `.\.venv\Scripts\python.exe -m pytest tests\test_m8_news.py tests\test_m21_agent_operability_contract.py tests\test_m22_command_center_contract.py tests\test_m22_mission_ledger.py -q --basetemp .omx\pytest-tmp\m23-41-docs` -> 23 passed.
+- M23.41 frontend `npm run build` -> passed with the existing Vite chunk-size warning.
+- M23.41 frontend `npm run e2e` -> 15 passed.
+- M23.41 source-wall/live-safety/local-secret/ledger gate `.\.venv\Scripts\python.exe -m pytest tests\test_clean_room_source_wall.py tests\test_m16_live_safety.py tests\test_m20_local_secret_gate.py tests\test_m22_mission_ledger.py -q --basetemp .omx\pytest-tmp\m23-41-safety` -> 23 passed.
+- M23.41 full backend gate `.\.venv\Scripts\python.exe -m pytest -q --basetemp .omx\pytest-tmp\m23-41-full` -> 347 passed.
+- M23.41 full ruff `.\.venv\Scripts\python.exe -m ruff check .` -> passed.
+- M23.41 local smoke confirmed backend health 200, frontend root 200, live `/api/news/topic-entity-map` payload `news_topic_entity_map_v1`, and browser-visible News selector `news-topic-entity-map` with shell milestone `M23.41 News topic/entity map`.
+- M23.42 focused provider/Command Center/ledger gate `.\.venv\Scripts\python.exe -m pytest tests\test_m22_provider_acquisition_gate.py tests\test_m22_command_center_contract.py tests\test_m22_mission_ledger.py -q --basetemp .omx\pytest-tmp\m23-42-focused-rerun` -> 9 passed.
+- M23.42 focused ruff over provider acquisition, Command Center, and focused tests -> passed.
+- M23.42 source-wall/live-safety/local-secret/provider-gate gate `.\.venv\Scripts\python.exe -m pytest tests\test_clean_room_source_wall.py tests\test_m16_live_safety.py tests\test_m20_local_secret_gate.py tests\test_m22_mission_ledger.py tests\test_m22_provider_acquisition_gate.py -q --basetemp .omx\pytest-tmp\m23-42-safety` -> 26 passed.
+- M23.42 frontend `npm run lint`, `npm run build`, and `npm run e2e` in `frontend/` -> passed; build kept only the existing Vite chunk-size warning and E2E result was 15 passed.
+- M23.42 full backend gate `.\.venv\Scripts\python.exe -m pytest -q --basetemp .omx\pytest-tmp\m23-42-full` with repo-local TEMP/TMP -> 347 passed.
+- M23.42 full ruff `.\.venv\Scripts\python.exe -m ruff check .` -> passed.
+- M23.42 FastAPI TestClient smoke confirmed `/api/provider-acquisition-gate` reports `candidate_count=15`, `public_no_key_count=9`, `optional_local_key_count=5`, `implemented_count=13`, `blocked_count=2`, `resume_state=backlog_exhausted_needs_research`, `implementation_allowed=false`, IEX `status=blocked_official_terms`, IEX `auth_mode=subscriber_agreement_required`, and Command Center current milestone `M23.42 IEX TOPS market data gate`.
+- M23.42 exact personal-account/password/PIN scan found no literal matches for the provided Gmail, password, or PIN in changed files; broader changed-file secret scan found only historical verification text and negative `api_key=`/`protected_value`/`private_key` assertions.
+- M23.42 `git diff --check` -> passed with Git CRLF working-copy warnings only.
+- M23.43 focused provider/Command Center/ledger gate after final doc updates `.\.venv\Scripts\python.exe -m pytest tests\test_m22_provider_acquisition_gate.py tests\test_m22_command_center_contract.py tests\test_m22_mission_ledger.py -q --basetemp .omx\pytest-tmp\m23-43-docs-final` -> 9 passed.
+- M23.43 frontend `npm run lint`, `npm run build`, and `npm run e2e` in `frontend/` -> passed; build kept only the existing Vite chunk-size warning and E2E result was 15 passed with IEX/Cboe Command Center candidate-row assertions.
+- M23.43 source-wall/live-safety/local-secret/provider-gate gate `.\.venv\Scripts\python.exe -m pytest tests\test_clean_room_source_wall.py tests\test_m16_live_safety.py tests\test_m20_local_secret_gate.py tests\test_m22_mission_ledger.py tests\test_m22_provider_acquisition_gate.py -q --basetemp .omx\pytest-tmp\m23-43-safety` -> 26 passed.
+- M23.43 full backend gate `.\.venv\Scripts\python.exe -m pytest -q --basetemp .omx\pytest-tmp\m23-43-full` -> 347 passed.
+- M23.43 full ruff `.\.venv\Scripts\python.exe -m ruff check .` -> passed.
+- M23.43 FastAPI TestClient smoke confirmed Command Center current milestone `M23.43 Provider gate candidate detail`, milestone path `docs/planning/M23_PROVIDER_GATE_CANDIDATE_DETAIL.md`, `/api/provider-acquisition-gate` candidate rows surfaced through Command Center with `candidate_count=15`, `blocked_count=2`, `implementation_allowed=false`, IEX `status=blocked_official_terms`, IEX `auth_mode=subscriber_agreement_required`, Cboe `status=blocked_official_terms`, and `live_order` present in stop gates.
+- M23.43 exact personal-account/password/PIN scan found no literal matches for the provided Gmail, password, or PIN in changed files; broader changed-file secret scan found only historical verification text and negative `api_key=`/`protected_value`/`private_key` assertions.
+- M23.43 `git diff --check` -> passed with Git CRLF working-copy warnings only.
+- M23.44 focused Backtest/Algo/Command Center/docs gate `.\.venv\Scripts\python.exe -m pytest tests\test_m6_backtest.py tests\test_m10_algo.py tests\test_m22_command_center_contract.py tests\test_m22_mission_ledger.py -q --basetemp .omx\pytest-tmp\m23-44-docs-final` -> 59 passed.
+- M23.44 focused initial Backtest/Algo/Command Center gate `.\.venv\Scripts\python.exe -m pytest tests\test_m6_backtest.py tests\test_m10_algo.py tests\test_m22_command_center_contract.py -q --basetemp .omx\pytest-tmp\m23-44-focused-initial` -> 55 passed.
+- M23.44 frontend `npm run lint`, `npm run build`, and `npm run e2e` in `frontend/` -> passed; build kept only the existing Vite chunk-size warning and E2E result was 15 passed with Backtest UI momentum-continuation indicator assertions.
+- M23.44 source-wall/live-safety/local-secret/Backtest/Algo gate `.\.venv\Scripts\python.exe -m pytest tests\test_clean_room_source_wall.py tests\test_m16_live_safety.py tests\test_m20_local_secret_gate.py tests\test_m22_mission_ledger.py tests\test_m6_backtest.py tests\test_m10_algo.py -q --basetemp .omx\pytest-tmp\m23-44-safety` -> 76 passed.
+- M23.44 full backend gate `.\.venv\Scripts\python.exe -m pytest -q --basetemp .omx\pytest-tmp\m23-44-full` -> 350 passed.
+- M23.44 full ruff `.\.venv\Scripts\python.exe -m ruff check .` -> passed.
+- M23.44 FastAPI TestClient smoke confirmed Command Center current milestone `M23.44 Backtest momentum continuation`, milestone path `docs/planning/M23_BACKTEST_MOMENTUM_CONTINUATION.md`, Backtest strategy catalog `strategy_count=5`, `has_momentum=true`, artifact engine `local_momentum_continuation_v1`, `strategy_label=Momentum Continuation`, indicator keys `exit_sma`, `momentum_reference`, and `momentum_return_pct`, and `live_orders=false`.
+- M23.44 exact personal-account/password/PIN scan found no literal matches for the provided Gmail, password, or PIN in changed files; broader changed-file secret scan found only historical verification text, negative response assertions, and existing unsafe-input test strings.
+- M23.44 `git diff --check` -> passed with Git CRLF working-copy warnings only.
+- M23.26 focused Markets/agent/command-center gate `.\.venv\Scripts\python.exe -m pytest tests\test_m21_markets_source_coverage_matrix.py tests\test_m21_agent_operability_contract.py tests\test_m22_command_center_contract.py -q --basetemp .omx\pytest-tmp\m23-26-focused-initial` -> 17 passed.
+- M23.26 focused docs/ledger gate `.\.venv\Scripts\python.exe -m pytest tests\test_m21_markets_source_coverage_matrix.py tests\test_m21_agent_operability_contract.py tests\test_m22_command_center_contract.py tests\test_m22_mission_ledger.py -q --basetemp .omx\pytest-tmp\m23-26-docs` -> 21 passed.
+- M23.26 focused ruff `.\.venv\Scripts\python.exe -m ruff check src\local_terminal\markets.py src\local_terminal\server.py src\local_terminal\agent_contract.py src\local_terminal\command_center.py tests\test_m21_markets_source_coverage_matrix.py tests\test_m21_agent_operability_contract.py tests\test_m22_command_center_contract.py` -> passed.
+- M23.26 full backend gate `.\.venv\Scripts\python.exe -m pytest -q --basetemp .omx\pytest-tmp\m23-26-full` with repo-local TEMP/TMP -> 322 passed.
+- M23.26 full ruff `.\.venv\Scripts\python.exe -m ruff check .` -> passed.
+- M23.26 frontend `npm run lint`, `npm run build`, and `npm run e2e` in `frontend/` -> passed; build kept only the existing Vite chunk-size warning and E2E result was 15 passed.
+- M23.26 source-wall/live-safety/local-secret/ledger gate `.\.venv\Scripts\python.exe -m pytest tests\test_clean_room_source_wall.py tests\test_m16_live_safety.py tests\test_m20_local_secret_gate.py tests\test_m22_mission_ledger.py -q --basetemp .omx\pytest-tmp\m23-26-safety` -> 23 passed.
+- M23.26 FastAPI TestClient smoke confirmed embedded Markets `quote_reference_coverage`, dedicated quote/reference endpoint summary `21` source rows / `6` quote lanes / `0` executable / `0` orderable, Command Center current milestone, AI Agent action contract, and no local secret-store creation.
+- M23.26 changed-diff secret scan found no personal-account email literals, password/PIN literals, provider-key assignments, bearer-token values, private-key blocks, protected-value payload assignments, secret-value assignments, or credential assignments.
+- M23.26 `git diff --check` -> passed with Git CRLF working-copy warnings only.
+- M23.25 focused Backtest/agent/command-center gate `.\.venv\Scripts\python.exe -m pytest tests\test_m6_backtest.py tests\test_m21_agent_operability_contract.py tests\test_m22_command_center_contract.py -q --basetemp .omx\pytest-tmp\m23-25-focused-after-fix` -> 29 passed.
+- M23.25 focused ruff `.\.venv\Scripts\python.exe -m ruff check src\local_terminal\backtest.py src\local_terminal\server.py src\local_terminal\agent_contract.py src\local_terminal\command_center.py tests\test_m6_backtest.py tests\test_m21_agent_operability_contract.py tests\test_m22_command_center_contract.py` -> passed.
+- M23.25 focused docs/ledger gate `.\.venv\Scripts\python.exe -m pytest tests\test_m6_backtest.py tests\test_m21_agent_operability_contract.py tests\test_m22_command_center_contract.py tests\test_m22_mission_ledger.py -q --basetemp .omx\pytest-tmp\m23-25-docs-final` -> 33 passed.
+- M23.25 full backend gate `.\.venv\Scripts\python.exe -m pytest -q --basetemp .omx\pytest-tmp\m23-25-full` -> 320 passed.
+- M23.25 full ruff `.\.venv\Scripts\python.exe -m ruff check .` -> passed.
+- M23.25 frontend `npm run lint`, `npm run build`, and `npm run e2e` in `frontend/` -> passed; build kept only the existing Vite chunk-size warning and E2E result was 15 passed.
+- M23.25 source-wall/live-safety/local-secret/ledger gate `.\.venv\Scripts\python.exe -m pytest tests\test_clean_room_source_wall.py tests\test_m16_live_safety.py tests\test_m20_local_secret_gate.py tests\test_m22_mission_ledger.py -q --basetemp .omx\pytest-tmp\m23-25-safety` -> 23 passed.
+- M23.25 FastAPI TestClient smoke confirmed two local Backtest runs, read-only run index readiness, embedded `/api/backtest` run index, Command Center current milestone, AI Agent action contract, and no local secret-store creation.
+- M23.25 changed-diff secret scan found no personal-account email literals, password/PIN literals, provider-key assignments, bearer-token values, private-key blocks, protected-value payload assignments, or credential assignments; the only match was a safety assertion that `settings/local_secrets.json` does not exist.
+- M23.25 `git diff --check` -> passed with Git CRLF working-copy warnings only.
+- M23.24 focused artifact-lifecycle/agent/command-center gate `.\.venv\Scripts\python.exe -m pytest tests\test_m21_artifact_lifecycle.py tests\test_m21_agent_operability_contract.py tests\test_m22_command_center_contract.py -q --basetemp .omx\pytest-tmp\m23-24-focused-initial-rerun` -> 12 passed.
+- M23.24 focused docs/ledger gate `.\.venv\Scripts\python.exe -m pytest tests\test_m21_artifact_lifecycle.py tests\test_m21_agent_operability_contract.py tests\test_m22_command_center_contract.py tests\test_m22_mission_ledger.py -q --basetemp .omx\pytest-tmp\m23-24-docs` -> 16 passed.
+- M23.24 focused ruff `.\.venv\Scripts\python.exe -m ruff check src\local_terminal\artifact_lifecycle.py src\local_terminal\agent_contract.py src\local_terminal\command_center.py tests\test_m21_artifact_lifecycle.py tests\test_m21_agent_operability_contract.py tests\test_m22_command_center_contract.py` -> passed.
+- M23.24 full backend gate `.\.venv\Scripts\python.exe -m pytest -q --basetemp .omx\pytest-tmp\m23-24-full-final` -> 318 passed.
+- M23.24 full ruff `.\.venv\Scripts\python.exe -m ruff check .` -> passed.
+- M23.24 frontend `npm run lint`, `npm run build`, and `npm run e2e` in `frontend/` -> passed; build kept only the existing Vite chunk-size warning and E2E result was 15 passed.
+- M23.24 source-wall/live-safety/local-secret/ledger gate `.\.venv\Scripts\python.exe -m pytest tests\test_clean_room_source_wall.py tests\test_m16_live_safety.py tests\test_m20_local_secret_gate.py tests\test_m22_mission_ledger.py -q --basetemp .omx\pytest-tmp\m23-24-safety-rerun` -> 23 passed.
+- M23.24 FastAPI TestClient smoke confirmed artifact lifecycle root readiness fields, Command Center current milestone/root health matrix, AI Agent action contract, and no local secret-store creation.
+- M23.24 changed-diff secret scan found no personal-account email literals, password/PIN literals, provider-key assignments, bearer-token values, private-key blocks, protected-value payload assignments, or credential assignments.
+- M23.24 `git diff --check` -> passed with Git CRLF working-copy warnings only.
+- M23.23 focused advanced-output/agent/command-center gate `.\.venv\Scripts\python.exe -m pytest tests\test_m22_advanced_workflow_outputs.py tests\test_m21_agent_operability_contract.py tests\test_m22_command_center_contract.py -q --basetemp .omx\pytest-tmp\m23-23-focused-initial` -> 9 passed.
+- M23.23 focused docs/ledger gate `.\.venv\Scripts\python.exe -m pytest tests\test_m22_advanced_workflow_outputs.py tests\test_m21_agent_operability_contract.py tests\test_m22_command_center_contract.py tests\test_m22_mission_ledger.py -q --basetemp .omx\pytest-tmp\m23-23-docs` -> 13 passed.
+- M23.23 full backend gate `.\.venv\Scripts\python.exe -m pytest -q --basetemp .omx\pytest-tmp\m23-23-full` -> 318 passed.
+- M23.23 full ruff `.\.venv\Scripts\python.exe -m ruff check .` -> passed.
+- M23.23 frontend `npm run lint`, `npm run build`, and `npm run e2e` in `frontend/` -> passed; build kept only the existing Vite chunk-size warning and E2E result was 15 passed.
+- M23.23 source-wall/live-safety/local-secret/ledger gate `.\.venv\Scripts\python.exe -m pytest tests\test_clean_room_source_wall.py tests\test_m16_live_safety.py tests\test_m20_local_secret_gate.py tests\test_m22_mission_ledger.py -q --basetemp .omx\pytest-tmp\m23-23-safety` -> 23 passed.
+- M23.23 FastAPI TestClient smoke confirmed partial health states, missing expected kinds, Command Center current milestone, AI Agent action contract, and no local secret-store creation.
+- M23.23 changed-diff secret scan found no personal-account email literals, password/PIN literals, provider-key assignments, bearer-token values, private-key blocks, protected value markers, or credential assignments.
+- M23.23 `git diff --check` -> passed with Git CRLF working-copy warnings only.
+- M23.22 focused advanced-output/agent/command-center gate `.\.venv\Scripts\python.exe -m pytest tests\test_m22_advanced_workflow_outputs.py tests\test_m21_agent_operability_contract.py tests\test_m22_command_center_contract.py -q --basetemp .omx\pytest-tmp\m23-22-focused-initial` -> 8 passed.
+- M23.22 focused docs/ledger gate `.\.venv\Scripts\python.exe -m pytest tests\test_m22_advanced_workflow_outputs.py tests\test_m21_agent_operability_contract.py tests\test_m22_command_center_contract.py tests\test_m22_mission_ledger.py -q --basetemp .omx\pytest-tmp\m23-22-docs` -> 12 passed.
+- M23.22 full backend gate `.\.venv\Scripts\python.exe -m pytest -q --basetemp .omx\pytest-tmp\m23-22-full` -> 317 passed.
+- M23.22 full ruff `.\.venv\Scripts\python.exe -m ruff check .` -> passed.
+- M23.22 frontend `npm run lint`, `npm run build`, and `npm run e2e` in `frontend/` -> passed; build kept only the existing Vite chunk-size warning and E2E result was 15 passed.
+- M23.22 source-wall/live-safety/local-secret/ledger gate `.\.venv\Scripts\python.exe -m pytest tests\test_clean_room_source_wall.py tests\test_m16_live_safety.py tests\test_m20_local_secret_gate.py tests\test_m22_mission_ledger.py -q --basetemp .omx\pytest-tmp\m23-22-safety` -> 23 passed.
+- M23.22 FastAPI TestClient smoke confirmed manifest/report/error-log counts for all five advanced routes, Command Center current milestone, AI Agent action contract, and no local secret-store creation.
+- M23.22 changed-diff secret scan found no personal-account email literals, password/PIN literals, provider-key assignments, bearer-token values, private-key blocks, protected value markers, or credential assignments.
+- M23.22 `git diff --check` -> passed with Git CRLF working-copy warnings only.
+- M23.21 focused News/agent/command-center/ledger gate `.\.venv\Scripts\python.exe -m pytest tests\test_m8_news.py tests\test_m21_agent_operability_contract.py tests\test_m22_command_center_contract.py tests\test_m22_mission_ledger.py -q --basetemp .omx\pytest-tmp\m23-21-docs` -> 21 passed.
+- M23.21 full backend gate `.\.venv\Scripts\python.exe -m pytest -q --basetemp .omx\pytest-tmp\m23-21-full-rerun` -> 317 passed.
+- M23.21 full ruff `.\.venv\Scripts\python.exe -m ruff check .` -> passed.
+- M23.21 frontend `npm run lint`, `npm run build`, and `npm run e2e` in `frontend/` -> passed; build kept only the existing Vite chunk-size warning and E2E result was 15 passed.
+- M23.21 source-wall/live-safety/local-secret gate `.\.venv\Scripts\python.exe -m pytest tests\test_clean_room_source_wall.py tests\test_m16_live_safety.py tests\test_m20_local_secret_gate.py tests\test_m22_mission_ledger.py -q --basetemp .omx\pytest-tmp\m23-21-safety` -> 23 passed.
+- M23.21 FastAPI TestClient smoke confirmed empty-index recovery queue, one generated News brief index, file/content-read safety flags, embedded News payload index, Command Center current milestone, AI Agent action contract, and no local secret-store creation.
+- M23.21 changed-diff secret scan found no personal-account email literals, password/PIN literals, provider-key assignments, bearer-token values, private-key blocks, protected value markers, or credential assignments.
+- M23.21 `git diff --check` -> passed with Git CRLF working-copy warnings only.
+- M23.20 focused Backtest/agent/command-center/ledger gate `.\.venv\Scripts\python.exe -m pytest tests\test_m6_backtest.py tests\test_m21_agent_operability_contract.py tests\test_m22_command_center_contract.py tests\test_m22_mission_ledger.py -q --basetemp .omx\pytest-tmp\m23-20-docs` -> 31 passed.
+- M23.20 full backend gate `.\.venv\Scripts\python.exe -m pytest -q --basetemp .omx\pytest-tmp\m23-20-full` -> 315 passed.
+- M23.20 full ruff `.\.venv\Scripts\python.exe -m ruff check .` -> passed.
+- M23.20 frontend `npm run lint`, `npm run build`, and `npm run e2e` in `frontend/` -> passed; build kept only the existing Vite chunk-size warning and E2E result was 15 passed after tightening one duplicate-text test selector.
+- M23.20 source-wall/live-safety/local-secret gate `.\.venv\Scripts\python.exe -m pytest tests\test_clean_room_source_wall.py tests\test_m16_live_safety.py tests\test_m20_local_secret_gate.py tests\test_m22_mission_ledger.py -q --basetemp .omx\pytest-tmp\m23-20-safety` -> 23 passed.
+- M23.20 FastAPI TestClient smoke confirmed two local Backtest runs, comparison packet run count 2, 4 comparison artifacts, Command Center current milestone, AI Agent action contract, and no local secret-store creation.
+- M23.20 Playwright browser smoke opened Backtest, ran two local strategies, clicked `Compare Runs`, and confirmed the visible `backtest-comparison-packet` with `comparison.json`.
+- M23.20 changed-diff secret scan found no personal-account email literals, password/PIN literals, provider-key assignments, bearer-token values, private-key blocks, protected value markers, or credential assignments.
+- M23.20 `git diff --check` -> passed with Git CRLF working-copy warnings only.
+- M23.19 focused MOEX provider/source/agent/command-center gate `.\.venv\Scripts\python.exe -m pytest tests\test_m23_moex_quote_provider.py tests\test_m21_markets_source_coverage_matrix.py tests\test_m21_agent_operability_contract.py tests\test_m19_provider_registry.py tests\test_m22_provider_acquisition_gate.py tests\test_m22_command_center_contract.py -q --basetemp .omx\pytest-tmp\m23-19-focused-final` -> 35 passed.
+- M23.19 changed-file ruff over MOEX, server, Markets, provider refresh, Agent contract, Command Center, advanced context, and focused tests -> passed.
+- M23.19 doc/contract gate `.\.venv\Scripts\python.exe -m pytest tests\test_m23_moex_quote_provider.py tests\test_m22_command_center_contract.py tests\test_m22_mission_ledger.py tests\test_m22_provider_acquisition_gate.py tests\test_m21_agent_operability_contract.py tests\test_m21_markets_source_coverage_matrix.py -q --basetemp .omx\pytest-tmp\m23-19-docs` -> 27 passed.
+- M23.19 full backend gate `.\.venv\Scripts\python.exe -m pytest -q --basetemp .omx\pytest-tmp\m23-19-full-rerun` -> 313 passed.
+- M23.19 full ruff `.\.venv\Scripts\python.exe -m ruff check .` -> passed.
+- M23.19 frontend `npm run lint`, `npm run build`, and `npm run e2e` in `frontend/` -> passed; build kept only the existing Vite chunk-size warning and E2E result was 15 passed.
+- M23.19 source-wall/live-safety/local-secret gate `.\.venv\Scripts\python.exe -m pytest tests\test_clean_room_source_wall.py tests\test_m16_live_safety.py tests\test_m20_local_secret_gate.py tests\test_m22_mission_ledger.py -q --basetemp .omx\pytest-tmp\m23-19-safety` -> 23 passed.
+- M23.19 FastAPI TestClient smoke confirmed MOEX refresh, 3 delayed non-orderable rows, source coverage, AI Agent action contract, Command Center current milestone, and no local secret-store creation.
+- M23.19 in-app browser smoke opened Markets and confirmed the M23.19 milestone, `MOEX` action, and MOEX source coverage row.
+- M23.19 changed-diff secret scan found no personal-account email literals, password/PIN literals, provider-key assignments, bearer-token values, private-key blocks, protected value markers, or credential assignments.
+- M23.19 `git diff --check` -> passed with Git CRLF working-copy warnings only.
+- M23.18 focused Nasdaq symbol discovery/backend contract gate `.\.venv\Scripts\python.exe -m pytest tests\test_m23_nasdaq_trader_symbol_directory.py tests\test_m21_agent_operability_contract.py tests\test_m20_sec_stocks_fundamentals.py -q --basetemp .omx\pytest-tmp\m23-18-focused-rerun` -> 15 passed.
+- M23.18 broader contract gate `.\.venv\Scripts\python.exe -m pytest tests\test_m23_nasdaq_trader_symbol_directory.py tests\test_m21_agent_operability_contract.py tests\test_m20_sec_stocks_fundamentals.py tests\test_m20_alpha_vantage_quote_provider.py tests\test_m21_markets_source_coverage_matrix.py tests\test_m22_command_center_contract.py -q --basetemp .omx\pytest-tmp\m23-18-contract-rerun` -> 40 passed.
+- M23.18 changed-file ruff over Nasdaq Trader, server, Markets, Agent contract, and focused tests -> passed.
+- M23.18 frontend `npm run lint` in `frontend/` -> passed.
+- M23.18 doc/contract gate `.\.venv\Scripts\python.exe -m pytest tests\test_m23_nasdaq_trader_symbol_directory.py tests\test_m21_agent_operability_contract.py tests\test_m20_sec_stocks_fundamentals.py tests\test_m20_alpha_vantage_quote_provider.py tests\test_m21_markets_source_coverage_matrix.py tests\test_m22_command_center_contract.py tests\test_m22_mission_ledger.py -q --basetemp .omx\pytest-tmp\m23-18-doc-contract` -> 44 passed.
+- M23.18 full backend gate `.\.venv\Scripts\python.exe -m pytest -q --basetemp .omx\pytest-tmp\m23-18-full-final` -> 308 passed.
+- M23.18 full ruff `.\.venv\Scripts\python.exe -m ruff check .` -> passed.
+- M23.18 frontend `npm run build` and `npm run e2e` in `frontend/` -> passed; build kept only the existing Vite chunk-size warning and E2E result was 15 passed.
+- M23.18 source-wall/live-safety/local-secret gate `.\.venv\Scripts\python.exe -m pytest tests\test_clean_room_source_wall.py tests\test_m16_live_safety.py tests\test_m20_local_secret_gate.py tests\test_m22_mission_ledger.py -q --basetemp .omx\pytest-tmp\m23-18-safety-final` -> 23 passed.
+- M23.18 FastAPI TestClient smoke confirmed public symbol refresh, cache-only search, Command Center current milestone, AI Agent action contract, `not_quote` semantics, `orderable=false`, and no local secret-store creation.
+- M23.18 changed-diff secret scan found no personal-account email literals, password/PIN literals, provider-key assignments, bearer-token values, private-key blocks, protected value markers, or credential assignments.
+- M23.18 `git diff --check` -> passed with Git CRLF working-copy warnings only.
+- M23.17 focused Nasdaq/provider/source/agent/local-state/command-center gate `.\.venv\Scripts\python.exe -m pytest tests\test_m23_nasdaq_trader_symbol_directory.py tests\test_m21_markets_source_coverage_matrix.py tests\test_m21_agent_operability_contract.py tests\test_m22_provider_acquisition_gate.py tests\test_m19_provider_registry.py tests\test_m2_local_state.py tests\test_m22_command_center_contract.py -q --basetemp .omx\pytest-tmp\m23-17-focused-rerun` -> 41 passed.
+- M23.17 no-write live smoke against the official Nasdaq Trader text files normalized 12,649 rows: 5,463 Nasdaq-listed, 7,186 other-listed, 5,230 ETF rows, first symbol `AACB`, and `quote_semantics=not_quote`.
+- M23.17 initial full backend gate caught a clean-room source-wall issue in the new adapter User-Agent string. The runtime string was changed to neutral local terminal wording, then `.\.venv\Scripts\python.exe -m pytest -q --basetemp .omx\pytest-tmp\m23-17-full-final-rerun` -> 308 passed.
+- M23.17 full ruff `.\.venv\Scripts\python.exe -m ruff check .` -> passed.
+- M23.17 frontend `npm run lint`, `npm run build`, and `npm run e2e` in `frontend/` -> passed; build kept only the existing Vite chunk-size warning and E2E result was 15 passed.
+- M23.17 source-wall/live-safety/local-secret gate `.\.venv\Scripts\python.exe -m pytest tests\test_clean_room_source_wall.py tests\test_m16_live_safety.py tests\test_m20_local_secret_gate.py tests\test_m22_mission_ledger.py -q --basetemp .omx\pytest-tmp\m23-17-safety-final-rerun` -> 23 passed after rerunning outside a concurrent Playwright `test-results` file race.
+- M23.17 FastAPI TestClient smoke confirmed Command Center current milestone, public Nasdaq Trader refresh, Markets `symbol_directory` source coverage, provider freshness, `not_quote` semantics, and no local secret store creation.
+- M23.17 changed-diff secret scan found no personal-account email literals, password/PIN literals, provider-key assignments, bearer-token values, private-key blocks, protected value markers, or credential assignments.
+- M23.17 `git diff --check` -> passed with Git CRLF working-copy warnings only.
+- M23.16 focused Stooq/provider/source/agent/local-state gate `.\.venv\Scripts\python.exe -m pytest tests\test_m23_stooq_quote_provider.py tests\test_m21_markets_source_coverage_matrix.py tests\test_m21_agent_operability_contract.py tests\test_m22_provider_acquisition_gate.py tests\test_m19_provider_registry.py tests\test_m2_local_state.py -q --basetemp .omx\pytest-tmp\m23-16-focused-final` -> 40 passed.
+- M23.16 doc/contract gate `.\.venv\Scripts\python.exe -m pytest tests\test_m23_stooq_quote_provider.py tests\test_m21_markets_source_coverage_matrix.py tests\test_m21_agent_operability_contract.py tests\test_m22_provider_acquisition_gate.py tests\test_m19_provider_registry.py tests\test_m2_local_state.py tests\test_m22_command_center_contract.py tests\test_m22_mission_ledger.py -q --basetemp .omx\pytest-tmp\m23-16-doc-contract` -> 46 passed.
+- M23.16 full backend gate `.\.venv\Scripts\python.exe -m pytest -q --basetemp .omx\pytest-tmp\m23-16-full-final` -> 304 passed.
+- M23.16 full ruff `.\.venv\Scripts\python.exe -m ruff check .` -> passed.
+- M23.16 frontend `npm run lint`, `npm run build`, and `npm run e2e` in `frontend/` -> passed; build kept only the existing Vite chunk-size warning and E2E result was 15 passed.
+- M23.16 source-wall/live-safety/local-secret gate `.\.venv\Scripts\python.exe -m pytest tests\test_clean_room_source_wall.py tests\test_m16_live_safety.py tests\test_m20_local_secret_gate.py tests\test_m22_mission_ledger.py -q --basetemp .omx\pytest-tmp\m23-16-safety-final` -> 23 passed.
+- M23.16 FastAPI TestClient smoke confirmed Command Center current milestone, Stooq refresh, Markets source coverage, provider freshness, non-orderable quote semantics, and no local secret store creation.
+- M23.16 changed-diff secret scan found no personal-account email literals, password/PIN literals, provider-key assignments, bearer-token values, private-key blocks, protected value markers, or credential assignments.
+- M23.16 `git diff --check` -> passed with Git CRLF working-copy warnings only.
+- M23.3 focused command-center gate `.\.venv\Scripts\python.exe -m pytest tests\test_m22_command_center_contract.py -q --basetemp .omx\pytest-tmp\m23-3-command-center-focused-initial` -> 2 passed.
+- M23.3 focused ruff `.\.venv\Scripts\python.exe -m ruff check src\local_terminal\command_center.py tests\test_m22_command_center_contract.py` -> passed.
+- M23.3 frontend type gate `npm run lint` in `frontend/` -> passed.
+- M23.3 FastAPI TestClient probe for `/api/command-center` -> 200, milestone `M23.3 Command Center activity timeline`, 6 timeline events, selector `[data-testid='command-center-activity-timeline']`, and `safety.live_trading=False`.
+- M23.3 full backend gate `.\.venv\Scripts\python.exe -m pytest -q --basetemp .omx\pytest-tmp\m23-3-full` -> 274 passed.
+- M23.3 source-wall/live-safety/local-secret/docs gate `.\.venv\Scripts\python.exe -m pytest tests\test_m22_command_center_contract.py tests\test_m22_mission_ledger.py tests\test_clean_room_source_wall.py tests\test_m16_live_safety.py tests\test_m20_local_secret_gate.py -q --basetemp .omx\pytest-tmp\m23-3-safety-docs` -> 25 passed.
+- M23.3 frontend `npm run build` and `npm run e2e` in `frontend/` -> passed; build kept only the existing Vite chunk-size warning and E2E result was 15 passed with Command Center timeline visibility covered.
+- M23.3 full ruff `.\.venv\Scripts\python.exe -m ruff check .` -> passed.
+- M23.3 docs final gate `.\.venv\Scripts\python.exe -m pytest tests\test_m22_command_center_contract.py tests\test_m22_mission_ledger.py -q --basetemp .omx\pytest-tmp\m23-3-doc-final` -> 6 passed.
+- M23.3 changed-file secret scan found no known personal credential literals and no high-risk assignment-like secret matches outside planning docs.
+- M23.3 `git diff --check` -> passed with Git CRLF working-copy warnings only.
+- M23.2 focused FX quote/provider/source gate `.\.venv\Scripts\python.exe -m pytest tests\test_m20_alpha_vantage_quote_provider.py tests\test_m21_markets_source_coverage_matrix.py tests\test_m21_agent_operability_contract.py tests\test_m19_provider_registry.py tests\test_m2_local_state.py tests\test_m22_command_center_contract.py -q --basetemp .omx\pytest-tmp\m23-2-focused-initial` -> 46 passed.
+- M23.2 row-order regression check after preserving existing FX reference-row order `.\.venv\Scripts\python.exe -m pytest tests\test_m10_algo.py::test_algo_scan_accepts_markets_source_row_and_persists_lineage tests\test_m21_markets_source_coverage_matrix.py tests\test_m20_alpha_vantage_quote_provider.py -q --basetemp .omx\pytest-tmp\m23-2-roworder` -> 22 passed.
+- M23.2 full backend gate `.\.venv\Scripts\python.exe -m pytest -q --basetemp .omx\pytest-tmp\m23-2-full-rerun` -> 274 passed.
+- M23.2 full ruff `.\.venv\Scripts\python.exe -m ruff check .` -> passed.
+- M23.2 frontend `npm run lint`, `npm run build`, and final `npm run e2e` in `frontend/` -> passed; build kept only the existing Vite chunk-size warning and E2E result was 15 passed after fixing hash-first shell restore so startup hydration cannot remount Crypto/Backtest and reset edited form state.
+- M23.2 source-wall/live-safety/local-secret gate `.\.venv\Scripts\python.exe -m pytest tests\test_clean_room_source_wall.py tests\test_m16_live_safety.py tests\test_m20_local_secret_gate.py tests\test_m22_mission_ledger.py -q --basetemp .omx\pytest-tmp\m23-2-safety` -> 23 passed.
+- M23.2 Playwright visual smoke opened Markets -> FX, clicked `FX QTE`, and confirmed `Alpha Vantage FX Quotes`, `FX QUOTE`, Source Contract, and `key_required` are visible; screenshot captured at `artifacts/screenshots/m23-2-markets-fx-quote-watchlist.png`.
+- M23.2 changed-file secret scan found no known personal credential literals and no high-risk assignment-like secret matches outside planning docs.
+- M23.2 `git diff --check` -> passed with Git CRLF working-copy warnings only.
+- M23.1 focused FX/provider/source gate `.\.venv\Scripts\python.exe -m pytest tests\test_m20_ecb_fx_provider.py tests\test_m19_provider_registry.py tests\test_m21_markets_source_coverage_matrix.py tests\test_m21_agent_operability_contract.py tests\test_m22_provider_acquisition_gate.py tests\test_m2_local_state.py -q --basetemp .omx\pytest-tmp\m23-1-focused-current` -> 36 passed.
+- M23.1 live no-write H.10 normalization smoke parsed provider `federal_reserve_h10_ddp_public`, latest date `2026-05-15`, 23 rows, and first row `AUD/USD usd_per_currency True`.
+- M23.1 FastAPI TestClient probe confirmed `/api/fx`, `/api/markets`, `/api/providers`, `/api/provider-acquisition-gate`, and `/api/agent-contract` return 200 with H.10 state separated from ECB state and no credential requirement.
+- M23.1 live local FX refresh smoke `POST /api/markets/fx/refresh` -> 200, `fx.status.state=live`, ECB row count 29, H.10 row count 23, H.10 date `2026-05-15`, local H.10 cache exists, and first H.10 row keeps `reference_only=True`.
+- M23.1 focused docs/command-center gate `.\.venv\Scripts\python.exe -m pytest tests\test_m20_ecb_fx_provider.py tests\test_m19_provider_registry.py tests\test_m21_markets_source_coverage_matrix.py tests\test_m21_agent_operability_contract.py tests\test_m22_provider_acquisition_gate.py tests\test_m2_local_state.py tests\test_m22_command_center_contract.py tests\test_m22_mission_ledger.py -q --basetemp .omx\pytest-tmp\m23-1-focused-docs` -> 42 passed.
+- M23.1 full backend gate `.\.venv\Scripts\python.exe -m pytest -q --basetemp .omx\pytest-tmp\m23-1-full` -> 269 passed.
+- M23.1 full ruff `.\.venv\Scripts\python.exe -m ruff check .` -> passed.
+- M23.1 frontend `npm run lint`, `npm run build`, and `npm run e2e` in `frontend/` -> passed; build kept only the existing Vite chunk-size warning and E2E result was 15 passed.
+- M23.1 Playwright visual smoke opened Markets -> FX and confirmed the `FED H10 FX` card, `FED H10` panel, Provider Stack, and Source Contract are visible; screenshot captured at `artifacts/screenshots/m23-1-markets-fx-h10.png`.
+- M23.1 source-wall/live-safety/local-secret rerun after a Playwright `.last-run.json` transient `.\.venv\Scripts\python.exe -m pytest tests\test_clean_room_source_wall.py tests\test_m16_live_safety.py tests\test_m20_local_secret_gate.py tests\test_m22_mission_ledger.py -q --basetemp .omx\pytest-tmp\m23-1-safety-final` -> 23 passed.
+- M23.1 changed-file secret scan found only historical verification text and negative response assertions; no credential values, provider keys, bearer tokens, personal credential literals, PIN assignments, or private key blocks were added.
+- M23.1 `git diff --check` -> passed with Git CRLF working-copy warnings only.
+- M22.9 focused audit/contract gate `.\.venv\Scripts\python.exe -m pytest tests\test_m22_mission_ledger.py tests\test_m22_command_center_contract.py tests\test_m21_agent_operability_contract.py -q --basetemp .omx\pytest-tmp\m22-9-focused` -> 10 passed.
+- M22.9 source-wall/live-safety/local-secret gate `.\.venv\Scripts\python.exe -m pytest tests\test_clean_room_source_wall.py tests\test_m16_live_safety.py tests\test_m20_local_secret_gate.py tests\test_m22_mission_ledger.py -q --basetemp .omx\pytest-tmp\m22-9-safety` -> 23 passed.
+- M22.9 FastAPI TestClient probe confirmed `/api/command-center` returns `M22.9 Final non-live parity audit`, includes `docs/planning/M22_FINAL_NON_LIVE_PARITY_AUDIT.md` in provenance, and keeps external network, secret values, content reads, destructive actions, live trading, broker mutation, and installed-source reads disabled.
+- M22.9 full backend gate `.\.venv\Scripts\python.exe -m pytest -q --basetemp .omx\pytest-tmp\m22-9-full` -> 268 passed.
+- M22.9 full ruff `.\.venv\Scripts\python.exe -m ruff check .` -> passed.
+- M22.9 frontend `npm run lint`, `npm run build`, and `npm run e2e` in `frontend/` -> passed; build kept only the existing Vite chunk-size warning and E2E result was 15 passed.
+- M22.9 changed-file secret scan found only historical verification text and negative response assertions; no credential values, provider keys, bearer tokens, personal credential literals, PIN assignments, or private key blocks were added.
+- M22.9 `git diff --check` -> passed with Git CRLF working-copy warnings only.
+- M21.23 frontend type compatibility gate `npm run lint` in `frontend/` -> passed.
+- M21.23 frontend production build `npm run build` in `frontend/` -> passed.
+- M21.23 Playwright E2E `npm run e2e` in `frontend/` -> 15 passed.
+- Full M21.23 backend gate `.\.venv\Scripts\python.exe -m pytest -q --basetemp .omx\pytest-tmp\m21-23-full` -> 255 passed.
+- M21.23 source-wall/live-safety gate `.\.venv\Scripts\python.exe -m pytest tests\test_clean_room_source_wall.py tests\test_m16_live_safety.py -q --basetemp .omx\pytest-tmp\m21-23-safety` -> 12 passed.
+- M21.23 full ruff `.\.venv\Scripts\python.exe -m ruff check .` -> passed.
+- M21.23 browser screenshot and visual-verdict were not rerun because this slice is type-only and changes no visible UI workflow, layout, selectors, or CSS.
+- M21.23 changed-file secret scan found only schema field names such as `secret_gate`, `local_secret_status`, and `secret_storage`; no credential values, provider keys, bearer tokens, personal credential literals, PIN assignments, or private key blocks were added.
+- M21.23 `git diff --check` -> passed with Git CRLF working-copy warnings only.
+- M21.23 local code-review gate -> APPROVE; no unresolved findings. Review notes: keep `frontend/src/types.ts` as the compatibility barrel for now, and continue future type cleanup by route family rather than broad import churn.
+- Focused M21.22 pre/post cleanup regression gate `.\.venv\Scripts\python.exe -m pytest tests\test_m21_markets_source_coverage_matrix.py tests\test_m10_algo.py tests\test_m6_backtest.py tests\test_m21_agent_operability_contract.py tests\test_m21_artifact_lifecycle.py -q` -> 51 passed after adding the source-row hash regression.
+- Full M21.22 backend gate `.\.venv\Scripts\python.exe -m pytest -q --basetemp .omx\pytest-tmp\m21-22-full-final` with repo-local TEMP/TMP -> 255 passed.
+- M21.22 source-wall/live-safety gate `.\.venv\Scripts\python.exe -m pytest tests\test_clean_room_source_wall.py tests\test_m16_live_safety.py -q --basetemp .omx\pytest-tmp\m21-22-safety-final` with repo-local TEMP/TMP -> 12 passed.
+- M21.22 full ruff `.\.venv\Scripts\python.exe -m ruff check .` -> passed.
+- M21.22 frontend `npm run lint`, `npm run build`, and `npm run e2e` in `frontend/` -> passed; E2E result: 15 passed.
+- M21.22 browser/Playwright screenshot evidence retained under ignored `artifacts/screenshots/m21-22-karpathy-cleanup-research-loop.png`; it confirms the unchanged Markets -> Algo -> Backtest research-loop workflow after the cleanup.
+- M21.22 visual-verdict was not rerun because the cleanup is layout-neutral and preserves existing CSS, visible text, route flow, and selectors for the changed surfaces.
+- M21.22 changed-file secret scan returned zero matches for known personal credential literals, bearer tokens, credential assignments, provider key assignments, or private key blocks.
+- M21.22 `git diff --check` -> passed with Git CRLF working-copy warnings only.
+- M21.22 code-review gate -> APPROVE; no unresolved CRITICAL/HIGH/MEDIUM/LOW findings and architecture status CLEAR. Review notes: keep future provider work on the extracted Markets source-state panels and keep broad server/storage/agent-contract splits for later bounded cleanup slices.
+- Focused M21.21 research-loop gate `.\.venv\Scripts\python.exe -m pytest tests\test_m21_markets_source_coverage_matrix.py tests\test_m10_algo.py tests\test_m6_backtest.py tests\test_m21_agent_operability_contract.py tests\test_m21_artifact_lifecycle.py -q` -> 50 passed.
+- Full M21.21 backend gate `.\.venv\Scripts\python.exe -m pytest -q` -> 254 passed; Windows pytest atexit temp cleanup emitted a non-fatal `pytest-current` permission warning after the passing result.
+- M21.21 source-wall/live-safety gate `.\.venv\Scripts\python.exe -m pytest tests\test_clean_room_source_wall.py tests\test_m16_live_safety.py -q` -> 12 passed; the same non-fatal Windows pytest temp cleanup warning may appear after pass.
+- M21.21 full ruff `.\.venv\Scripts\python.exe -m ruff check .` -> passed.
+- M21.21 frontend lint/build `npm run lint` and `npm run build` in `frontend/` -> passed.
+- M21.21 Playwright E2E `npm run e2e` in `frontend/` -> 15 passed.
+- M21.21 screenshot captured under ignored `artifacts/screenshots/m21-21-research-lineage-loop.png`.
+- M21.21 visual verdict passed with score 91 in `.omx/state/m21-21/ralph-progress.json`.
+- M21.21 generic high-risk secret scan over the current diff returned zero matches for credential assignment, bearer token, token assignment, provider key assignment, or private key patterns.
+- M21.21 `git diff --check` -> passed with Git CRLF working-copy warnings only.
+- M21.21 code-review gate found two lineage-integrity risks before commit: direct `/api/backtest/run` could accept arbitrary client-supplied lineage, and Algo scan artifact hashes were computed before all persisted lineage/source-contract fields were present. Fixed by validating direct Backtest lineage against the latest local Algo scan seed, computing scan hashes after stable scan id/path/source-contract fields are present, and adding regression coverage. Final gate -> APPROVE, no unresolved CRITICAL/HIGH/MEDIUM/LOW findings; architecture status CLEAR.
+- Focused M21.20 Markets source coverage/agent gate `.\.venv\Scripts\python.exe -m pytest tests\test_m21_markets_source_coverage_matrix.py tests\test_m21_agent_operability_contract.py tests\test_m4_markets.py -q --basetemp .omx\pytest-tmp\m21-20-focused-after-review` with repo-local TEMP/TMP -> 16 passed.
+- Full M21.20 backend gate `.\.venv\Scripts\python.exe -m pytest -q --basetemp .omx\pytest-tmp\m21-20-full-final` with repo-local TEMP/TMP -> 246 passed.
+- M21.20 source-wall/live-safety gate `.\.venv\Scripts\python.exe -m pytest tests\test_clean_room_source_wall.py tests\test_m16_live_safety.py -q --basetemp .omx\pytest-tmp\m21-20-safety-final` with repo-local TEMP/TMP -> 12 passed.
+- M21.20 full ruff `.\.venv\Scripts\python.exe -m ruff check .` -> passed.
+- M21.20 frontend lint/build `npm run lint` and `npm run build` in `frontend/` -> passed.
+- M21.20 Playwright E2E `npm run e2e` in `frontend/` -> 15 passed after tightening existing Backtest/Algo test synchronization around selected strategy values and the `/api/algo/strategy` response.
+- M21.20 screenshot captured under ignored `artifacts/screenshots/m21-20-markets-source-coverage-matrix.png`.
+- M21.20 visual verdict passed with score 92 in `.omx/state/m21-20/ralph-progress.json`.
+- M21.20 generic high-risk secret scan over changed/untracked text files returned zero matches for credential assignment, bearer token, provider key prefix, private key block, PIN assignment, or personal-email patterns.
+- M21.20 `git diff --check` -> passed with Git CRLF working-copy warnings only.
+- M21.20 code-review gate initially found a macro provider contract risk; fixed before commit by making FRED macro coverage optional-local-key gated, adding `markets_macro_refresh` / `markets_fred_refresh` action contracts, and adding regression coverage. Final gate -> APPROVE, no unresolved CRITICAL/HIGH/MEDIUM/LOW findings; architecture status CLEAR.
+- Focused M21.19 Stocks filings/provider/agent gate `.\.venv\Scripts\python.exe -m pytest tests\test_m20_sec_stocks_fundamentals.py tests\test_m19_news_macro_fundamentals.py tests\test_m19_provider_registry.py tests\test_m21_agent_operability_contract.py -q --basetemp .tmp\pytest-m21-19-focused` with repo-local TEMP/TMP -> 24 passed.
+- M21.19 review-fix gate `.\.venv\Scripts\python.exe -m pytest tests\test_m20_sec_stocks_fundamentals.py tests\test_m2_local_state.py -q --basetemp .tmp\pytest-m21-19-review-fix` with repo-local TEMP/TMP -> 12 passed.
+- Full M21.19 backend gate `.\.venv\Scripts\python.exe -m pytest -q --basetemp .tmp\pytest-m21-19-full-final` with repo-local TEMP/TMP -> 242 passed.
+- M21.19 source-wall/live-safety gate `.\.venv\Scripts\python.exe -m pytest tests\test_clean_room_source_wall.py tests\test_m16_live_safety.py -q --basetemp .tmp\pytest-m21-19-safety-final` with repo-local TEMP/TMP -> 12 passed.
+- M21.19 full ruff `.\.venv\Scripts\python.exe -m ruff check .` -> passed.
+- M21.19 frontend lint/build `npm run lint` and `npm run build` in `frontend/` -> passed.
+- M21.19 Playwright E2E `npm run e2e` in `frontend/` -> 15 passed after stopping manual Browser-smoke servers on ports 8765 and 5173.
+- M21.19 browser smoke opened Markets Stocks after public refresh and confirmed SEC filings rows across `AAPL/MSFT/NVDA`, filing symbol header, provider status lanes, Source Contract rows, and no real/live order wording.
+- M21.19 screenshot captured under ignored `artifacts/screenshots/m21-stock-filings-watchlist.png`.
+- M21.19 visual verdict passed with score 91 in `.omx/state/m21-stock-filings-watchlist/ralph-progress.json`.
+- M21.19 generic high-risk secret scan over changed/untracked text files returned zero matches for credential assignment, bearer token, provider key prefix, and private key block patterns.
+- M21.19 `git diff --check` -> passed with Git CRLF working-copy warnings only.
+- M21.19 code-review gate -> APPROVE, no CRITICAL/HIGH/MEDIUM/LOW findings after fixing per-CIK summary drift. Architecture status CLEAR; remaining product watch is broader non-crypto provider depth, not this filings-watchlist contract.
+- Focused M21.17 provider refresh semantics/agent gate `.\.venv\Scripts\python.exe -m pytest tests\test_m19_provider_registry.py tests\test_m21_agent_operability_contract.py -q --basetemp .tmp\pytest-m21-17-focused` with repo-local TEMP/TMP -> 16 passed.
+- M21.17 targeted ruff `.\.venv\Scripts\python.exe -m ruff check src\local_terminal\provider_refresh.py src\local_terminal\agent_contract.py tests\test_m19_provider_registry.py tests\test_m21_agent_operability_contract.py` -> passed.
+- M21.17 frontend lint `npm run lint` in `frontend/` -> passed.
+- M21.17 browser smoke opened the local Dashboard, ran manual public source refresh, and confirmed Provider Freshness showed `10 written / 11 available / 1 reused` with public no-key refresh artifacts.
+- M21.17 screenshot captured under ignored `artifacts/screenshots/m21-provider-refresh-result-semantics.png`.
+- M21.17 visual verdict recorded in `.omx/state/m21-provider-refresh-result-semantics/ralph-progress.json`.
+- Full M21.17 backend gate `.\.venv\Scripts\python.exe -m pytest -q --basetemp .tmp\pytest-m21-17-full-final` with repo-local TEMP/TMP -> 241 passed.
+- M21.17 source-wall/live-safety gate `.\.venv\Scripts\python.exe -m pytest tests\test_clean_room_source_wall.py tests\test_m16_live_safety.py -q --basetemp .tmp\pytest-m21-17-safety-final` with repo-local TEMP/TMP -> 12 passed.
+- M21.17 full ruff `.\.venv\Scripts\python.exe -m ruff check .` -> passed.
+- M21.17 frontend build `npm run build` in `frontend/` -> passed.
+- M21.17 Playwright E2E `npm run e2e` in `frontend/` -> 15 passed.
+- M21.17 generic high-risk secret scan over changed/untracked text files returned zero matches for credential assignment, bearer token, provider key prefix, and private key block patterns.
+- M21.17 `git diff --check` -> passed with Git CRLF working-copy warnings only.
+- M21.17 code-review gate -> APPROVE with no CRITICAL/HIGH/MEDIUM/LOW findings and architectural status CLEAR. The reviewed boundary is intentionally narrow: result fields clarify refresh evidence without adding automatic scheduling, recovery mutation, optional-key refreshes, credentials, or live/private behavior.
+- Focused M21.16 SEC submissions/provider/agent gate `.\.venv\Scripts\python.exe -m pytest tests\test_m20_sec_stocks_fundamentals.py tests\test_m19_news_macro_fundamentals.py tests\test_m19_provider_registry.py tests\test_m21_bls_macro_provider.py tests\test_m21_agent_operability_contract.py tests\test_m2_local_state.py -q` -> 33 passed; the first Windows default TEMP run emitted a pytest atexit cleanup permission warning after pass, so full gates used repo-local TEMP/TMP and `--basetemp`.
+- Full M21.16 backend gate `.\.venv\Scripts\python.exe -m pytest -q --basetemp .tmp\pytest-m21-16-full` with repo-local TEMP/TMP -> 240 passed.
+- M21.16 source-wall/live-safety gate `.\.venv\Scripts\python.exe -m pytest tests\test_clean_room_source_wall.py tests\test_m16_live_safety.py -q --basetemp .tmp\pytest-m21-16-safety` with repo-local TEMP/TMP -> 12 passed.
+- M21.16 full ruff `.\.venv\Scripts\python.exe -m ruff check .` -> passed.
+- M21.16 frontend lint `npm run lint` in `frontend/` -> passed.
+- M21.16 frontend build `npm run build` in `frontend/` -> passed.
+- M21.16 Playwright E2E `npm run e2e` in `frontend/` -> 15 passed after stopping the manual Browser-smoke dev servers that occupied ports 8765 and 5173.
+- M21.16 browser smoke opened Markets Stocks after public refresh and confirmed `SEC_COMPANY_SUBMISSIONS RECENT FILINGS 12 rows` with SEC filing rows visible.
+- M21.16 screenshot captured under ignored `artifacts/screenshots/m21-sec-company-submissions-stocks.png`.
+- M21.16 visual verdict passed with score 91 in `.omx/state/m21-sec-company-submissions/ralph-progress.json`.
+- M21.16 generic high-risk secret scan over changed/untracked text files returned zero matches for credential assignment, bearer token, provider key prefix, and private key block patterns.
+- M21.16 `git diff --check` -> passed with Git CRLF working-copy warnings only.
+- M21.16 code-review gate -> COMMENT with code-reviewer APPROVE and no CRITICAL/HIGH/MEDIUM/LOW findings. Architecture WATCH: filings can currently become the Stocks route gateway/headline status when no quote/fundamental lane is primary, the submissions cache is intentionally fixed to the default AAPL CIK slice, and provider refresh still reports `cache_written` from cache availability rather than a strict this-run write.
+- Focused M21.9 BLS/provider/agent gate `.\.venv\Scripts\python.exe -m pytest tests\test_m19_provider_registry.py tests\test_m21_bls_macro_provider.py tests\test_m20_dbnomics_markets_macro_context.py tests\test_m21_agent_operability_contract.py -q` with repo-local TEMP/TMP -> 20 passed.
+- Focused M21.9 provider-refresh/BLS regression gate `.\.venv\Scripts\python.exe -m pytest tests\test_m19_provider_registry.py tests\test_m21_bls_macro_provider.py -q` with repo-local TEMP/TMP -> 14 passed.
+- M21.9 BLS live smoke parsed the official no-key endpoint for `LNS14000000` and normalized one live series with latest period `April 2026`; no credential or provider key was used.
+- `.\.venv\Scripts\python.exe -m pytest -q` with repo-local TEMP/TMP -> 233 passed.
+- `.\.venv\Scripts\python.exe -m pytest tests\test_clean_room_source_wall.py tests\test_m16_live_safety.py -q` with repo-local TEMP/TMP -> 12 passed.
+- `.\.venv\Scripts\python.exe -m ruff check .` -> passed.
+- M21.9 frontend lint `npm run lint` in `frontend/` -> passed.
+- M21.9 frontend build `npm run build` in `frontend/` -> passed.
+- M21.9 Playwright E2E `npm run e2e` in `frontend/` -> 15 passed after stabilizing the Code route test to wait for initial route sync before clicking `NEW`.
+- M21.9 browser check opened Markets, clicked `BLS`, selected Indexes, and confirmed `BLS macro refreshed`, `bls_public_macro`, BLS docs/auth rows, and source-attributed BLS macro rows without live controls.
+- M21.9 screenshot captured under ignored `artifacts/screenshots/m21-bls-macro-provider.png`.
+- M21.9 visual verdict passed with score 91 in `.omx/state/m21-bls-macro-provider/ralph-progress.json`.
+- `git diff --check` -> passed with Git CRLF working-copy warnings only.
+- M21.9 exact sensitive-literal scan for known account credential/PIN literals returned no matches.
+- M21.9 code-review gate -> APPROVE after fixing DBnomics/BLS refresh attribution and research API source-count/type drift. Architecture WATCH remains: macro aggregation still uses provider list order for headline latest fields; future macro breadth should formalize `primary_provider`/`headline_series` and split `cache_written` from `cache_available` semantics before automation expands.
+- Focused M21.10 macro aggregation gate `.\.venv\Scripts\python.exe -m pytest tests\test_m20_dbnomics_markets_macro_context.py tests\test_m21_bls_macro_provider.py tests\test_m19_news_macro_fundamentals.py tests\test_m4_markets.py -q` -> 17 passed.
+- Full M21.10 backend gate `.\.venv\Scripts\python.exe -m pytest -q` with repo-local TEMP/TMP -> 234 passed.
+- M21.10 source-wall/live-safety gate `.\.venv\Scripts\python.exe -m pytest tests\test_clean_room_source_wall.py tests\test_m16_live_safety.py -q` with repo-local TEMP/TMP -> 12 passed.
+- M21.10 ruff `.\.venv\Scripts\python.exe -m ruff check .` -> passed.
+- M21.10 frontend lint `npm run lint` in `frontend/` -> passed.
+- M21.10 frontend build `npm run build` in `frontend/` -> passed.
+- M21.10 Playwright E2E `npm run e2e` in `frontend/` -> 15 passed after adding macro headline/provider row assertions.
+- M21.10 browser/Playwright smoke opened Markets Indexes and confirmed `HEADLINE`, `PRIMARY`, `PROVIDERS`, and `HEADLINE ID` rows with zero visible `LIVE` controls.
+- M21.10 screenshot captured under ignored `artifacts/screenshots/m21-macro-aggregation-contract-detail.png`.
+- M21.10 visual verdict passed with score 91 in `.omx/state/m21-macro-aggregation-contract/ralph-progress.json`.
+- M21.10 exact sensitive-literal scan for known account credential/PIN literals returned no matches.
+- M21.10 code-review gate -> COMMENT with no CRITICAL/HIGH/MEDIUM/LOW findings. Architecture WATCH: split the dense Markets macro/provider panel before adding another macro provider family.
+- Focused M21.11 macro panel split gate `.\.venv\Scripts\python.exe -m pytest tests\test_m21_agent_operability_contract.py tests\test_m20_dbnomics_markets_macro_context.py tests\test_m21_bls_macro_provider.py -q` with repo-local TEMP/TMP -> 10 passed.
+- Full M21.11 backend gate `.\.venv\Scripts\python.exe -m pytest -q` with repo-local TEMP/TMP -> 234 passed.
+- M21.11 source-wall/live-safety gate `.\.venv\Scripts\python.exe -m pytest tests\test_clean_room_source_wall.py tests\test_m16_live_safety.py -q` with repo-local TEMP/TMP -> 12 passed.
+- M21.11 ruff `.\.venv\Scripts\python.exe -m ruff check .` -> passed.
+- M21.11 frontend lint `npm run lint` in `frontend/` -> passed.
+- M21.11 frontend build `npm run build` in `frontend/` -> passed.
+- M21.11 Playwright E2E `npm run e2e` in `frontend/` -> 15 passed after scoping macro provider/source panel assertions.
+- M21.11 browser smoke opened Markets and confirmed `markets-indexes-macro-provider-stack` plus `markets-indexes-macro-source-contract` are visible.
+- M21.11 screenshots captured under ignored `artifacts/screenshots/m21-markets-macro-panel-split.png` and `artifacts/screenshots/m21-markets-macro-source-panels.png`.
+- M21.11 visual verdict passed with score 92 in `.omx/state/m21-markets-macro-panel-split/ralph-progress.json`.
+- M21.11 exact sensitive-literal scan for known account credential/PIN literals returned no matches.
+- M21.11 `git diff --check` -> passed with Git CRLF working-copy warnings only.
+- M21.11 code-review gate -> COMMENT with no CRITICAL/HIGH/MEDIUM findings.
+  LOW follow-ups were addressed before commit by adding Regional selector E2E
+  coverage and recording the finalized review status. Architecture status CLEAR;
+  future watch is whether Source Contract should become its own agent state field
+  or remain covered by `source_diagnostics` / `gateway_state`.
+- Focused M21.12 provider/source contract gate `.\.venv\Scripts\python.exe -m pytest tests\test_m21_agent_operability_contract.py tests\test_m20_sec_stocks_fundamentals.py tests\test_m20_sec_fund_etf_provider.py tests\test_m20_ecb_fx_provider.py tests\test_m20_treasury_rates_provider.py tests\test_m20_world_bank_commodities_provider.py -q` with repo-local TEMP/TMP -> 18 passed.
+- Full M21.12 backend gate `.\.venv\Scripts\python.exe -m pytest -q` with repo-local TEMP/TMP -> 234 passed.
+- M21.12 source-wall/live-safety gate `.\.venv\Scripts\python.exe -m pytest tests\test_clean_room_source_wall.py tests\test_m16_live_safety.py -q` with repo-local TEMP/TMP -> 12 passed.
+- M21.12 ruff `.\.venv\Scripts\python.exe -m ruff check .` -> passed.
+- M21.12 frontend lint `npm run lint` in `frontend/` -> passed.
+- M21.12 frontend build `npm run build` in `frontend/` -> passed.
+- M21.12 Playwright E2E `npm run e2e` in `frontend/` -> 15 passed after adding scoped Provider Stack / Source Contract assertions for Stocks, ETF, FX, Commodities, and Bonds/Rates.
+- M21.12 browser smoke opened Markets and confirmed representative Stocks and Commodities provider/source contract panels.
+- M21.12 screenshots captured under ignored `artifacts/screenshots/m21-markets-provider-source-contracts-stocks.png` and `artifacts/screenshots/m21-markets-provider-source-contracts-focused.png`.
+- M21.12 visual verdict passed with score 92 in `.omx/state/m21-markets-provider-source-contracts/ralph-progress.json`.
+- M21.12 exact sensitive-literal scan for known account credential/PIN literals returned no matches.
+- M21.12 `git diff --check` -> passed with Git CRLF working-copy warnings only.
+- M21.12 code-review gate -> APPROVE with no CRITICAL/HIGH/MEDIUM/LOW findings. The slice only changes UI/agent-contract inspection surfaces and adds no provider adapter, credential path, live trading path, paid data path, or installed-source dependency.
+- Focused M21.13 SEC company ticker registry gate `.\.venv\Scripts\python.exe -m pytest tests\test_m20_sec_stocks_fundamentals.py tests\test_m19_news_macro_fundamentals.py tests\test_m2_local_state.py tests\test_m19_provider_registry.py tests\test_m21_bls_macro_provider.py tests\test_m21_agent_operability_contract.py -q` -> 32 passed; Windows default TEMP emitted a pytest atexit cleanup permission warning after pass, so full pytest should use `--basetemp`.
+- M21.13 targeted ruff `.\.venv\Scripts\python.exe -m ruff check src\local_terminal\research_data.py src\local_terminal\markets.py src\local_terminal\server.py src\local_terminal\storage.py src\local_terminal\providers.py src\local_terminal\provider_refresh.py src\local_terminal\advanced_context.py src\local_terminal\agent_contract.py tests\test_m20_sec_stocks_fundamentals.py tests\test_m19_news_macro_fundamentals.py tests\test_m19_provider_registry.py tests\test_m2_local_state.py tests\test_m21_bls_macro_provider.py tests\test_m21_agent_operability_contract.py` -> passed.
+- M21.13 frontend lint `npm run lint` in `frontend/` -> passed.
+- M21.13 frontend build `npm run build` in `frontend/` -> passed.
+- Full M21.13 backend gate `.\.venv\Scripts\python.exe -m pytest -q --basetemp .tmp\pytest-m21-13-full` with repo-local TEMP/TMP -> 235 passed.
+- M21.13 source-wall/live-safety gate `.\.venv\Scripts\python.exe -m pytest tests\test_clean_room_source_wall.py tests\test_m16_live_safety.py -q --basetemp .tmp\pytest-m21-13-safety` with repo-local TEMP/TMP -> 12 passed.
+- M21.13 full ruff `.\.venv\Scripts\python.exe -m ruff check .` -> passed.
+- M21.13 Playwright E2E `npm run e2e` in `frontend/` -> 15 passed.
+- M21.13 browser smoke opened Markets Stocks after live SEC public refresh and confirmed `SEC Company Registry`, `markets-stocks-provider-stack`, and `markets-stocks-source-contract` are visible with `company_registry_available`.
+- M21.13 screenshot captured under ignored `artifacts/screenshots/m21-sec-company-ticker-registry-stocks.png`.
+- M21.13 visual verdict passed with score 92 in `.omx/state/m21-sec-company-ticker-registry/ralph-progress.json`.
+- M21.13 generic high-risk secret scan over 22 changed/untracked files returned zero matches for API-key assignment, bearer token, OpenAI key, private key, password assignment, and PIN assignment patterns.
+- M21.13 `git diff --check` -> passed with Git CRLF working-copy warnings only.
+- M21.13 code-review gate -> APPROVE with architectural status CLEAR and no CRITICAL/HIGH/MEDIUM/LOW findings after fixing stale handoff wording. The slice adds public read-only SEC issuer-reference data only; quote, credential, paid-data, live-trading, and installed-source boundaries remain blocked.
+- Focused M21.14 Algo/provider-cache/agent gate `.\.venv\Scripts\python.exe -m pytest tests\test_m10_algo.py tests\test_m2_local_state.py tests\test_m21_agent_operability_contract.py -q --basetemp .tmp\pytest-m21-14-focused-fix` -> 25 passed after adding the missing-symbol provenance regression.
+- M21.14 targeted ruff `.\.venv\Scripts\python.exe -m ruff check src\local_terminal\algo.py src\local_terminal\storage.py src\local_terminal\agent_contract.py tests\test_m10_algo.py tests\test_m2_local_state.py tests\test_m21_agent_operability_contract.py` -> passed.
+- M21.14 frontend lint `npm run lint` in `frontend/` -> passed.
+- Full M21.14 backend gate `.\.venv\Scripts\python.exe -m pytest -q --basetemp .tmp\pytest-m21-14-full-final` with repo-local TEMP/TMP -> 237 passed.
+- M21.14 source-wall/live-safety gate `.\.venv\Scripts\python.exe -m pytest tests\test_clean_room_source_wall.py tests\test_m16_live_safety.py -q --basetemp .tmp\pytest-m21-14-safety-final` with repo-local TEMP/TMP -> 12 passed.
+- M21.14 full ruff `.\.venv\Scripts\python.exe -m ruff check .` -> passed.
+- M21.14 frontend build `npm run build` in `frontend/` -> passed.
+- M21.14 Playwright E2E `npm run e2e` in `frontend/` -> 15 passed.
+- M21.14 browser smoke opened Algo, saved a local strategy, ran Scanner, and confirmed the `Algo scan source contract` and `Algo scan artifacts` regions were visible.
+- M21.14 screenshot captured under ignored `artifacts/screenshots/m21-algo-provider-cache-scan.png`.
+- M21.14 visual verdict passed with score 91 in `.omx/state/m21-algo-provider-cache-scan/ralph-progress.json`.
+- M21.14 generic high-risk secret scan over changed/untracked files returned zero matches for API-key assignment, bearer token, OpenAI key, private key, password assignment, and PIN assignment patterns.
+- M21.14 `git diff --check` -> passed with Git CRLF working-copy warnings only.
+- M21.14 code-review gate -> COMMENT: code-reviewer APPROVE after the missing-symbol provenance fix, with no unresolved CRITICAL/HIGH/MEDIUM/LOW findings; architecture WATCH notes that scan artifacts are still emitted from the broad Algo state writer and should get a dedicated lifecycle boundary before archive/replay/prune semantics grow. The slice keeps scanner output non-actionable and local research-only; live deployment, broker routing, private keys, paid data, fixture-primary runtime, and installed-source dependencies remain blocked.
+- Focused M21.15 Algo lifecycle/agent gate `.\.venv\Scripts\python.exe -m pytest tests\test_m10_algo.py tests\test_m21_agent_operability_contract.py tests\test_m2_local_state.py -q --basetemp .tmp\pytest-m21-15-focused-reviewfix` -> 27 passed after adding invalid-scan-state health regression coverage.
+- M21.15 targeted ruff `.\.venv\Scripts\python.exe -m ruff check src\local_terminal\storage.py src\local_terminal\server.py src\local_terminal\agent_contract.py tests\test_m10_algo.py tests\test_m21_agent_operability_contract.py tests\test_m2_local_state.py` -> passed.
+- M21.15 frontend lint `npm run lint` in `frontend/` -> passed.
+- M21.15 browser smoke opened Algo, saved a local strategy, ran Scanner, clicked `REPAIR ARTIFACTS`, and confirmed `HEALTH complete`, `PRESENT 3/3 / MISSING 0`, `DESTRUCTIVE false`, and `Scan artifacts repaired`.
+- M21.15 screenshot captured under ignored `artifacts/screenshots/m21-algo-scan-artifact-lifecycle.png`.
+- M21.15 visual verdict passed with score 91 in `.omx/state/m21-algo-scan-artifact-lifecycle/ralph-progress.json`.
+- Full M21.15 backend gate `.\.venv\Scripts\python.exe -m pytest -q --basetemp .tmp\pytest-m21-15-full-reviewfix` with repo-local TEMP/TMP -> 239 passed.
+- M21.15 source-wall/live-safety gate `.\.venv\Scripts\python.exe -m pytest tests\test_clean_room_source_wall.py tests\test_m16_live_safety.py -q --basetemp .tmp\pytest-m21-15-safety-reviewfix` with repo-local TEMP/TMP -> 12 passed.
+- M21.15 full ruff `.\.venv\Scripts\python.exe -m ruff check .` -> passed.
+- M21.15 frontend build `npm run build` in `frontend/` -> passed.
+- M21.15 Playwright E2E `npm run e2e` in `frontend/` -> 15 passed.
+- M21.15 generic high-risk secret scan over 13 changed/untracked text files returned zero matches for API-key assignment, bearer token, OpenAI key, private key, password assignment, and PIN assignment patterns.
+- M21.15 `git diff --check` -> passed with Git CRLF working-copy warnings only.
+- M21.15 code-review gate -> COMMENT: code-reviewer initially requested changes because invalid/tampered latest-scan state collapsed into `no_scan`; this was fixed with explicit `invalid_scan_state`, 400 repair rejection, frontend visibility, and regression coverage. Re-check recommendation APPROVE. Architecture status remains WATCH because generic Algo state writes still rewrite the latest scan mirror idempotently; narrow mutation ownership before archive/replay/prune/delete/restore semantics grow.
+- Focused M21.7 Backtest/agent gate `.\.venv\Scripts\python.exe -m pytest tests\test_m6_backtest.py tests\test_m21_agent_operability_contract.py -q` -> 17 passed; Windows default TEMP emitted a pytest atexit cleanup permission warning after pass, so full pytest should use repo-local TEMP/TMP.
+- M21.7 targeted ruff `.\.venv\Scripts\python.exe -m ruff check src\local_terminal\backtest.py src\local_terminal\server.py src\local_terminal\agent_contract.py tests\test_m6_backtest.py tests\test_m21_agent_operability_contract.py` -> passed.
+- `.\.venv\Scripts\python.exe -m pytest -q` with repo-local TEMP/TMP -> 227 passed.
+- Focused M21.7 source-wall/live-safety gate `.\.venv\Scripts\python.exe -m pytest tests\test_clean_room_source_wall.py tests\test_m16_live_safety.py -q` with repo-local TEMP/TMP -> 12 passed.
+- `.\.venv\Scripts\python.exe -m ruff check .` -> passed.
+- M21.7 frontend lint `npm run lint` in `frontend/` -> passed.
+- M21.7 frontend build `npm run build` in `frontend/` -> passed.
+- M21.7 Playwright E2E `npm run e2e` in `frontend/` -> 15 passed after narrowing the walk-forward artifact assertion to the artifact list.
+- M21.7 browser check opened the local Backtest route in the in-app browser and confirmed `Walk-Forward complete`, `fixed_parameter_walk_forward`, `fold_id`, and `walk_forward_folds.csv` were visible.
+- M21.7 screenshot captured under ignored `artifacts/screenshots/m21-backtest-walk-forward.png`; visual inspection found no secret material, no live controls, and no incoherent overlap after responsive status-strip CSS.
+- M21.7 visual verdict passed with score 91 in `.omx/state/m21-backtest-walk-forward/ralph-progress.json`.
+- `git diff --check` -> passed with Git CRLF working-copy warnings only.
+- M21.7 exact sensitive-literal scan for known account credential/PIN literals returned no matches.
+- M21.7 code-review gate -> COMMENT with no CRITICAL/HIGH/MEDIUM/LOW findings; architecture WATCH was addressed before commit by adding `train_usage: metadata_only_no_fit_no_warmup` and including `manifest` in the agent response contract. Residual future-watch: true optimizer/training/warm-up walk-forward must use a separate contract.
+- Focused M21.6 Alpha Vantage watchlist gate `.\.venv\Scripts\python.exe -m pytest tests\test_m20_alpha_vantage_quote_provider.py -q` with repo-local TEMP/TMP -> 10 passed.
+- `.\.venv\Scripts\python.exe -m pytest -q` with repo-local TEMP/TMP -> 224 passed.
+- Focused M21.6 source-wall/live-safety gate `.\.venv\Scripts\python.exe -m pytest tests\test_clean_room_source_wall.py tests\test_m16_live_safety.py -q` with repo-local TEMP/TMP -> 12 passed.
+- `.\.venv\Scripts\python.exe -m ruff check .` -> passed.
+- M21.6 frontend lint `npm run lint` in `frontend/` -> passed.
+- M21.6 frontend build `npm run build` in `frontend/` -> passed.
+- M21.6 Playwright E2E `npm run e2e` in `frontend/` -> first run found the old single-quote assertion; after updating the test to assert watchlist headings/symbol cells, 15 passed.
+- M21.6 browser check opened the local Markets route in the in-app browser and confirmed `Alpha Vantage Watchlist`, `AAPL,MSFT,NVDA`, `Alpha Vantage ETF Watchlist`, and `SPY,QQQ,IWM` were visible.
+- M21.6 screenshots captured under ignored `artifacts/screenshots/m21-alpha-vantage-watchlist-stocks.png` and `artifacts/screenshots/m21-alpha-vantage-watchlist-etf.png`; visual inspection found no visible key material, no live controls, and no incoherent overlap in the watchlist panels.
+- M21.6 visual verdict passed with score 91 in `.omx/state/m21-alpha-vantage-watchlist/ralph-progress.json`.
+- `git diff --check` -> passed with Git CRLF working-copy warnings only.
+- M21.6 exact sensitive-literal scan for known account credential/PIN literals returned no matches.
+- M21.6 local code-review gate pass/comment: no CRITICAL/HIGH/BLOCK findings. Watch: future quote breadth should use a separate provider comparison/gate before adding paid bulk endpoints or more optional-key families.
+
+- Focused M21.5 lifecycle/governance/agent gate `.\.venv\Scripts\python.exe -m pytest tests\test_m21_provider_refresh_lifecycle.py tests\test_m19_provider_registry.py tests\test_m19_governance_routes.py tests\test_m21_artifact_lifecycle.py tests\test_m21_agent_operability_contract.py -q` -> 24 passed after lifecycle recovery/artifact hardening.
+- `.\.venv\Scripts\python.exe -m pytest -q` with local TEMP/TMP -> 221 passed.
+- Focused M21.5 source-wall/live-safety gate `.\.venv\Scripts\python.exe -m pytest tests\test_clean_room_source_wall.py tests\test_m16_live_safety.py -q` with local TEMP/TMP -> 12 passed.
+- `.\.venv\Scripts\python.exe -m ruff check .` -> passed.
+- M21.5 frontend lint `npm run lint` in `frontend/` -> passed.
+- M21.5 frontend build `npm run build` in `frontend/` -> passed.
+- M21.5 Playwright E2E `npm run e2e` in `frontend/` -> 15 passed.
+- M21.5 browser check opened the local Settings route in the in-app browser and confirmed `Provider Refresh Lifecycle`, `read_only_provider_refresh_lifecycle`, and `Status Writes` were visible.
+- M21.5 screenshot captured under ignored `artifacts/screenshots/m21-provider-refresh-lifecycle-settings.png`; visual inspection found no secret values or live controls.
+- M21.5 visual verdict passed with score 91 in `.omx/state/m21-provider-refresh-lifecycle/ralph-progress.json`.
+- `git diff --check` -> passed with Git CRLF working-copy warnings only.
+- M21.5 sensitive scan across changed/new text files returned `SENSITIVE_SCAN_NO_MATCH`.
+- M21.5 code-review gate initially requested changes for lifecycle artifact metadata echoing; architecture review initially BLOCKed the read-only recovery payload because it pointed at the mutating refresh-job endpoint. Both were fixed before commit by reconstructing known artifact links from the run directory, replacing `safe_endpoint` with the read-only lifecycle `read_endpoint`, adding contaminated metadata regression coverage, and aligning frontend fallback/type contracts. Final code-review recommendation: APPROVE. Final architecture status: CLEAR.
+- Focused M21.4 agent/governance/lifecycle gate `.\.venv\Scripts\python.exe -m pytest tests\test_m21_agent_operability_contract.py tests\test_m19_governance_routes.py tests\test_m21_artifact_lifecycle.py -q` with repo-local TEMP/TMP -> 12 passed.
+- Initial full pytest found one source-wall regression because a new runtime contract field used a reference-brand string; the field was renamed to neutral `retained_reference_screenshot`.
+- `.\.venv\Scripts\python.exe -m pytest -q` with repo-local TEMP/TMP under `.omx\pytest-tmp` -> 219 passed.
+- Focused M21.4 source-wall/live-safety gate `.\.venv\Scripts\python.exe -m pytest tests\test_clean_room_source_wall.py tests\test_m16_live_safety.py -q` with repo-local TEMP/TMP -> 12 passed.
+- `.\.venv\Scripts\python.exe -m ruff check .` -> passed.
+- M21.4 frontend lint `npm run lint` in `frontend/` -> passed.
+- M21.4 frontend build `npm run build` in `frontend/` -> passed.
+- M21.4 Playwright E2E `npm run e2e` in `frontend/` -> 15 passed.
+- M21.4 browser check opened the local Settings route in the in-app browser and confirmed `Agent Operability`, `read_only_agent_contract`, and `/api/quantlib/compute` were visible.
+- M21.4 screenshot captured under ignored `artifacts/screenshots/m21-agent-operability-settings.png`; visual inspection found no secret values or live controls.
+- `git diff --check` -> passed with Git CRLF working-copy warnings only.
+- M21.4 exact sensitive-literal scan for known account credential/PIN literals returned no matches.
+- M21.4 code-review gate initially requested changes for a Backtest action payload-shape bug, selector-count mismatch, and Help diagnostics type drift; all were fixed before commit. Architecture WATCH remains: keep `agent_contract.py` updated with route/action/workflow changes and rely on endpoint parity tests to catch drift.
+- Focused M21.3 provider/UI gate `.\.venv\Scripts\python.exe -m pytest tests\test_m21_eia_energy_provider.py tests\test_m20_world_bank_commodities_provider.py tests\test_m20_local_secret_gate.py tests\test_m19_provider_registry.py tests\test_m2_local_state.py -q` with repo-local TEMP/TMP -> 32 passed.
+- `.\.venv\Scripts\python.exe -m pytest -q` with repo-local TEMP/TMP under `.omx\pytest-tmp` -> 215 passed.
+- Focused M21.3 source-wall/live-safety gate `.\.venv\Scripts\python.exe -m pytest tests\test_clean_room_source_wall.py tests\test_m16_live_safety.py -q` with repo-local TEMP/TMP -> 12 passed.
+- `.\.venv\Scripts\python.exe -m ruff check .` -> passed.
+- M21.3 frontend lint `npm run lint` in `frontend/` -> passed.
+- M21.3 frontend build `npm run build` in `frontend/` -> passed.
+- M21.3 Playwright E2E `npm run e2e` in `frontend/` -> 15 passed.
+- M21.3 browser check opened the local Markets route in the in-app browser, selected Commodities, and confirmed `EIA Energy Context` plus local-key/cache-required state was visible.
+- M21.3 screenshot captured under ignored `artifacts/screenshots/m21-eia-energy-context.png`; visual inspection found no sensitive content.
+- M21.3 provider source check used official EIA Open Data documentation and registration pages; no live user-key refresh was run.
+- `git diff --check` -> passed with Git CRLF working-copy warnings only.
+- M21.3 exact sensitive-literal scan for known account credential/PIN literals returned no matches.
+- M21.3 code-review gate pass/comment: no CRITICAL/HIGH/BLOCK findings. WATCH: EIA remains optional-key reference context only; successful live refresh with a real user key was not run, and executable commodity/futures/live workflows still require separate provider and safety contracts.
+- Focused M21.2 News/provider/storage gate `.\.venv\Scripts\python.exe -m pytest tests\test_m8_news.py tests\test_m19_provider_registry.py tests\test_m2_local_state.py -q` with repo-local TEMP/TMP -> 24 passed.
+- `.\.venv\Scripts\python.exe -m pytest -q` with repo-local TEMP/TMP under `.omx\pytest-tmp` -> 210 passed.
+- Focused M21.2 source-wall/live-safety gate `.\.venv\Scripts\python.exe -m pytest tests\test_clean_room_source_wall.py tests\test_m16_live_safety.py -q` with repo-local TEMP/TMP -> 12 passed.
+- Focused M21.2 Python lint `.\.venv\Scripts\python.exe -m ruff check src\local_terminal\news.py src\local_terminal\provider_refresh.py src\local_terminal\storage.py tests\test_m8_news.py tests\test_m19_provider_registry.py tests\test_m2_local_state.py` -> passed.
+- `.\.venv\Scripts\python.exe -m ruff check .` -> passed.
+- M21.2 frontend lint `npm run lint` in `frontend/` -> passed.
+- M21.2 frontend build `npm run build` in `frontend/` -> passed.
+- M21.2 Playwright E2E `npm run e2e` in `frontend/` -> 15 passed; the rerun after the Windows extended-path fix produced no server exception trace.
+- M21.2 browser/Playwright screenshot captured under ignored `artifacts/screenshots/m21-news-intel-strip.png`; visual inspection confirmed the News intel strip, public RSS/GDELT/offline provider cards, selected-item metadata, and no sensitive content.
+- M21.2 provider source check used official GDELT DOC 2.0 docs; the live public shape probe returned HTTP 429 and is documented as degraded provider behavior.
+- `git diff --check` -> passed with Git CRLF working-copy warnings only.
+- M21.2 exact sensitive-literal scan for known account credential/PIN literals returned no matches.
+- M21.2 code-review gate pass/comment: no CRITICAL/HIGH/BLOCK findings. WATCH: GDELT DOC public access can rate-limit; future full-article ingestion, AI summaries, paid/cloud providers, or automatic background News refresh still require separate copyright, credential, lifecycle, and safety contracts.
+- Focused M21.1 artifact lifecycle/governance gate `.\.venv\Scripts\python.exe -m pytest tests\test_m21_artifact_lifecycle.py tests\test_m19_governance_routes.py -q` -> 8 passed; the first run used Windows default TEMP and passed with a known pytest temp cleanup warning.
+- `.\.venv\Scripts\python.exe -m pytest -q` with repo-local TEMP/TMP under `.omx\pytest-tmp` -> 208 passed.
+- Focused M21.1 Python lint `.\.venv\Scripts\python.exe -m ruff check src\local_terminal\artifact_lifecycle.py src\local_terminal\governance.py src\local_terminal\support.py src\local_terminal\server.py tests\test_m21_artifact_lifecycle.py` -> passed.
+- `.\.venv\Scripts\python.exe -m ruff check .` -> passed.
+- M21.1 frontend lint `npm run lint` in `frontend/` -> passed.
+- M21.1 frontend build `npm run build` in `frontend/` -> passed.
+- M21.1 Playwright E2E `npm run e2e` in `frontend/` -> 15 passed after tightening one new lifecycle assertion from broad text matching to exact text matching.
+- M21.1 browser/Playwright screenshot captured under ignored `artifacts/screenshots/m21-artifact-lifecycle-settings.png`; it covers Settings governance diagnostics plus the new read-only artifact lifecycle panel.
+- M21.1 provider research matrix source refresh checked official/primary docs for SEC, Treasury, ECB, World Bank, DBnomics, FRED, Alpha Vantage, EIA, GDELT, Twelve Data, Stooq, and Nasdaq Data Link.
+- `git diff --check` -> passed with Git CRLF working-copy warnings only.
+- M21.1 exact sensitive-literal scan for known account credential/PIN literals returned no matches.
+- M21.1 code-review gate pass/comment: no CRITICAL/HIGH/BLOCK findings. Architecture WATCH: artifact lifecycle is intentionally read-only metadata inventory; prune/archive/recovery, artifact content indexing, and any automatic lifecycle mutation still require a separate safety contract and tests.
+
+- Focused M20.27 Alpha Vantage ETF quote gate `.\.venv\Scripts\python.exe -m pytest tests\test_m20_alpha_vantage_quote_provider.py tests\test_m20_sec_fund_etf_provider.py tests\test_m2_local_state.py tests\test_m19_provider_registry.py tests\test_m19_advanced_routes_context.py -q` with repo-local TEMP/TMP -> 28 passed.
+- Focused M20.27 Python lint `.\.venv\Scripts\python.exe -m ruff check src\local_terminal\alpha_vantage_data.py src\local_terminal\markets.py src\local_terminal\server.py src\local_terminal\storage.py src\local_terminal\providers.py src\local_terminal\advanced_context.py tests\test_m20_alpha_vantage_quote_provider.py tests\test_m20_sec_fund_etf_provider.py tests\test_m2_local_state.py` -> passed.
+- `.\.venv\Scripts\python.exe -m pytest -q` with repo-local TEMP/TMP -> 205 passed.
+- Focused M20.27 source-wall/live-safety gate `.\.venv\Scripts\python.exe -m pytest tests\test_clean_room_source_wall.py tests\test_m16_live_safety.py -q` with repo-local TEMP/TMP -> 12 passed.
+- `.\.venv\Scripts\python.exe -m ruff check .` -> passed.
+- M20.27 frontend lint `npm run lint` in `frontend/` -> passed.
+- M20.27 frontend build `npm run build` in `frontend/` -> passed.
+- M20.27 Playwright E2E `npm run e2e` in `frontend/` -> 15 passed.
+- `git diff --check` -> passed with Git CRLF working-copy warnings only.
+- M20.27 browser/Playwright screenshot captured under ignored `artifacts/screenshots/m20-27-alpha-vantage-etf-quote.png`; visual inspection confirmed the Markets ETF `ETF QTE` path, explicit local-key/cache-required state, separate SEC registry context, source/auth attribution, no visible key material, and no incoherent overlap.
+- M20.27 local code-review gate pass/comment after fixing the provider-health secondary-cache issue: Alpha Vantage provider freshness can now become active from either `AAPL` stock quote cache or `SPY` ETF quote cache, while both remain optional-key/local-secret gated and excluded from public no-key refresh jobs.
+
+- Focused M20.26 Alpha Vantage provider gate `.\.venv\Scripts\python.exe -m pytest tests\test_m20_alpha_vantage_quote_provider.py tests\test_m20_sec_stocks_fundamentals.py tests\test_m2_local_state.py tests\test_m19_provider_registry.py -q` -> 22 passed.
+- Focused M20.26 Python lint `.\.venv\Scripts\python.exe -m ruff check src\local_terminal\alpha_vantage_data.py src\local_terminal\markets.py src\local_terminal\server.py src\local_terminal\storage.py src\local_terminal\providers.py src\local_terminal\advanced_context.py tests\test_m20_alpha_vantage_quote_provider.py tests\test_m20_sec_stocks_fundamentals.py tests\test_m2_local_state.py` -> passed.
+- `.\.venv\Scripts\python.exe -m pytest -q` with repo-local TEMP/TMP -> 203 passed.
+- Focused M20.26 source-wall/live-safety gate `.\.venv\Scripts\python.exe -m pytest tests\test_clean_room_source_wall.py tests\test_m16_live_safety.py -q` with repo-local TEMP/TMP -> 12 passed.
+- `.\.venv\Scripts\python.exe -m ruff check .` -> passed.
+- M20.26 frontend lint `npm run lint` in `frontend/` -> passed.
+- M20.26 frontend build `npm run build` in `frontend/` -> passed.
+- M20.26 Playwright E2E `npm run e2e` in `frontend/` -> 15 passed after rerun; two earlier retries exposed existing non-quote route timing flakiness in News/Backtest/Algo waits.
+- `git diff --check` -> passed with Git CRLF working-copy warnings only.
+- M20.26 browser/Playwright screenshot captured under ignored `artifacts/screenshots/m20-26-alpha-vantage-stock-quote.png`; visual inspection confirmed the Markets Stocks QUOTE action path, explicit local-key/cache-required state, source/auth attribution, no visible key material, and no incoherent overlap.
+- M20.26 code-review gate pass/comment after fixing the MEDIUM serialization issue: coerced Alpha Vantage stale/rate-limited payloads no longer create circular `cache` references, and regression coverage asserts stale quote cache is serializable and not labeled as live/available.
+
+- Focused M20.25 FRED provider gate `.\.venv\Scripts\python.exe -m pytest tests\test_m20_fred_optional_provider.py tests\test_m19_news_macro_fundamentals.py tests\test_m2_local_state.py tests\test_m19_provider_registry.py -q` with repo-local TEMP/TMP -> 23 passed.
+- Focused M20.25 Python lint `.\.venv\Scripts\python.exe -m ruff check src\local_terminal\fred_data.py src\local_terminal\research_data.py src\local_terminal\storage.py src\local_terminal\providers.py src\local_terminal\server.py src\local_terminal\advanced_context.py tests\test_m20_fred_optional_provider.py` -> passed.
+- `.\.venv\Scripts\python.exe -m pytest -q` with repo-local TEMP/TMP -> 198 passed.
+- Focused M20.25 source-wall/live-safety gate `.\.venv\Scripts\python.exe -m pytest tests\test_clean_room_source_wall.py tests\test_m16_live_safety.py -q` with repo-local TEMP/TMP -> 12 passed.
+- `.\.venv\Scripts\python.exe -m ruff check .` -> passed.
+- M20.25 frontend lint `npm run lint` in `frontend/` -> passed.
+- M20.25 frontend build `npm run build` in `frontend/` -> passed.
+- M20.25 Playwright E2E `npm run e2e` in `frontend/` -> 15 passed.
+- `git diff --check` -> passed with Git CRLF working-copy warnings only.
+- M20.25 browser/Playwright screenshot captured under ignored `artifacts/screenshots/m20-25-fred-optional-provider.png`; visual inspection confirmed the Markets FRED action path, explicit local-key/cache-required state, macro source/auth attribution, no visible key material, and no incoherent overlap.
+- M20.25 changed-file credential scan found no real credential, PIN, provider-key, private-key, or personal-account literal. Matches were FRED parameter names and redaction assertions only.
+- M20.25 code-review gate pass/comment: no CRITICAL/HIGH/BLOCK findings. Architecture WATCH: FRED is intentionally the first one-series optional-key adapter; further optional-key providers should reuse the same secret/cache/UI pattern and must not be added to the public no-key refresh job without a separate provider gate.
+
+- Focused M20.24 local secret store gate `.\.venv\Scripts\python.exe -m pytest tests\test_m20_local_secret_gate.py tests\test_m19_governance_routes.py -q` with repo-local TEMP/TMP -> 12 passed.
+- Focused M20.24 Python lint `.\.venv\Scripts\python.exe -m ruff check src\local_terminal\local_secrets.py src\local_terminal\secret_gate.py src\local_terminal\governance.py src\local_terminal\server.py src\local_terminal\support.py tests\test_m20_local_secret_gate.py tests\test_m19_governance_routes.py` -> passed.
+- `.\.venv\Scripts\python.exe -m pytest -q` with repo-local TEMP/TMP -> 194 passed.
+- Focused M20.24 source-wall/live-safety gate `.\.venv\Scripts\python.exe -m pytest tests\test_clean_room_source_wall.py tests\test_m16_live_safety.py -q` with repo-local TEMP/TMP -> 12 passed.
+- `.\.venv\Scripts\python.exe -m ruff check .` -> passed.
+- M20.24 frontend lint `npm run lint` in `frontend/` -> passed.
+- M20.24 frontend build `npm run build` in `frontend/` -> passed.
+- M20.24 Playwright E2E `npm run e2e` in `frontend/` -> 15 passed.
+- `git diff --check` -> passed with Git CRLF working-copy warnings only.
+- M20.24 browser/Playwright screenshot captured under ignored `artifacts/screenshots/m20-24-settings-local-secret-store.png`; visual inspection confirmed `local_secret_store_ready`, blank local secret input, scoped FRED eligibility, paid provider block, API value reads disabled, and no stored value or incoherent overlap.
+- M20.24 code-review/security gate pass after fixing one blocker before commit: API consent no longer defaults to the required phrase, and tests prove omitting consent fails without creating `settings/local_secrets.json`. Architecture WATCH: this enables local secret persistence only; optional-key provider adapters remain unimplemented until their provider-entry gates and official-doc/cache/schema/UI tests are complete.
+
+- Focused M20.23 provider refresh job gate `.\.venv\Scripts\python.exe -m pytest tests\test_m19_provider_registry.py -q` with repo-local TEMP/TMP -> 10 passed.
+- Focused M20.23 provider cluster gate `.\.venv\Scripts\python.exe -m pytest tests\test_m19_provider_registry.py tests\test_m19_crypto_provider_chain.py tests\test_m19_news_macro_fundamentals.py tests\test_m20_treasury_rates_provider.py tests\test_m20_ecb_fx_provider.py tests\test_m20_world_bank_commodities_provider.py tests\test_m20_sec_fund_etf_provider.py tests\test_m4_markets.py -q` with repo-local TEMP/TMP -> 39 passed.
+- Focused M20.23 source-wall/live-safety/provider gate `.\.venv\Scripts\python.exe -m pytest tests\test_m19_provider_registry.py tests\test_clean_room_source_wall.py tests\test_m16_live_safety.py -q` with repo-local TEMP/TMP -> 22 passed.
+- Focused M20.23 Python lint `.\.venv\Scripts\python.exe -m ruff check src\local_terminal\provider_refresh.py src\local_terminal\server.py tests\test_m19_provider_registry.py` -> passed.
+- M20.23 frontend lint `npm run lint` in `frontend/` -> passed.
+- M20.23 frontend build `npm run build` in `frontend/` -> passed.
+- M20.23 Playwright E2E `npm run e2e` in `frontend/` -> 15 passed.
+- `.\.venv\Scripts\python.exe -m pytest -q` with repo-local TEMP/TMP -> 190 passed.
+- Focused M20.23 source-wall/live-safety gate `.\.venv\Scripts\python.exe -m pytest tests\test_clean_room_source_wall.py tests\test_m16_live_safety.py -q` with repo-local TEMP/TMP -> 12 passed.
+- `.\.venv\Scripts\python.exe -m ruff check .` -> passed.
+- `git diff --check` -> passed with Git CRLF working-copy warnings only.
+- M20.23 browser/Playwright screenshot captured under ignored `artifacts/screenshots/m20-23-provider-refresh-job.png`; visual inspection confirmed the Provider Freshness job start/poll/completed flow, local `provider-refresh-*` artifact path, refreshed public no-key summary, active/gated/unavailable freshness chips, and no sensitive content or incoherent overlap.
+- M20.23 exact credential scan found no real credential, PIN, provider-key, private-key, or personal-account literal in changed files.
+- M20.23 code-review gate pass/comment: no CRITICAL/HIGH/BLOCK findings. Architecture WATCH: provider refresh jobs are now manual, pollable, and single-flight in-process; automatic scheduling, durable recovery of interrupted queued/running jobs, and stale job cleanup remain future lifecycle work before any automatic refresh loop.
+
+- Focused M20.22 provider refresh gate `.\.venv\Scripts\python.exe -m pytest tests\test_m19_provider_registry.py -q` -> 7 passed.
+- Focused M20.22 provider cluster gate `.\.venv\Scripts\python.exe -m pytest tests\test_m19_provider_registry.py tests\test_m19_crypto_provider_chain.py tests\test_m19_news_macro_fundamentals.py tests\test_m20_treasury_rates_provider.py tests\test_m20_ecb_fx_provider.py tests\test_m20_world_bank_commodities_provider.py tests\test_m20_sec_fund_etf_provider.py tests\test_m4_markets.py -q` -> 35 passed.
+- Focused M20.22 Python lint `.\.venv\Scripts\python.exe -m ruff check src\local_terminal\server.py tests\test_m19_provider_registry.py` -> passed.
+- Focused M20.22 frontend lint `npm run lint` in `frontend/` -> passed.
+- `npm run build` in `frontend/` -> passed.
+- `npm run e2e` in `frontend/` -> 15 passed.
+- `.\.venv\Scripts\python.exe -m pytest -q` with repo-local TEMP/TMP -> 187 passed.
+- Focused M20.22 source-wall/live-safety gate `.\.venv\Scripts\python.exe -m pytest tests\test_clean_room_source_wall.py tests\test_m16_live_safety.py -q` with repo-local TEMP/TMP -> 12 passed.
+- `.\.venv\Scripts\python.exe -m ruff check .` -> passed.
+- `git diff --check` -> passed with Git CRLF working-copy warnings only.
+- M20.22 browser/Playwright screenshot captured under ignored `artifacts/screenshots/m20-22-provider-refresh-public.png`; visual inspection confirmed the global provider refresh action, local `provider-refresh-*` artifact path, active/gated/unavailable freshness chips, and no sensitive content or incoherent overlap.
+- M20.22 exact credential scan found no real credential, PIN, provider-key, private-key, or personal-account literal.
+- M20.22 code-review gate pass/comment: no CRITICAL/HIGH/BLOCK findings. Architecture WATCH: global refresh is still synchronous and broad orchestration remains in `server.py`; extract a provider refresh service and background job model before automatic refresh loops.
+
+- Focused M20.21 Profile usage gate `.\.venv\Scripts\python.exe -m pytest tests\test_m19_governance_routes.py tests\test_m2_local_state.py -q` with repo-local TEMP/TMP -> 11 passed.
+- Focused M20.21 Python lint `.\.venv\Scripts\python.exe -m ruff check src\local_terminal\governance.py tests\test_m19_governance_routes.py` -> passed.
+- Focused M20.21 frontend lint `npm run lint` in `frontend/` -> passed.
+- `npm run build` in `frontend/` -> passed.
+- `npm run e2e` in `frontend/` -> 15 passed.
+- `.\.venv\Scripts\python.exe -m pytest -q` with repo-local TEMP/TMP -> 185 passed.
+- Focused M20.21 source-wall/live-safety gate `.\.venv\Scripts\python.exe -m pytest tests\test_clean_room_source_wall.py tests\test_m16_live_safety.py -q` with repo-local TEMP/TMP -> 12 passed.
+- `.\.venv\Scripts\python.exe -m ruff check .` -> passed.
+- `git diff --check` -> passed with Git CRLF working-copy warnings only.
+- M20.21 browser/Playwright screenshot captured under ignored `artifacts/screenshots/m20-21-profile-local-usage-stats.png`; visual inspection confirmed Profile local usage stats, local build channel, disabled billing/credits state, content-read safety, and no sensitive content or incoherent overlap.
+- M20.21 exact credential scan found no real credential, PIN, provider-key, private-key, or personal-account literal.
+- M20.21 code-review gate pass: no CRITICAL/HIGH/BLOCK findings. Architecture WATCH: Profile usage stats intentionally inspect file metadata only; content indexing, secret scanning, account sync, or usage analytics export require separate reviewed contracts.
+
+- Focused M20.20 Settings governance diagnostics gate `.\.venv\Scripts\python.exe -m pytest tests\test_m19_governance_routes.py tests\test_m15_forum_help.py -q` with repo-local TEMP/TMP -> 13 passed.
+- Focused M20.20 Python lint `.\.venv\Scripts\python.exe -m ruff check src\local_terminal\support.py src\local_terminal\server.py tests\test_m19_governance_routes.py` -> passed.
+- Focused M20.20 frontend lint `npm run lint` in `frontend/` -> passed.
+- `npm run build` in `frontend/` -> passed.
+- `npm run e2e` in `frontend/` -> 15 passed.
+- `.\.venv\Scripts\python.exe -m pytest -q` with repo-local TEMP/TMP -> 184 passed.
+- Focused M20.20 source-wall/live-safety gate `.\.venv\Scripts\python.exe -m pytest tests\test_clean_room_source_wall.py tests\test_m16_live_safety.py -q` with repo-local TEMP/TMP -> 12 passed.
+- `.\.venv\Scripts\python.exe -m ruff check .` -> passed.
+- `git diff --check` -> passed with Git CRLF working-copy warnings only.
+- M20.20 browser/Playwright screenshot captured under ignored `artifacts/screenshots/m20-20-settings-governance-diagnostics.png`; visual inspection confirmed Settings shows governance diagnostics, local `gov-*` artifact path, manifest path, read-only safety status, and no sensitive content or incoherent overlap.
+- M20.20 exact credential scan found no real credential, PIN, provider-key, private-key, or personal-account literal.
+- M20.20 code-review gate pass: no CRITICAL/HIGH/BLOCK findings. Architecture WATCH: governance diagnostics are read-only; destructive cache prune/delete, background refresh, or real secret persistence still require separate contracts and review.
+
+- Focused M20.19 Forum/Help gate `.\.venv\Scripts\python.exe -m pytest tests\test_m15_forum_help.py tests\test_m19_governance_routes.py -q` with repo-local TEMP/TMP -> 12 passed.
+- Focused M20.19 Python lint `.\.venv\Scripts\python.exe -m ruff check src\local_terminal\forum.py src\local_terminal\support.py src\local_terminal\server.py tests\test_m15_forum_help.py` -> passed.
+- Focused M20.19 frontend lint `npm run lint` in `frontend/` -> passed.
+- `.\.venv\Scripts\python.exe -m pytest -q` with repo-local TEMP/TMP -> 183 passed.
+- Focused M20.19 source-wall/live-safety gate `.\.venv\Scripts\python.exe -m pytest tests\test_clean_room_source_wall.py tests\test_m16_live_safety.py -q` with repo-local TEMP/TMP -> 12 passed.
+- `.\.venv\Scripts\python.exe -m ruff check .` -> passed.
+- `npm run build` -> passed.
+- `npm run e2e` -> 15 passed.
+- `git diff --check` -> passed with Git CRLF working-copy warnings only.
+- M20.19 browser/Playwright screenshot captured under ignored `artifacts/screenshots/m20-19-forum-artifact-health.png`; visual inspection confirmed Forum artifact health, non-destructive repair action, local thread artifacts, Help-covered diagnostics, and no sensitive content or incoherent overlap.
+- M20.19 exact credential scan found no real credential, PIN, provider-key, private-key, or personal-account literal.
+- M20.19 code-review gate pass: no CRITICAL/HIGH/BLOCK findings. Architecture WATCH: Forum repair is non-destructive and state-derived only; actual prune/archive deletion remains intentionally disabled and requires a separate reviewed lifecycle contract.
+
+- Focused M20.18 QuantLib/context gate `.\.venv\Scripts\python.exe -m pytest tests\test_m14_quantlib.py tests\test_m19_advanced_routes_context.py -q` with repo-local TEMP/TMP -> 12 passed.
+- Focused M20.18 Python lint `.\.venv\Scripts\python.exe -m ruff check src\local_terminal\quantlib.py tests\test_m14_quantlib.py tests\test_m19_advanced_routes_context.py` -> passed.
+- Focused M20.18 frontend lint `npm run lint` in `frontend/` -> passed.
+- `.\.venv\Scripts\python.exe -m pytest -q` with repo-local TEMP/TMP -> 181 passed.
+- Focused M20.18 source-wall/live-safety gate `.\.venv\Scripts\python.exe -m pytest tests\test_clean_room_source_wall.py tests\test_m16_live_safety.py -q` with repo-local TEMP/TMP -> 12 passed.
+- `.\.venv\Scripts\python.exe -m ruff check .` -> passed.
+- `npm run build` -> passed.
+- `npm run e2e` -> 15 passed.
+- `git diff --check` -> passed with Git CRLF working-copy warnings only.
+- M20.18 browser/Playwright screenshot captured under ignored `artifacts/screenshots/m20-18-quantlib-provenance-bundle.png`; visual inspection confirmed QuantLib provenance bundle artifact paths, context/source rows, artifact input rows, gated external/runtime safety, and no sensitive content or incoherent overlap.
+- M20.18 changed-file credential-like string scan found no real credential, PIN, provider-key, private-key, or personal-account literal; matches were existing safety wording and synthetic redaction-test probes only.
+- M20.18 code-review gate pass: no CRITICAL/HIGH/BLOCK findings. Architecture WATCH: QuantLib remains deterministic stdlib calculation plus provenance; external QuantLib runtime, larger calculator lifecycle, and executable/sandboxed expansion still require separate contracts.
+
+- Focused M20.17 Quant Lab/context gate `.\.venv\Scripts\python.exe -m pytest tests\test_m13_quant_lab.py tests\test_m19_advanced_routes_context.py -q` with repo-local TEMP/TMP -> 10 passed.
+- Focused M20.17 Python lint `.\.venv\Scripts\python.exe -m ruff check src\local_terminal\quant_lab.py tests\test_m13_quant_lab.py tests\test_m19_advanced_routes_context.py` -> passed.
+- Focused M20.17 frontend lint `npm run lint` in `frontend/` -> passed.
+- `.\.venv\Scripts\python.exe -m pytest -q` with repo-local TEMP/TMP -> 181 passed.
+- Focused M20.17 source-wall/live-safety gate `.\.venv\Scripts\python.exe -m pytest tests\test_clean_room_source_wall.py tests\test_m16_live_safety.py -q` with repo-local TEMP/TMP -> 12 passed.
+- `.\.venv\Scripts\python.exe -m ruff check .` -> passed.
+- `npm run build` -> passed.
+- `npm run e2e` -> 15 passed.
+- `git diff --check` -> passed with Git CRLF working-copy warnings only.
+- M20.17 browser/Playwright screenshot captured under ignored `artifacts/screenshots/m20-17-quant-lab-context-bundle.png`; visual inspection confirmed Quant Lab bundle artifact paths, context/source rows, artifact input rows, gated deep-agent/runtime safety, and no sensitive content or incoherent overlap.
+- M20.17 changed-file credential-like string scan found no real credential, PIN, provider-key, private-key, or personal-account literal; matches were existing safety wording and synthetic redaction-test probes only.
+- M20.17 code-review gate pass: no CRITICAL/HIGH/BLOCK findings. Architecture WATCH: Quant Lab remains preview/bundle-only; executable modules, deep-agent behavior, and model training still require separate sandbox/runtime/security contracts.
+
+- Focused M20.16 Code/context gate `.\.venv\Scripts\python.exe -m pytest tests\test_m12_code_workspace.py tests\test_m19_advanced_routes_context.py -q` with repo-local TEMP/TMP -> 11 passed.
+- Focused M20.16 Python lint `.\.venv\Scripts\python.exe -m ruff check src\local_terminal\code_workspace.py src\local_terminal\storage.py src\local_terminal\server.py tests\test_m12_code_workspace.py` -> passed.
+- Focused M20.16 format check `.\.venv\Scripts\python.exe -m ruff format --check src\local_terminal\code_workspace.py src\local_terminal\storage.py src\local_terminal\server.py tests\test_m12_code_workspace.py` -> passed after formatting changed Python files.
+- Focused M20.16 frontend lint `npm run lint` in `frontend/` -> passed.
+- `.\.venv\Scripts\python.exe -m pytest -q` with repo-local TEMP/TMP -> 181 passed.
+- Focused M20.16 source-wall/live-safety gate `.\.venv\Scripts\python.exe -m pytest tests\test_clean_room_source_wall.py tests\test_m16_live_safety.py -q` with repo-local TEMP/TMP -> 12 passed.
+- `.\.venv\Scripts\python.exe -m ruff check .` -> passed.
+- `npm run build` -> passed.
+- `npm run e2e` -> 15 passed.
+- M20.16 browser/Playwright screenshot captured under ignored `artifacts/screenshots/m20-16-code-analysis-artifacts.png`; visual inspection confirmed Code notebook analysis artifact panel, report/manifest paths, provider context, disabled run controls, and no sensitive content or incoherent overlap.
+- M20.16 changed-file credential-like string scan found no real credential, PIN, provider-key, private-key, or personal-account literal; matches were existing safety wording and synthetic redaction-test probes only.
+- M20.16 code-review gate pass: no CRITICAL/HIGH/BLOCK findings. Architecture WATCH: Code remains static-analysis-only; real notebook execution still requires a separate sandbox/runtime contract, artifact lifecycle policy, and security review.
+
+- Focused M20.15 Nodes/context gate `.\.venv\Scripts\python.exe -m pytest tests\test_m11_nodes.py tests\test_m19_advanced_routes_context.py -q` with repo-local TEMP/TMP -> 10 passed.
+- Focused M20.15 Python lint `.\.venv\Scripts\python.exe -m ruff check src\local_terminal\nodes.py src\local_terminal\storage.py tests\test_m11_nodes.py tests\test_m19_advanced_routes_context.py` -> passed.
+- Focused M20.15 format check `.\.venv\Scripts\python.exe -m ruff format --check src\local_terminal\nodes.py src\local_terminal\storage.py tests\test_m11_nodes.py tests\test_m19_advanced_routes_context.py` -> passed after formatting changed Python files.
+- Focused M20.15 frontend lint `npm run lint` in `frontend/` -> passed.
+- `.\.venv\Scripts\python.exe -m pytest -q` with repo-local TEMP/TMP -> 180 passed.
+- Focused M20.15 source-wall/live-safety gate `.\.venv\Scripts\python.exe -m pytest tests\test_clean_room_source_wall.py tests\test_m16_live_safety.py -q` with repo-local TEMP/TMP -> 12 passed.
+- `.\.venv\Scripts\python.exe -m ruff check .` -> passed.
+- `npm run build` -> passed.
+- `npm run e2e` -> 15 passed.
+- `git diff --check` -> passed with Git CRLF working-copy warnings only.
+- M20.15 browser/Playwright screenshot captured under ignored `artifacts/screenshots/m20-15-nodes-dry-run-output.png`; visual inspection confirmed Nodes dry-run output mode, provider/cache read count, context-source count, local report/manifest artifact paths, provider context, and no sensitive content or incoherent overlap.
+- M20.15 changed-file credential-like string scan found no real credential, PIN, provider-key, private-key, or personal-account literal; matches were a synthetic redaction-test probe and the forbidden-term list only.
+- M20.15 code-review gate pass: no CRITICAL/HIGH/BLOCK findings. Architecture WATCH: Nodes remains dry-run-only; report/manifest lifecycle, prune, and repair behavior should be added before high-volume workflow use or any executable runtime contract.
+
+- Focused M20.14 AI Chat/context gate `.\.venv\Scripts\python.exe -m pytest tests\test_m9_ai_chat.py tests\test_m19_advanced_routes_context.py -q` with repo-local TEMP/TMP -> 10 passed.
+- Focused M20.14 Python lint `.\.venv\Scripts\python.exe -m ruff check src\local_terminal\chat.py tests\test_m9_ai_chat.py tests\test_m19_advanced_routes_context.py` -> passed.
+- Focused M20.14 format check `.\.venv\Scripts\python.exe -m ruff format --check src\local_terminal\chat.py tests\test_m9_ai_chat.py tests\test_m19_advanced_routes_context.py` -> passed after formatting changed Python files.
+- Focused M20.14 frontend lint `npm run lint` in `frontend/` -> passed.
+- `.\.venv\Scripts\python.exe -m pytest -q` with repo-local TEMP/TMP -> 180 passed.
+- Focused M20.14 source-wall/live-safety gate `.\.venv\Scripts\python.exe -m pytest tests\test_clean_room_source_wall.py tests\test_m16_live_safety.py -q` with repo-local TEMP/TMP -> 12 passed.
+- `.\.venv\Scripts\python.exe -m ruff check .` -> passed.
+- `npm run build` -> passed.
+- `npm run e2e` -> 15 passed after fixing the AI Chat E2E locator to target the linked artifact list now that the same artifact path also appears in the assistant context brief.
+- `git diff --check` -> passed with Git CRLF working-copy warnings only.
+- M20.14 browser/Playwright screenshot captured under ignored `artifacts/screenshots/m20-14-ai-chat-context-brief.png`; visual inspection confirmed local context brief, provider/cache source rows, context artifacts, linked artifact metadata, and no incoherent overlap.
+- M20.14 changed-file credential-like string scan found no real credential, PIN, provider-key, private-key, or personal-account literal; matches were existing safety wording and synthetic redaction-test probes only.
+- M20.14 code-review gate pass: no CRITICAL/HIGH/BLOCK findings. Architecture WATCH: AI Chat remains a deterministic local context brief; future richer assistant behavior should add a structured local answer schema and artifact lifecycle before any optional external/provider-key path.
+
+- Focused M20.13 Portfolio gate `.\.venv\Scripts\python.exe -m pytest tests\test_m7_portfolio.py -q` with repo-local TEMP/TMP -> 14 passed.
+- Focused M20.13 Python lint `.\.venv\Scripts\python.exe -m ruff check src\local_terminal\portfolio.py src\local_terminal\server.py tests\test_m7_portfolio.py` -> passed.
+- Focused M20.13 format check `.\.venv\Scripts\python.exe -m ruff format --check src\local_terminal\portfolio.py src\local_terminal\server.py tests\test_m7_portfolio.py` -> passed after formatting changed Python files.
+- Focused M20.13 frontend lint `npm run lint` in `frontend/` -> passed.
+- `.\.venv\Scripts\python.exe -m pytest -q` with repo-local TEMP/TMP under `.omx\pytest-tmp` -> 180 passed.
+- Focused M20.13 source-wall/live-safety gate `.\.venv\Scripts\python.exe -m pytest tests\test_clean_room_source_wall.py tests\test_m16_live_safety.py -q` with repo-local TEMP/TMP -> 12 passed.
+- `.\.venv\Scripts\python.exe -m ruff check .` -> passed.
+- `npm run build` in `frontend/` -> passed.
+- `npm run e2e` in `frontend/` -> 15 passed.
+- `git diff --check` -> passed with Git CRLF working-copy warnings only.
+- M20.13 browser/Playwright screenshot captured under ignored `artifacts/screenshots/m20-13-portfolio-report-risk.png`; visual inspection confirmed Portfolio Report tab, local report artifacts, enabled safe toolbar actions, and no incoherent overlap.
+- M20.13 changed-file credential-like string scan found no real credential, PIN, provider-key, private-key, or personal-account literal; matches were existing safety/type/redaction terms only.
+- M20.13 code-review gate pass: no CRITICAL/HIGH/BLOCK findings. Architecture WATCH: Portfolio optimizer, report builder expansion, and planning/report lifecycle management remain deliberately gated for later local contracts.
+
+- Focused M20.12 Portfolio/Backtest gate `.\.venv\Scripts\python.exe -m pytest tests\test_m7_portfolio.py tests\test_m6_backtest.py -q` with repo-local TEMP/TMP -> 23 passed.
+- Focused M20.12 Python lint `.\.venv\Scripts\python.exe -m ruff check src\local_terminal\portfolio.py tests\test_m7_portfolio.py` -> passed.
+- Focused M20.12 frontend lint `npm run lint` in `frontend/` -> passed.
+- `.\.venv\Scripts\python.exe -m pytest -q` with repo-local TEMP/TMP under `.omx\pytest-tmp` -> 179 passed.
+- Focused M20.12 source-wall/live-safety gate `.\.venv\Scripts\python.exe -m pytest tests\test_clean_room_source_wall.py tests\test_m16_live_safety.py -q` with repo-local TEMP/TMP -> 12 passed.
+- `.\.venv\Scripts\python.exe -m ruff check .` -> passed.
+- `.\.venv\Scripts\python.exe -m ruff format --check src\local_terminal\portfolio.py tests\test_m7_portfolio.py` -> passed after formatting changed Python files.
+- `npm run build` in `frontend/` -> passed.
+- `npm run e2e` in `frontend/` -> 15 passed.
+- M20.12 browser/Playwright screenshot captured under ignored `artifacts/screenshots/m20-12-portfolio-backtest-context.png`; visual inspection confirmed Portfolio Backtest context, linked signal/indicator/returns artifacts, local read-only safety row, and no incoherent overlap.
+- M20.12 changed-file credential-like string scan found no real credential, PIN, provider-key, private-key, or personal-account literal; matches were existing safety/type/redaction terms only.
+- M20.12 code-review gate pass: no CRITICAL/HIGH/BLOCK findings. Architecture WATCH: this pass improves Backtest-to-Portfolio artifact context only; broader Portfolio risk analytics/optimizer/report toolbar actions remain gated or unchanged.
+
+- Focused M20.11 Backtest gate `.\.venv\Scripts\python.exe -m pytest tests\test_m6_backtest.py -q` with repo-local TEMP/TMP -> 10 passed.
+- `.\.venv\Scripts\python.exe -m pytest -q` with repo-local TEMP/TMP under `.omx\pytest-tmp` -> 178 passed.
+- Focused M20.11 source-wall/live-safety gate `.\.venv\Scripts\python.exe -m pytest tests\test_clean_room_source_wall.py tests\test_m16_live_safety.py -q` with repo-local TEMP/TMP -> 12 passed.
+- `.\.venv\Scripts\python.exe -m ruff check .` -> passed.
+- `npm run lint` in `frontend/` -> passed.
+- `npm run build` in `frontend/` -> passed.
+- `npm run e2e` in `frontend/` -> 15 passed.
+- M20.11 browser/Playwright screenshot captured under ignored `artifacts/screenshots/m20-11-backtest-indicator-signals-returns.png`; visual inspection confirmed Backtest artifacts include signals, indicators, returns analysis, returns curve, and route tabs render without incoherent overlap.
+- M20.11 changed-file credential-like string scan found no real credential, PIN, provider-key, private-key, or personal-account literal; matches were existing safety/type/redaction terms only.
+- M20.11 code-review gate pass: no CRITICAL/HIGH/BLOCK findings. Architecture WATCH: Optimize, Walk-Forward, and broader strategy families remain deliberately gated until separate local contracts exist.
+
+- Focused M20.10 storage/Backtest/Algo schema gate `.\.venv\Scripts\python.exe -m pytest tests\test_m2_local_state.py tests\test_m6_backtest.py tests\test_m10_algo.py -q` with repo-local TEMP/TMP -> 27 passed.
+- `.\.venv\Scripts\python.exe -m pytest -q` with repo-local TEMP/TMP under `.omx\pytest-tmp` -> 177 passed.
+- Focused M20.10 source-wall/live-safety gate `.\.venv\Scripts\python.exe -m pytest tests\test_clean_room_source_wall.py tests\test_m16_live_safety.py -q` with repo-local TEMP/TMP -> 12 passed.
+- `.\.venv\Scripts\python.exe -m ruff check .` -> passed.
+- `.\.venv\Scripts\python.exe -m ruff format --check src\local_terminal\storage.py src\local_terminal\backtest.py src\local_terminal\algo.py tests\test_m2_local_state.py tests\test_m6_backtest.py tests\test_m10_algo.py` -> passed after formatting changed Python files.
+- `npm run build` in `frontend/` -> passed.
+- `npm run lint` in `frontend/` -> passed.
+- `npm run e2e` in `frontend/` -> 15 passed.
+- M20.10 browser/Playwright screenshots captured under ignored `artifacts/screenshots/m20-10-backtest-strategy-parameter-schema.png` and `artifacts/screenshots/m20-10-algo-strategy-parameter-schema.png`; visual inspection confirmed strategy schema version, artifact contract, parameter bounds, constraints, and no incoherent overlap.
+- M20.10 changed-file credential-like string scan found no real credential, PIN, provider-key, private-key, or personal-account literal; matches were existing safety/type/redaction terms and test redaction probes only.
+- M20.10 code-review gate pass: no CRITICAL/HIGH/BLOCK findings after the temp cleanup and E2E wait-response follow-up. Architecture WATCH: backend Backtest catalog remains the source of truth while the frontend strategy schema helper is an offline fallback mirror.
+- Focused M20.9 Algo/Backtest/source-wall/live-safety gate `.\.venv\Scripts\python.exe -m pytest tests\test_m10_algo.py tests\test_m6_backtest.py tests\test_clean_room_source_wall.py tests\test_m16_live_safety.py -q` with repo-local TEMP/TMP -> 32 passed.
+- `.\.venv\Scripts\python.exe -m pytest -q` with repo-local TEMP/TMP under `.omx\pytest-tmp` -> 174 passed.
+- `.\.venv\Scripts\python.exe -m ruff check .` -> passed.
+- `.\.venv\Scripts\python.exe -m ruff format --check src\local_terminal\algo.py tests\test_m10_algo.py` -> passed.
+- `npm run build` in `frontend/` -> passed.
+- `npm run lint` in `frontend/` -> passed.
+- `npm run e2e` in `frontend/` -> 15 passed.
+- M20.9 browser/Playwright screenshot captured under ignored `artifacts/screenshots/m20-9-algo-backtest-strategy-handoff.png`; visual inspection confirmed Algo's Backtest Strategy selector, Channel Breakout handoff, Backtest artifacts, dry-run Scanner, and no incoherent overlap in the captured workflow.
+- M20.9 changed-file credential-like string scan found no real credential, PIN, provider-key, private-key, or personal-account literal; matches were existing safety/type/redaction terms only.
+- M20.9 code-review gate pass after fixing the runtime strategy override mismatch: no CRITICAL/HIGH/BLOCK findings. Architecture WATCH: promote Backtest catalog metadata into a parameter schema before adding a third strategy family.
+- Focused M20.8 Backtest gate `.\.venv\Scripts\python.exe -m pytest tests\test_m6_backtest.py -q` with repo-local TEMP/TMP -> 8 passed.
+- Focused M20.8 ruff `.\.venv\Scripts\python.exe -m ruff check src\local_terminal\backtest.py src\local_terminal\server.py tests\test_m6_backtest.py` -> passed.
+- Focused M20.8 source-wall/live-safety sweep `.\.venv\Scripts\python.exe -m pytest tests\test_clean_room_source_wall.py tests\test_m16_live_safety.py -q` with repo-local TEMP/TMP -> 12 passed.
+- M20.8 credential-like string scan over changed files found no real credential, PIN, provider-key, private-key, or personal-account literal; matches were existing type/safety terms only.
+- `.\.venv\Scripts\python.exe -m pytest -q` with repo-local TEMP/TMP under `.omx\pytest-tmp` -> 171 passed.
+- `.\.venv\Scripts\python.exe -m ruff check .` -> passed.
+- `npm run build` in `frontend/` -> passed.
+- `npm run lint` in `frontend/` -> passed.
+- `npm run e2e` in `frontend/` -> 15 passed.
+- `git diff --check` -> passed with Git CRLF working-copy warnings only.
+- M20.8 browser/Playwright screenshot captured under ignored `artifacts/screenshots/m20-8-backtest-strategy-catalog.png`; visual inspection confirmed the Strategy Catalog, Channel Breakout selection, artifacts, Data Source tab, and no-same-candle guard render without incoherent overlap.
+- M20.8 code-review gate pass: no CRITICAL/HIGH/BLOCK findings. Architecture watch: the frontend fallback strategy catalog intentionally mirrors backend metadata for offline fallback; keep backend catalog as source of truth before expanding strategy count.
+- Focused M20.7 gate `.\.venv\Scripts\python.exe -m pytest tests\test_m20_local_secret_gate.py tests\test_m19_governance_routes.py tests\test_m16_live_safety.py tests\test_clean_room_source_wall.py -q` with repo-local TEMP/TMP -> 18 passed.
+- Focused M20.7 ruff `.\.venv\Scripts\python.exe -m ruff check src\local_terminal\secret_gate.py src\local_terminal\governance.py src\local_terminal\server.py tests\test_m20_local_secret_gate.py` -> passed.
+- M20.7 security scan `npm audit --audit-level=high` in `frontend/` -> found 0 vulnerabilities; `rg` review found no real credential literals, and the only test/demo `abc123` values are redaction probes.
+- `.\.venv\Scripts\python.exe -m pytest -q` with repo-local TEMP/TMP under `.omx\pytest-tmp` -> 167 passed.
+- `.\.venv\Scripts\python.exe -m ruff check .` -> passed.
+- `npm run build` in `frontend/` -> passed.
+- `npm run lint` in `frontend/` -> passed.
+- `npm run e2e` in `frontend/` -> 15 passed.
+- `git diff --check` -> passed with Git CRLF working-copy warnings only.
+- M20.7 browser/Playwright screenshot captured under ignored `artifacts/screenshots/m20-7-settings-secret-gate.png`; visual inspection confirmed Settings shows `contract_ready_disabled`, `local-secret-gate-v1`, blocked optional-key provider count, disabled persistence gate, and no incoherent text overlap.
+- M20.7 code-review/security gate pass: no CRITICAL/HIGH/BLOCK findings. Security watch: this is only a read-only redaction/enablement contract; actual provider-key persistence still needs a separate security-reviewed milestone before any key form or adapter can be enabled.
+- Focused M20.6 test sweep `.\.venv\Scripts\python.exe -m pytest tests\test_m20_sec_fund_etf_provider.py tests\test_m4_markets.py tests\test_m19_provider_registry.py tests\test_m2_local_state.py tests\test_m19_advanced_routes_context.py -q` with repo-local TEMP/TMP -> 22 passed.
+- M20.6 source-wall sweep `.\.venv\Scripts\python.exe -m pytest tests\test_clean_room_source_wall.py tests\test_m20_sec_fund_etf_provider.py -q` with repo-local TEMP/TMP -> 10 passed.
+- M20.6 live SEC smoke `.\.venv\Scripts\python.exe -c "from src.local_terminal.fund_data import fetch_sec_fund_tickers, normalize_sec_fund_tickers; p=fetch_sec_fund_tickers(timeout=20); n=normalize_sec_fund_tickers(p); print(n['summary']['row_count'], n['summary']['registry_total'], n['rows'][0]['symbol'])"` -> `6 28349 BND`.
+- `.\.venv\Scripts\python.exe -m pytest -q` with repo-local TEMP/TMP under `.omx\pytest-tmp` -> 164 passed.
+- `.\.venv\Scripts\python.exe -m ruff check .` -> passed.
+- `npm run build` in `frontend/` -> passed.
+- `npm run lint` in `frontend/` -> passed.
+- `npm run e2e` in `frontend/` -> 15 passed.
+- `git diff --check` -> passed with Git CRLF working-copy warnings only.
+- M20.6 browser/Playwright screenshot captured under ignored `artifacts/screenshots/m20-6-markets-etf-fund-registry.png`; visual inspection confirmed ETF active status, SEC fund registry provider freshness, CIK/series/class rows, source/cache/docs attribution, quote-provider gate, and no incoherent text overlap.
+- M20.6 code-review gate pass: no CRITICAL/HIGH/BLOCK findings. Architecture watch: SEC fund ticker registry remains reference-only and ETF quote rows remain gated; `Markets.tsx` now has multiple provider-specific panels, so future provider additions should split repeated panel patterns before adding another market data family.
+- Focused M20.5 test sweep `.\.venv\Scripts\python.exe -m pytest tests\test_m20_dbnomics_markets_macro_context.py tests\test_m19_news_macro_fundamentals.py tests\test_m4_markets.py -q` with repo-local TEMP/TMP -> 13 passed.
+- `.\.venv\Scripts\python.exe -m pytest -q` with repo-local TEMP/TMP under `.omx\pytest-tmp` -> 161 passed.
+- `.\.venv\Scripts\python.exe -m ruff check .` -> passed.
+- `npm run build` in `frontend/` -> passed.
+- `npm run lint` in `frontend/` -> passed.
+- `npm run e2e` in `frontend/` -> 15 passed.
+- `git diff --check` -> passed with Git CRLF working-copy warnings only.
+- M20.5 browser/Playwright screenshot captured under ignored `artifacts/screenshots/m20-5-markets-index-regional-macro.png`; visual inspection confirmed Regional macro panels, DBnomics provider/cache attribution, gated quote state, and no blank main workflow.
+- M20.5 code-review gate pass: no CRITICAL/HIGH/BLOCK findings. Architecture check: Macro refresh is DBnomics-only, index/regional quote rows remain gated, and no installed-source, credential, private/live, billing, cloud, margin, leverage, short, or derivatives path was added.
+- Focused M20.4 test sweep `.\.venv\Scripts\python.exe -m pytest tests\test_m20_sec_stocks_fundamentals.py tests\test_m19_news_macro_fundamentals.py tests\test_m4_markets.py -q` -> 13 passed; Windows default TEMP cleanup emitted a known pytest temp-dir PermissionError after pass, so full pytest was rerun with repo-local TEMP/TMP.
+- `.\.venv\Scripts\python.exe -m pytest -q` with repo-local TEMP/TMP under `.omx\pytest-tmp` -> 159 passed.
+- `.\.venv\Scripts\python.exe -m ruff check .` -> passed.
+- `npm run build` in `frontend/` -> passed.
+- `npm run lint` in `frontend/` -> passed.
+- `npm run e2e` in `frontend/` -> 15 passed.
+- `git diff --check` -> passed with Git CRLF working-copy warnings only.
+- M20.2 browser/Playwright screenshot captured under ignored `artifacts/screenshots/m20-2-markets-fx-provider.png`.
+- M20.3 browser/Playwright screenshot captured under ignored `artifacts/screenshots/m20-3-markets-commodities-provider.png`.
+- M20.4 browser/Playwright screenshot captured under ignored `artifacts/screenshots/m20-4-markets-stocks-fundamentals.png`; visual inspection confirmed Stocks active status, SEC provider freshness, company/fact tables, no-key source/cache attribution, quote gate, and no incoherent text overlap.
+- M20.2 code-review gate pass: no CRITICAL/HIGH/BLOCK findings. Architecture watch: ECB rates must remain reference-only and must not be reused as executable spot FX quotes without a separate provider/safety milestone.
+- M20.3 code-review gate pass: no CRITICAL/HIGH/BLOCK findings. Architecture watch: World Bank monthly values must remain reference-only and must not be reused as executable spot/futures commodity quotes without a separate provider/safety milestone.
+- M20.4 code-review gate pass: no CRITICAL/HIGH/BLOCK findings. Architecture watch: the Stocks refresh currently reuses the combined SEC/DBnomics research refresh path; keep it bounded or split by provider before enabling automatic background refresh.
+- Local smoke: backend `http://127.0.0.1:8765/api/health` returned 15 routes and live disabled.
+- Local smoke: frontend `http://127.0.0.1:5173/` returned the shell.
+- Playwright screenshots captured to ignored artifacts `artifacts/screenshots/m1-foundation.png`, `artifacts/screenshots/m2-shell-dashboard.png`, `artifacts/screenshots/m3-dashboard-e2e.png`, `artifacts/screenshots/m4-markets-e2e.png`, `artifacts/screenshots/m5-crypto-paper-e2e.png`, `artifacts/screenshots/m6-backtest-e2e.png`, `artifacts/screenshots/m7-portfolio-e2e.png`, `artifacts/screenshots/m8-news-e2e.png`, `artifacts/screenshots/m9-ai-chat-e2e.png`, `artifacts/screenshots/m10-algo-e2e.png`, `artifacts/screenshots/m11-nodes-e2e.png`, `artifacts/screenshots/m12-code-e2e.png`, `artifacts/screenshots/m13-quant-lab-e2e.png`, `artifacts/screenshots/m14-quantlib-e2e.png`, `artifacts/screenshots/m15-forum-help-e2e.png`, and `artifacts/screenshots/m16-live-safety-e2e.png`.
+- Visual verdict for M7 Portfolio functional/layout parity: pass, score 92, recorded under ignored `.omx/state/m7-portfolio/ralph-progress.json`.
+- Visual verdict for M8 News functional/layout parity: pass, score 91, recorded under ignored `.omx/state/m8-news/ralph-progress.json`.
+- Visual verdict for M9 AI Chat functional/layout parity: pass, score 91, recorded under ignored `.omx/state/m9-ai-chat/ralph-progress.json`.
+- Visual verdict for M10 Algo functional/layout parity: pass, score 91, recorded under ignored `.omx/state/m10-algo/ralph-progress.json`.
+- Visual verdict for M11 Nodes functional/layout parity: pass, score 92, recorded under ignored `.omx/state/m11-nodes/ralph-progress.json`.
+- Visual verdict for M12 Code functional/layout parity: pass, score 91, recorded under ignored `.omx/state/m12-code/ralph-progress.json`.
+- Visual verdict for M13 Quant Lab functional/layout parity: pass, score 92, recorded under ignored `.omx/state/m13-quant-lab/ralph-progress.json`.
+- Visual verdict for M14 QuantLib functional/layout parity: pass, score 92, recorded under ignored `.omx/state/m14-quantlib/ralph-progress.json`.
+- Visual verdict for M15 Forum/Help functional/layout parity: pass, score 92, recorded under ignored `.omx/state/m15-forum-help/ralph-progress.json`.
+- Visual verdict for M16 Live Safety functional/layout parity: pass, score 91, recorded under ignored `.omx/state/m16-live-safety/ralph-progress.json`.
+- Visual verdict for M18 clean-room visual style parity: pass, score 91, recorded under ignored `.omx/state/m18-visual-style/ralph-progress.json`; screenshots captured under ignored `artifacts/screenshots/m18-style-dashboard.png`, `m18-style-markets.png`, `m18-style-settings.png`, and `m18-style-dashboard-1024.png`.
+- M18 code-review result: COMMENT with no CRITICAL/HIGH blockers; architecture WATCH remains that the late CSS visual layer is intentionally broad and should be split into stable theme/component rules before larger future visual expansions.
+- M19.1 browser/Playwright screenshots captured under ignored `artifacts/screenshots/m19-1-dashboard.png`, `m19-1-markets.png`, `m19-1-crypto.png`, `m19-1-backtest.png`, and `m19-1-settings.png`.
+- M19.1 code-review pass: no CRITICAL/HIGH/BLOCK findings. Architecture watch: legacy `styles.css` remains as the route/base stylesheet, while the active terminal visual system now lives in imported M19 token/component files for future route work.
+- M19.2 provider freshness screenshot captured under ignored `artifacts/screenshots/m19-2-provider-freshness.png`.
+- M19.2 code-review pass: no CRITICAL/HIGH/BLOCK findings after fixing stale-cache double counting and keeping the disabled-by-safety provider visible in the global freshness strip.
+- M19.3 browser/Playwright screenshots captured under ignored `artifacts/screenshots/m19-3-crypto-provider-chain.png` and `artifacts/screenshots/m19-3-dashboard-provider-aggregate.png`.
+- M19.3 code-review pass: no CRITICAL/HIGH/BLOCK findings. Architecture watch: public crypto fallback refresh is serial and can take roughly 20 seconds when primary providers fail; later provider UX should move long refreshes to background jobs or shorter bounded retries.
+- M19.4 browser/Playwright screenshot captured under ignored `artifacts/screenshots/m19-4-dashboard-aggregator.png`.
+- M19.4 code-review pass: no CRITICAL/HIGH/BLOCK findings. Subagent delegation was unavailable because the thread-level agent limit was reached, so the review was performed locally against the code-review checklist.
+- M19.5 browser/Playwright screenshot captured under ignored `artifacts/screenshots/m19-5-markets-provider-expansion.png`.
+- M19.5 code-review pass: no CRITICAL/HIGH/BLOCK findings. Architecture watch: public refresh still runs synchronously when explicitly requested; keep route-load auto-refresh disabled or move provider refresh to a bounded background job before enabling automatic refresh.
+- M19.6 browser/Playwright screenshot captured under ignored `artifacts/screenshots/m19-6-crypto-workspace-depth.png`.
+- M19.6 code-review pass: no CRITICAL/HIGH/BLOCK findings. Architecture watch: paper JSONL files are derivative mirrors rewritten from `paper_state.json`; add lifecycle/prune/repair behavior before scaling paper event volume.
+- M19.7 browser/Playwright screenshot captured under ignored `artifacts/screenshots/m19-7-backtest-provider-provenance.png`.
+- M19.7 code-review pass: no CRITICAL/HIGH/BLOCK findings. Architecture watch: Backtest still has one executable local strategy; provenance/artifact depth is intentionally completed before expanding strategy families.
+- M19.8 browser/Playwright screenshot captured under ignored `artifacts/screenshots/m19-8-portfolio-provider-pricing.png`.
+- M19.8 code-review pass: no CRITICAL/HIGH/BLOCK findings after fixing empty-cache provenance. Architecture watch: provider pricing currently uses the public crypto cache path; non-crypto holdings remain explicit `portfolio_snapshot/local_snapshot` until a later provider/secret-gate milestone expands coverage.
+- M19.9 live public provider smoke parsed SEC/DBnomics no-key endpoints successfully: AAPL companyfacts exposed 5 normalized facts, and DBnomics INSEE CPI series exposed the 2025 value `119.34`; no credentials or provider keys were used.
+- M19.9 browser/Playwright screenshot captured under ignored `artifacts/screenshots/m19-9-news-macro-fundamentals.png`.
+- M19.9 code-review pass: no CRITICAL/HIGH/BLOCK findings. Architecture watch: SEC/DBnomics refresh is synchronous and intentionally scoped to public no-key research cache; optional-key providers remain disabled until the separate local secret-storage gate exists.
+- M19.10 focused test sweep `.\.venv\Scripts\python.exe -m pytest tests/test_m9_ai_chat.py tests/test_m11_nodes.py tests/test_m12_code_workspace.py tests/test_m13_quant_lab.py tests/test_m14_quantlib.py tests/test_m19_advanced_routes_context.py -q` -> 44 passed.
+- M19.10 Playwright screenshots captured under ignored `artifacts/screenshots/m9-ai-chat-e2e.png`, `m11-nodes-e2e.png`, `m12-code-e2e.png`, `m13-quant-lab-e2e.png`, and `m14-quantlib-e2e.png`; Code, Quant Lab, and QuantLib screenshots were visually inspected for route context panels and non-overlapping layout.
+- M19.10 code-review gate pass: no CRITICAL/HIGH/BLOCK findings after fixing the Nodes artifact-context gap by adding artifact source mapping and a local `dry_run.json` plan artifact.
+- M19.11 focused tests `.\.venv\Scripts\python.exe -m pytest tests/test_m19_governance_routes.py tests/test_m15_forum_help.py tests/test_m16_live_safety.py tests/test_m19_provider_registry.py -q` -> 20 passed.
+- M19.11 full verification: `.\.venv\Scripts\python.exe -m pytest -q` -> 148 passed; `.\.venv\Scripts\python.exe -m ruff check .` -> passed; `npm run lint` -> passed; `npm run build` -> passed; `npm run e2e` -> 15 passed; `git diff --check` -> passed with Git CRLF working-copy warnings only.
+- M20.1 browser/Playwright screenshot captured under ignored `artifacts/screenshots/m20-1-markets-rates-provider.png`; visual inspection confirmed Bonds/Rates active status, Treasury provider freshness, no-key source/cache attribution, and populated curve rows without text overlap.
+- M20.1 code-review gate pass: no CRITICAL/HIGH/BLOCK findings. Architecture watch: future multi-provider expansions should split dense route-specific market panels before `Markets.tsx` grows into a broad data-workspace container.
+- M19.11 Playwright screenshots captured under ignored `artifacts/screenshots/m19-11-settings-governance.png`, `m19-11-profile-governance.png`, and `m19-11-forum-help-governance.png`; screenshots were visually inspected for low-contrast readability and non-overlapping governance rows.
+- M19.11 code-review gate pass: no CRITICAL/HIGH/BLOCK findings after tightening optional-key/paid provider setup classification so plan-gated optional providers remain secret-gated too.
+- M19.12 full QA audit recorded in `docs/planning/M19_FINAL_QA_AUDIT.md`; route screenshot matrix updated in `docs/planning/M19_SCREENSHOT_INDEX.md`, and final handoff refreshed in `docs/planning/FINAL_HANDOFF.md`.
+- M19.12 verification reused the latest green gate sweep after M19.11 and reran doc-sensitive checks after state updates: `.\.venv\Scripts\python.exe -m pytest -q` -> 148 passed; `.\.venv\Scripts\python.exe -m ruff check .` -> passed; `npm run lint` -> passed; `npm run build` -> passed; `npm run e2e` -> 15 passed; `git diff --check` -> passed with Git CRLF working-copy warnings only.
+- M19.12 code-review gate pass: no CRITICAL/HIGH/BLOCK findings; audit conclusion is docs-only handoff cleanup with remaining risks explicitly tracked for the next planning cycle.
+
+## Clean-Room Rules In Force
+
+- Do not read, copy, port, or adapt `D:\FinceptTerminal\app\scripts` or installed package implementation source.
+- Do not copy Fincept branding, logo, trademarks, commercial copy, runtime binaries, or assets.
+- Do not use `D:\Crypto-Trading` or `FINCEPT_TO_CRYPTO_TRADING_HANDOFF.md` as this repo roadmap.
+- Use public read-only runtime data where available; use deterministic fixtures/cache only for tests and offline fallback.
+- Live trading parity requires the dedicated safety contract, local secret-storage design, explicit opt-in, confirmation gates, audit logs, kill switch, paper/live isolation tests, static reachability checks, and code/security review before any reachable live path.
+
+## Next Milestone
+
+**Current resume point (2026-07-07): `docs/planning/M26_AGENT_READINESS_PLAN.md`** — M26
+agent-readiness slices (state-file backups, portfolio select, strategy delete,
+agent-contract truth test). The progress table inside that file is the single
+source of truth for M26; the historical M23 resume text below is retained as
+ledger history only.
+
+Historical resume point: Post-M23.68 execution must resume from
+`docs/planning/M22_MISSION_LEDGER.md`,
+`docs/planning/M22_FINAL_NON_LIVE_PARITY_AUDIT.md`, and
+`docs/planning/M23_FINAL_NON_LIVE_COMPLETION_AUDIT.md`. M23.68 records the
+current scoped completion state: Command Center `final_goal_audit` reports
+`complete_for_current_non_live_scope`, 12 completed current-scope requirement
+rows, 0 partial rows, 0 unknown rows, and 5 blocked/excluded boundaries. It does
+not add provider calls, adapters, signup, credential flow, cache writes, source
+coverage rows, broker routing, order paths, real balances, artifact mutation,
+external runtimes, or live/private behavior. Future work should be a new goal or
+a separately reviewed provider-entry/safety contract, not a continuation of
+already completed non-live scope.
+
+Post-M23.24 execution must resume from `docs/planning/M22_MISSION_LEDGER.md`, `docs/planning/M22_FINAL_NON_LIVE_PARITY_AUDIT.md`, `docs/planning/M23_FED_H10_FX_REFERENCE.md`, `docs/planning/M23_BANK_OF_CANADA_FX_REFERENCE.md`, `docs/planning/M23_ALPHA_VANTAGE_FX_QUOTE_WATCHLIST.md`, `docs/planning/M23_COMMAND_CENTER_ACTIVITY_TIMELINE.md`, `docs/planning/M23_TWELVE_DATA_QUOTE_WATCHLIST.md`, `docs/planning/M23_BEA_REGIONAL_CONTEXT.md`, `docs/planning/M23_CENSUS_REGIONAL_CONTEXT.md`, `docs/planning/M23_ACTIVE_TASK_SUPERVISION.md`, `docs/planning/M23_NYFED_SOFR_REFERENCE.md`, `docs/planning/M23_COMMAND_CENTER_MISSION_LEDGER.md`, `docs/planning/M23_SHELL_COMMAND_CENTER_STRIP.md`, `docs/planning/M23_CFTC_COT_COMMODITY_POSITIONING.md`, `docs/planning/M23_BACKTEST_STRATEGY_BREADTH.md`, `docs/planning/M23_STOOQ_QUOTE_SNAPSHOT.md`, `docs/planning/M23_NASDAQ_TRADER_SYMBOL_DIRECTORY.md`, `docs/planning/M23_NASDAQ_SYMBOL_DISCOVERY.md`, `docs/planning/M23_MOEX_QUOTE_SNAPSHOT.md`, `docs/planning/M23_BACKTEST_COMPARISON_PACKET.md`, `docs/planning/M23_NEWS_RESEARCH_BRIEF_INDEX.md`, `docs/planning/M23_ADVANCED_OUTPUT_MANIFEST_INDEX.md`, `docs/planning/M23_ADVANCED_OUTPUT_HEALTH_MATRIX.md`, `docs/planning/M23_ARTIFACT_ROOT_SUPERVISION_MATRIX.md`, `docs/planning/M23_BACKTEST_VOLATILITY_REVERSION.md`, `docs/planning/M23_PORTFOLIO_REPORT_INDEX.md`, `docs/planning/M23_FINNHUB_EQUITY_QUOTE_WATCHLIST.md`, `docs/planning/M23_ADVANCED_OUTPUT_STATE_FILE_CLASSIFICATION.md`, `docs/planning/M23_CBOE_DELAYED_QUOTE_GATE.md`, `docs/planning/M23_FMP_QUOTE_WATCHLIST.md`, `docs/planning/M23_PROVIDER_ACQUISITION_RESUME_CONTRACT.md`, `docs/planning/M23_BACKTEST_DATA_READINESS.md`, `docs/planning/M23_ALGO_SCAN_READINESS.md`, `docs/planning/M23_NEWS_TOPIC_ENTITY_MAP.md`, `docs/planning/M23_TWSE_QUOTE_SNAPSHOT.md`, and `docs/planning/M23_EUROSTAT_HICP_CONTEXT.md`. The final audit does not reopen M22.1-M22.8 completed surfaces, M23.1 does not reopen ECB/H.10 reference wiring, M23.31 does not make Bank of Canada reference rates executable FX quotes, M23.2 does not reopen bounded Alpha Vantage FX quote watchlist wiring, M23.3 does not claim durable external tool-call replay, M23.4 does not claim broad multi-asset quote parity, M23.5 does not treat BEA regional context as quotes, M23.6 does not treat Census ACS rows as quotes or a reason to collect unused keys, M23.10 does not make active-task supervision an execution engine, M23.11 does not treat SOFR as executable rates/funding quotes, M23.12 does not make the ledger snapshot an execution engine or goal-completion claim, M23.13 does not make the shell strip an action executor, M23.14 does not treat CFTC positioning rows as executable commodity quotes, M23.15 does not make Backtest/Algo optimized, deployable, or live-trading capable, M23.16 does not make Stooq snapshots orderable or implement the historical CAPTCHA/API-link download path, M23.17 does not make symbol-directory rows quotes, broker availability, balances, or exchange connectivity, M23.18 does not make symbol search quote routing, broker availability, balances, or tradeability, M23.19 does not make MOEX delayed snapshots orderable quotes, realtime feed data, broker/exchange connectivity, balances, or tradeability, M23.49 does not make TWSE daily snapshots realtime, orderable, broker/exchange-connected, balance-aware, or live/private behavior, M23.50 does not make Eurostat HICP rows quotes, orderable, broker/exchange-connected, balance-aware, or live/private behavior, M23.20 does not make Backtest comparison packets optimize, replay, deployment, broker routing, live-order, or destructive artifact lifecycle capability, M23.21 does not read article bodies, copy full articles, call AI summarizers, use paid/cloud news, or execute destructive recovery, M23.22 does not read artifact contents, execute advanced routes, run notebooks/workflows, call managed LLM or external QuantLib runtimes, mutate route outputs, or enable destructive recovery, M23.23 does not read artifact contents, perform artifact content indexing, execute advanced routes, run notebooks/workflows, call managed LLM or external QuantLib runtimes, mutate route outputs, or enable destructive recovery, M23.24 does not read artifact contents, perform content indexing, automatically repair files, execute archive/prune/delete/move/restore, access credentials, call external providers, or enable live/private behavior, M23.32 does not make Backtest strategies optimized, deployable, broker-routable, shortable, derivative-capable, orderable, balance-aware, credential-backed, or live/private behavior, M23.33 does not make Portfolio reports content-indexed, automatically repaired, destructively mutable, balance-aware, optimizer-backed, credential-backed, broker-routable, or live/private behavior, M23.34 does not make Finnhub quote rows orderable, realtime/broad quote parity, public no-key refresh material, broker/exchange-connected, balance-aware, credential-exposing, or live/private behavior, M23.35 does not make advanced route state files real outputs, execute workflows, read artifact contents, call managed LLMs/providers, run notebooks or external QuantLib, or enable destructive/live/private behavior, M23.36 does not make Cboe delayed quote pages a local adapter, cache, source coverage row, orderable quote source, or automation-approved provider, M23.37 does not make FMP quote rows orderable, broad quote parity, public no-key refresh material, account/MCP-integrated, broker/exchange-connected, balance-aware, credential-exposing, or live/private behavior, M23.38 does not approve another provider or bypass official-doc research, M23.39 does not write Backtest artifacts, refresh providers, optimize, deploy, route broker/exchange orders, read balances, or enable live/private behavior, and M23.41 does not refresh providers, read article bodies, call AI summarizers, write artifacts, use paid/cloud news, or execute destructive recovery. If the long goal continues, choose one concrete residual partial from the audit, especially a provider-entry research gate, another safe metadata-only artifact health slice, or fresh sanitized workflow observation, while preserving the live trading, broker/exchange binding, real balances, margin, leverage, short exposure, derivatives, payment, subscription, CR/credits, cloud sync, branding/assets/source copying, installed-source read, secret, and destructive-action gates.

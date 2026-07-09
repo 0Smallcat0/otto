@@ -1,0 +1,12 @@
+{
+  "profile_id": "local-default",
+  "display_name": "Local User",
+  "theme": "system",
+  "default_route": "dashboard",
+  "cloud_account_required": false,
+  "billing_enabled": false,
+  "subscription_required": false,
+  "cr_required": false,
+  "credits_enabled": false,
+  "private_api_required": false
+}

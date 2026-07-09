@@ -1,0 +1,37 @@
+app:
+  name: Local Terminal
+  mode: local
+  clean_room: true
+
+storage:
+  settings_dir: settings
+  workspace_layouts_dir: workspace_layouts
+  artifacts_dir: artifacts
+
+safety:
+  real_orders: false
+  private_api_required: false
+  margin: false
+  leverage: false
+  short: false
+  derivatives_live_execution: false
+
+profile:
+  cloud_account_required: false
+  billing_enabled: false
+  subscription_required: false
+  cr_required: false
+  credits_enabled: false
+
+features:
+  shell_routes: true
+  dashboard: true
+  markets: true
+  crypto_paper_workspace: true
+  portfolio: true
+  backtest: true
+  ai_chat: false
+  nodes_execution: false
+  code_execution: false
+  quantlab_execution: false
+  live_broker_sync: false
