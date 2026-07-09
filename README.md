@@ -8,6 +8,8 @@ Otto is built to be *operated by an AI* rather than clicked by hand: the whole p
 exposed as a safe, machine-operable tool surface over MCP, so a coding agent (Claude Code /
 Codex) can run it end to end while a human watches the dashboard.
 
+![Otto dashboard — the read-only human view: account equity, live watchlist, news wire, and AI activity feed](docs/screenshots/01-dashboard.png)
+
 ## Highlights
 
 - **Single-process local app** — a FastAPI backend serves both the JSON API and the built
@@ -21,6 +23,15 @@ Codex) can run it end to end while a human watches the dashboard.
 - **Workbenches** — Markets, Crypto, Portfolio (create / import / export / demo), Backtest,
   News digest, Algo scan, and an AI-chat research surface over local artifacts.
 - **~460 tests** covering the contract, safety gates, providers, and UI end-to-end.
+
+## Screenshots
+
+Multi-asset markets board (crypto, US/TW equities, FX) and the live crypto workbench —
+public, no-key data where available; live trading and code execution stay gated off:
+
+| Markets | Crypto |
+| --- | --- |
+| ![Markets board](docs/screenshots/02-markets.png) | ![Crypto workbench](docs/screenshots/03-crypto.png) |
 
 ## Run
 
