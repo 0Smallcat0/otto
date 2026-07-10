@@ -1,5 +1,7 @@
 # Otto
 
+[![CI](https://github.com/0Smallcat0/otto/actions/workflows/ci.yml/badge.svg)](https://github.com/0Smallcat0/otto/actions/workflows/ci.yml)
+
 An effortless, **local, AI-operated financial terminal**. You say what you want in plain
 language; an AI agent drives the terminal for you — pulling market data, running backtests,
 managing a paper portfolio, digesting news, and more. Everything runs on your machine.
