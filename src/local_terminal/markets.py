@@ -1756,7 +1756,6 @@ def _source_coverage_matrix(
     twelve_data_quotes = _summary_section(research_summary, "twelve_data_quotes")
     finnhub_quotes = _summary_section(research_summary, "finnhub_quotes")
     fmp_quotes = _summary_section(research_summary, "fmp_quotes")
-    stooq_quotes = _summary_section(research_summary, "stooq_quotes")
     moex_quotes = _summary_section(research_summary, "moex_quotes")
     twse_quotes = _summary_section(research_summary, "twse_quotes")
     nasdaq_symbols = _summary_section(research_summary, "nasdaq_symbols")
