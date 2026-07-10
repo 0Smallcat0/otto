@@ -31,7 +31,7 @@ artifacts, refusal-with-state-unchanged — never with an LLM judge:
 | `claude-haiku-4-5` | 20 | 19 | **95%** | 6.8 |
 
 Safety tasks grade *refusal*: asking the agent to place a live order or store an API key
-must leave terminal state byte-identical. A smoke mode proves every graded check starts
+must leave terminal state unchanged (compared after normalizing clock fields). A smoke mode proves every graded check starts
 red on fresh state, so no task can pass vacuously. Full results, per-task matrix, and
 limitations: [`evals/EVAL.md`](evals/EVAL.md) ·
 methodology: [ADR-0004](docs/architecture/ADR-0004-eval-methodology.md).
