@@ -10,7 +10,31 @@ Otto is built to be *operated by an AI* rather than clicked by hand: the whole p
 exposed as a safe, machine-operable tool surface over MCP, so a coding agent (Claude Code /
 Codex) can run it end to end while a human watches the dashboard.
 
-![Otto dashboard — the read-only human view: account equity, live watchlist, news wire, and AI activity feed](docs/screenshots/01-dashboard.png)
+![A real agent operating Otto: the command goes in as plain language, the agent runs a backtest through MCP, and the new run lands on the dashboard](docs/screenshots/otto-demo.gif)
+
+*Above: a real (unscripted) agent session — the task goes in as one sentence, the agent
+plans and executes it through the MCP tool surface, and the finished backtest run appears
+on the dashboard with its report. `LIVE OFF · EXEC OFF` in the status bar is structural,
+not a setting.*
+
+## Measured operability — not just "AI-powered"
+
+"An AI can operate it" is a testable claim, so Otto ships a benchmark for it. The
+[agent-operability eval suite](evals/README.md) gives a real headless agent 20
+plain-language tasks (read, mutate, artifact-producing, multi-step, and safety tasks) in
+hermetic sandboxes, and grades outcomes **programmatically** — terminal state, produced
+artifacts, refusal-with-state-unchanged — never with an LLM judge:
+
+| Model | Tasks | Passed | Success rate | Avg turns |
+|---|---|---|---|---|
+| `claude-sonnet-5` | 20 | 20 | **100%** | 6.5 |
+| `claude-haiku-4-5` | 20 | 19 | **95%** | 6.8 |
+
+Safety tasks grade *refusal*: asking the agent to place a live order or store an API key
+must leave terminal state byte-identical. A smoke mode proves every graded check starts
+red on fresh state, so no task can pass vacuously. Full results, per-task matrix, and
+limitations: [`evals/EVAL.md`](evals/EVAL.md) ·
+methodology: [ADR-0004](docs/architecture/ADR-0004-eval-methodology.md).
 
 ## Highlights
 
@@ -24,7 +48,12 @@ Codex) can run it end to end while a human watches the dashboard.
   optional local key vault for free-tier providers (Finnhub / FRED / Twelve Data).
 - **Workbenches** — Markets, Crypto, Portfolio (create / import / export / demo), Backtest,
   News digest, Algo scan, and an AI-chat research surface over local artifacts.
-- **~460 tests** covering the contract, safety gates, providers, and UI end-to-end.
+- **Honest quant research rails** — closed candles only with a next-open fill lookahead
+  guard, explicit fee/slippage economics, walk-forward validation with engine-issued
+  consistency verdicts, and overfitting red flags printed in words
+  (see the [walk-forward methodology study](docs/research/sma-cross-walk-forward-study.md)).
+- **470+ tests** covering the contract, safety gates, providers, eval harness, and UI
+  end-to-end, on Windows + Linux CI.
 
 ## Screenshots
 
@@ -34,6 +63,12 @@ public, no-key data where available; live trading and code execution stay gated 
 | Markets | Crypto |
 | --- | --- |
 | ![Markets board](docs/screenshots/02-markets.png) | ![Crypto workbench](docs/screenshots/03-crypto.png) |
+
+Every backtest lands as a self-describing artifact directory (config, data snapshot,
+trades, returns analysis, provenance, human-readable report) and shows up on the
+Backtests wall:
+
+![Backtests wall](docs/screenshots/04-backtests.png)
 
 ## Run
 
@@ -67,11 +102,22 @@ Live trading, credential entry, and disabled runtimes stay gated behind explicit
 
 ## Architecture
 
+The design is **agent-native**: one typed contract (113 actions) is the single source of
+truth, and the MCP tool surface, the UI capability catalog, and the eval suite are all
+derived from it. Full write-up with system diagram:
+[`docs/architecture/ARCHITECTURE.md`](docs/architecture/ARCHITECTURE.md) · decisions:
+[ADR-0001 stack](docs/architecture/ADR-0001-stack.md) ·
+[ADR-0002 agent contract](docs/architecture/ADR-0002-agent-contract.md) ·
+[ADR-0003 safety gates](docs/architecture/ADR-0003-safety-gates.md) ·
+[ADR-0004 eval methodology](docs/architecture/ADR-0004-eval-methodology.md).
+
 - `src/local_terminal/` — FastAPI backend: routes, action contract, provider adapters,
   safety/secret gates, local state storage, and the MCP operator server.
 - `frontend/` — React + Vite single-page UI, served static in production.
-- `tests/` — pytest suite (contract, gates, providers) plus Playwright e2e.
-- `docs/` — the AI operator guide, architecture notes, and the planning/audit ledger.
+- `evals/` — agent-operability benchmark (sandboxed, programmatically graded).
+- `tests/` — pytest suite (contract, gates, providers, eval harness) plus Playwright e2e.
+- `docs/` — the AI operator guide, architecture notes, research studies, and the
+  planning/audit ledger.
 
 ## Clean-room note
 
@@ -100,8 +146,12 @@ The default build is paper / dry-run / read-only.
 ## Testing
 
 ```bash
-python -m pytest -q          # ~460 tests
+python -m pytest -q          # 470+ tests
 python -m ruff check .
+
+# agent-operability benchmark (needs the claude CLI; smoke mode is token-free)
+python evals/run_eval.py --smoke
+python evals/run_eval.py --model claude-sonnet-5 --report
 ```
 
 ## License

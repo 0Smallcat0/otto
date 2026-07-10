@@ -8,9 +8,14 @@ on:
 
 jobs:
   backend:
-    # The local secret store uses Windows DPAPI, so the governance
-    # contract tests only fully pass on a Windows runner.
-    runs-on: windows-latest
+    # The local secret store uses Windows DPAPI, so the Windows job is
+    # authoritative (full suite); the Linux job proves the rest of the
+    # backend is cross-platform, with DPAPI-bound tests skipped by marker.
+    strategy:
+      fail-fast: false
+      matrix:
+        os: [windows-latest, ubuntu-latest]
+    runs-on: ${{ matrix.os }}
     steps:
       - uses: actions/checkout@v4
 
