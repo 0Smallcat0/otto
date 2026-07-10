@@ -12,10 +12,10 @@ Codex) can run it end to end while a human watches the dashboard.
 
 ![A real agent operating Otto: the command goes in as plain language, the agent runs a backtest through MCP, and the new run lands on the dashboard](docs/screenshots/otto-demo.gif)
 
-*Above: a real (unscripted) agent session — the task goes in as one sentence, the agent
-plans and executes it through the MCP tool surface, and the finished backtest run appears
-on the dashboard with its report. `LIVE OFF · EXEC OFF` in the status bar is structural,
-not a setting.*
+*Above: a real (unscripted) agent session. One sentence goes in; the agent logs its plan,
+runs the backtest through MCP, and reports success — each step landing live in the
+dashboard's **AI ACTIVITY** feed, with the finished run on the Backtests wall.
+`LIVE OFF · EXEC OFF` is structural, not a setting.*
 
 ## Measured operability — not just "AI-powered"
 
@@ -57,12 +57,16 @@ methodology: [ADR-0004](docs/architecture/ADR-0004-eval-methodology.md).
 
 ## Screenshots
 
-Multi-asset markets board (crypto, US/TW equities, FX) and the live crypto workbench —
-public, no-key data where available; live trading and code execution stay gated off:
+The Mission wall is the human's read-only window: portfolio and paper-account state,
+the AI-managed quote monitor, headlines, and the **AI ACTIVITY feed** where every agent
+action lands with a ✓ and a summary:
 
-| Markets | Crypto |
-| --- | --- |
-| ![Markets board](docs/screenshots/02-markets.png) | ![Crypto workbench](docs/screenshots/03-crypto.png) |
+![Mission wall — equity, positions, AI-managed watchlist, and the live AI activity feed](docs/screenshots/01-dashboard.png)
+
+Multi-asset markets board (crypto, US/TW equities, FX) — public, no-key data where
+available; live trading and code execution stay gated off:
+
+![Markets board](docs/screenshots/02-markets.png)
 
 Every backtest lands as a self-describing artifact directory (config, data snapshot,
 trades, returns analysis, provenance, human-readable report) and shows up on the
