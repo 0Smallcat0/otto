@@ -8,7 +8,9 @@ on:
 
 jobs:
   backend:
-    runs-on: ubuntu-latest
+    # The local secret store uses Windows DPAPI, so the governance
+    # contract tests only fully pass on a Windows runner.
+    runs-on: windows-latest
     steps:
       - uses: actions/checkout@v4
 
