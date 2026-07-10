@@ -54,3 +54,7 @@ artifacts/agent_activity/*
 !artifacts/agent_activity/.gitkeep
 artifacts/healthcheck/*
 !artifacts/healthcheck/.gitkeep
+
+# M28 agent eval harness
+evals/.sandbox/
+evals/results/*/sandboxes/

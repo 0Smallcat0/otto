@@ -3,6 +3,7 @@
 from __future__ import annotations
 
 import json
+import os
 import urllib.error
 from dataclasses import asdict
 from datetime import UTC, datetime
@@ -361,8 +362,24 @@ from src.local_terminal.support import (
 )
 
 APP_NAME = "Local Terminal"
-DEFAULT_HOST = "127.0.0.1"
-DEFAULT_PORT = 8765
+
+
+def _port_from_env(name: str, default: int) -> int:
+    """Bounded int env override so eval/CI instances can avoid the live 8765 port."""
+    raw = os.environ.get(name)
+    if raw is None or not raw.strip():
+        return default
+    try:
+        value = int(raw.strip())
+    except ValueError:
+        return default
+    if not 1 <= value <= 65535:
+        return default
+    return value
+
+
+DEFAULT_HOST = os.environ.get("LOCAL_TERMINAL_HOST", "").strip() or "127.0.0.1"
+DEFAULT_PORT = _port_from_env("LOCAL_TERMINAL_PORT", 8765)
 REPO_ROOT = Path(__file__).resolve().parents[2]
 DEFAULT_FRONTEND_DIST = REPO_ROOT / "frontend" / "dist"
 STORE = LocalStateStore(root=state_root_from_env())

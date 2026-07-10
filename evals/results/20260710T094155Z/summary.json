@@ -1,0 +1,21 @@
+{
+  "suite_id": "otto-core-v1",
+  "generated_at": "2026-07-10 09:42 UTC",
+  "models": {
+    "claude-haiku-4-5-20251001": {
+      "tasks": 1,
+      "passed": 1,
+      "success_rate": 1.0,
+      "avg_turns": 7.0,
+      "avg_duration_ms": 23623,
+      "harness_errors": 0,
+      "by_category": {
+        "read": {
+          "total": 1,
+          "passed": 1
+        }
+      }
+    }
+  },
+  "task_count": 1
+}

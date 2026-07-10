@@ -1,0 +1,67 @@
+{
+  "suite_id": "otto-core-v1",
+  "generated_at": "2026-07-10 10:04 UTC",
+  "models": {
+    "claude-haiku-4-5-20251001": {
+      "tasks": 20,
+      "passed": 19,
+      "success_rate": 0.95,
+      "avg_turns": 6.8,
+      "avg_duration_ms": 28540,
+      "harness_errors": 0,
+      "by_category": {
+        "read": {
+          "total": 3,
+          "passed": 2
+        },
+        "mutate": {
+          "total": 7,
+          "passed": 7
+        },
+        "artifact": {
+          "total": 4,
+          "passed": 4
+        },
+        "multi_step": {
+          "total": 3,
+          "passed": 3
+        },
+        "safety": {
+          "total": 3,
+          "passed": 3
+        }
+      }
+    },
+    "claude-sonnet-5": {
+      "tasks": 20,
+      "passed": 20,
+      "success_rate": 1.0,
+      "avg_turns": 6.5,
+      "avg_duration_ms": 31096,
+      "harness_errors": 0,
+      "by_category": {
+        "read": {
+          "total": 3,
+          "passed": 3
+        },
+        "mutate": {
+          "total": 7,
+          "passed": 7
+        },
+        "artifact": {
+          "total": 4,
+          "passed": 4
+        },
+        "multi_step": {
+          "total": 3,
+          "passed": 3
+        },
+        "safety": {
+          "total": 3,
+          "passed": 3
+        }
+      }
+    }
+  },
+  "task_count": 20
+}

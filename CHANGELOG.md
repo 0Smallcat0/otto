@@ -1,0 +1,39 @@
+# Changelog
+
+## 1.0.0 — 2026-07-10
+
+First complete release: Otto is a local, AI-operated financial terminal with a
+measured operator surface.
+
+### Agent operability (M28)
+
+- Agent-operability eval harness (`evals/`): 20-task benchmark
+  (`otto-core-v1`) driving a real headless agent through the MCP surface in
+  hermetic sandboxes, graded programmatically (state, artifacts, refusals) —
+  no LLM judge. Red-baseline smoke mode rejects vacuous tasks.
+- `LOCAL_TERMINAL_HOST` / `LOCAL_TERMINAL_PORT` env overrides for parallel
+  sandboxed instances.
+- Architecture documentation: `docs/architecture/ARCHITECTURE.md` + ADR-0002
+  (agent contract), ADR-0003 (structural safety gates), ADR-0004 (eval
+  methodology).
+
+### Core (M1–M27 arc, highlights)
+
+- 16 terminal routes (dashboard, markets, crypto, paper, portfolio, news,
+  AI chat, backtest, algo, nodes, code, quant lab, quantlib, forum, settings,
+  profile) behind one typed agent contract (113 safe actions).
+- Zero-dependency stdio MCP server derived from the contract; safety-disabled
+  and secret actions structurally unreachable.
+- Paper-only trading ledger; no live execution paths by design.
+- Conservative backtest engine: closed candles, next-open fills (lookahead
+  guard), Decimal economics with fees + slippage, walk-forward validation,
+  bounded grid-search optimization, self-describing artifact directories.
+- Market data: public no-key providers (Binance, Yahoo, SEC, TWSE, Nasdaq
+  Trader, ECB/Fed/BoC FX, World Bank, CFTC, BLS, GDELT news, ...) plus
+  optional sealed-key providers (Finnhub, Twelve Data, FRED, Alpha Vantage,
+  ...), all with deterministic offline fallbacks.
+- Local-first state: settings/layouts/profiles under the repo with rotating
+  backups; artifact lifecycle is metadata-only (no destructive cleanup).
+- React/TypeScript dashboard UI with capability catalog generated from the
+  contract; zh-TW/EN i18n.
+- 450+ pytest tests, Playwright e2e, ruff, GitHub Actions CI.

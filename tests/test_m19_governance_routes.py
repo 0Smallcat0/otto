@@ -1,8 +1,11 @@
 from pathlib import Path
 
+import pytest
+
 from fastapi.testclient import TestClient
 
 from src.local_terminal import server
+from src.local_terminal.local_secrets import dpapi_available
 from src.local_terminal.storage import LocalStateStore
 
 
@@ -37,6 +40,9 @@ def _market_cache() -> dict[str, object]:
     }
 
 
+@pytest.mark.skipif(
+    not dpapi_available(), reason="Secret-store-enabled governance truths need Windows DPAPI"
+)
 def test_governance_payload_exposes_settings_contract_without_default_secret_file(
     tmp_path: Path, monkeypatch
 ) -> None:
@@ -74,6 +80,9 @@ def test_governance_payload_exposes_settings_contract_without_default_secret_fil
     assert not (tmp_path / "settings" / "local_secrets.json").exists()
 
 
+@pytest.mark.skipif(
+    not dpapi_available(), reason="Secret-store-enabled governance truths need Windows DPAPI"
+)
 def test_help_diagnostics_include_governance_summary(tmp_path: Path, monkeypatch) -> None:
     client = _client(tmp_path, monkeypatch)
 
@@ -93,6 +102,9 @@ def test_help_diagnostics_include_governance_summary(tmp_path: Path, monkeypatch
     assert (tmp_path / diagnostics["artifacts"]["diagnostics"]).is_file()
 
 
+@pytest.mark.skipif(
+    not dpapi_available(), reason="Secret-store-enabled governance truths need Windows DPAPI"
+)
 def test_governance_diagnostics_write_read_only_local_bundle(
     tmp_path: Path, monkeypatch
 ) -> None:
