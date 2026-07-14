@@ -1,6 +1,6 @@
 # M26 — AI 全權操作前置(Agent Readiness)執行計畫
 
-Status: **Phase 0 + Phase 1 COMPLETE(2026-07-07,6 slices,428 pytest 綠)**;Phase 2 未細化、待 owner 排優先序
+Status: **Phase 0 + Phase 1 COMPLETE(2026-07-07,6 slices,428 pytest 綠)**;Phase 2 部分落地 — S2.1 restore 端點完成(2026-07-14),其餘候選待 owner 排優先序
 Created: 2026-07-07 | Owner direction: 對話即介面、AI 全權負責操作、GUI = 人看的儀表板
 
 ## 0. 背景與依據
@@ -85,7 +85,7 @@ Created: 2026-07-07 | Owner direction: 對話即介面、AI 全權負責操作�
 - GUI「agent activity feed」:把 `agent_activity_event` 的資料層顯示在儀表板,人可即時看 AI 剛做了什麼(對話架構下「人即時觀察」的正解)。
 - custom watchlist:讓對話能改 Finnhub/Twelve Data 的看盤清單(接 memory `optional-key-data-sources` 的遺留項)。
 - `dashboard_reset` 加 confirm 或先快照(缺口 F 的正式解)。
-- undo/restore 端點(接 S0.2 留下的門)。
+- ~~undo/restore 端點(接 S0.2 留下的門)~~ → **S2.1 完成(2026-07-14)**:`POST /api/local-state/restore`,confirm 閘;restore 前現狀輪替進 slot 1(restore 本身可 undo);bak 壞檔零寫入;只認 protected 清單;contract 動作 `local_state_restore`(`confirm_gated_state_backup_restore`)。
 
 **明確不在 M26**:in-app chat 接真實 LLM(費用/安全另議)、M25 剩餘 UI 美化、niche 資料源(EIA/BEA/Census)。
 
@@ -99,13 +99,17 @@ Created: 2026-07-07 | Owner direction: 對話即介面、AI 全權負責操作�
 | S1.2 | algo strategy delete | ☑ 完成 2026-07-07 | `Let the strategy library shrink as well as grow` | 5 新測試;全量 426 綠;實機 confirm 閘+指標移轉演練;三新動作補進 recommended_actions |
 | S1.3 | contract drift ×8 修復 + 真值測試 | ☑ 完成 2026-07-07 | `Make the agent's map answer to the territory` | 真值測試跑 28 GET+40 本地 POST 全 resolve;完整性守衛上膛;全量 427 綠;m21 兩處舊 pin 同步更新 |
 | S1.4 | contract 文檔補強 | ☑ 完成 2026-07-07 | `Teach the contract to tell the whole truth` | 4 處 request 文字修正;algo_select_strategy 註冊(104 動作);枚舉鎖定測試;全量 428 綠 |
+| S2.1 | restore 端點(undo 閉環) | ☑ 完成 2026-07-14 | `feat: confirm-gated state restore endpoint` | 8 新測試;truth test 實跑 restore;實機演練(400 閘/未知 kind 拒絕/restore+輪替驗證);contract 115 動作,preflight 自動標 requires_confirmation |
 
 基線:407 pytest 通過(2026-07-07)。每 slice 淨增測試,不得減。
 
-## 5. 手動還原流程(S0.1 落地後生效)
+## 5. 還原流程
 
+**首選(S2.1 起)**:`POST /api/local-state/restore` body `{"kind": "<protected kind>", "slot": 1..3, "confirm": true}` — 不必停後端;restore 前會把現狀輪替進 slot 1,再 restore 一次 slot 1 即 undo。kind 清單看 `GET /api/local-state/backups` 的 `rows[].kind`。
+
+**手動 fallback**(端點不可用或檔案系統層問題時):
 1. 停後端(kill `:8765` process)。
-2. `artifacts/<route>/<name>.json.bak1` 是最近一版;copy 蓋回 `<name>.json`。
+2. `<name>.json.bak1` 是最近一版;copy 蓋回 `<name>.json`。
 3. 重啟 `.venv/Scripts/python.exe -m src.local_terminal`,GET 對應路由確認。
 
 ## 6. 風險與緩解

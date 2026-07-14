@@ -1084,8 +1084,67 @@ class LocalStateStore:
             "safety": {
                 "reads_file_contents": False,
                 "mutates_local_state": False,
-                "restore_endpoint_available": False,
+                "restore_endpoint_available": True,
+                "restore_endpoint": "/api/local-state/restore",
                 "manual_restore_doc": "docs/planning/M26_AGENT_READINESS_PLAN.md",
+            },
+        }
+
+    def restore_state_backup(self, kind: str, slot: int) -> dict[str, Any]:
+        """Copy backup slot `slot` back over the live state file for `kind`.
+
+        The pre-restore live file rotates into slot 1 first, so every restore
+        is itself undoable. An unreadable or non-object backup aborts with
+        zero writes — never restore from a broken baseline.
+        """
+        paths = dict(self.protected_state_files())
+        path = paths.get(kind)
+        if path is None:
+            known = ", ".join(sorted(paths))
+            raise StateRestoreError(f"Unknown protected state kind '{kind}' (known: {known})")
+        if not 1 <= slot <= STATE_BACKUP_COUNT:
+            raise StateRestoreError(f"Backup slot must be 1..{STATE_BACKUP_COUNT}, got {slot}")
+        backup = path.with_name(f"{path.name}.bak{slot}")
+        if not backup.is_file():
+            raise StateRestoreError(f"No backup in slot {slot} for '{kind}'")
+        try:
+            payload = json.loads(backup.read_text(encoding="utf-8"))
+        except (OSError, json.JSONDecodeError) as exc:
+            raise StateRestoreError(
+                f"Backup slot {slot} for '{kind}' is unreadable; aborted with zero writes"
+            ) from exc
+        if not isinstance(payload, dict):
+            raise StateRestoreError(
+                f"Backup slot {slot} for '{kind}' is not a JSON object; aborted with zero writes"
+            )
+        backup_stat = backup.stat()
+        had_live_file = path.is_file()
+        _write_json(path, payload, self.root, keep_backups=STATE_BACKUP_COUNT)
+        return {
+            "kind": kind,
+            "state_path": _relative(path, self.root),
+            "restored_from": {
+                "slot": slot,
+                "path": _relative(backup, self.root),
+                "modified_at": datetime.fromtimestamp(backup_stat.st_mtime, tz=UTC).isoformat(
+                    timespec="seconds"
+                ),
+                "size_bytes": backup_stat.st_size,
+            },
+            "undo": {
+                "available": had_live_file,
+                "path": _relative(path.with_name(f"{path.name}.bak1"), self.root),
+                "how": (
+                    "the pre-restore version rotated into slot 1; restore the same "
+                    "kind with slot=1 to undo"
+                    if had_live_file
+                    else "no live file existed before this restore; nothing rotated"
+                ),
+            },
+            "safety": {
+                "mutates_local_state": True,
+                "confirm_required": True,
+                "zero_write_on_unreadable_backup": True,
             },
         }
 
@@ -1514,6 +1573,10 @@ def _read_forum_state_json(path: Path) -> dict[str, Any]:
 
 
 STATE_BACKUP_COUNT = 3
+
+
+class StateRestoreError(ValueError):
+    """A state-backup restore request that must be refused (zero writes)."""
 
 
 def _rotate_state_backups(path: Path, keep_backups: int) -> None:

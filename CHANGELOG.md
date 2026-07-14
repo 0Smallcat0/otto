@@ -1,5 +1,14 @@
 # Changelog
 
+## Unreleased
+
+- `POST /api/local-state/restore` (M26 S2.1): confirm-gated restore of any
+  protected state file from its rotating backup slots. The pre-restore
+  version rotates into slot 1 first, so every restore is itself undoable;
+  an unreadable backup aborts with zero writes. Registered in the agent
+  contract as `local_state_restore` (115 actions) — the agent can now undo
+  a bad state write without human filesystem surgery.
+
 ## 1.0.0 — 2026-07-10
 
 First complete release: Otto is a local, AI-operated financial terminal with a
