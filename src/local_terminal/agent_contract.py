@@ -429,6 +429,7 @@ ROUTE_CONTRACTS: tuple[RouteAgentContract, ...] = (
             "artifact_lifecycle_root_health",
             "artifact_lifecycle_archive_plan",
             "local_state_backup_index",
+            "local_state_restore",
             "advanced_workflow_output_packet",
             "advanced_workflow_output_index",
             "advanced_workflow_output_health",
@@ -1900,6 +1901,40 @@ ACTION_CONTRACTS: tuple[AgentActionContract, ...] = (
         False,
         "metadata_only_state_backup_index",
         (),
+    ),
+    AgentActionContract(
+        "local_state_restore",
+        "settings",
+        "Restore a state file from a backup slot",
+        "POST",
+        "/api/local-state/restore",
+        (
+            "kind: a rows[].kind value from local_state_backup_index; "
+            "slot: 1..3 (1 = newest backup); confirm: true is required"
+        ),
+        (
+            "kind",
+            "state_path",
+            "restored_from",
+            "restored_from.slot",
+            "restored_from.path",
+            "restored_from.modified_at",
+            "undo",
+            "undo.available",
+            "undo.path",
+            "safety",
+        ),
+        (
+            "copies the chosen backup over the live state file; the pre-restore "
+            "version rotates into slot 1 so the restore itself stays undoable; "
+            "an unreadable backup aborts with zero writes"
+        ),
+        True,
+        False,
+        True,
+        False,
+        "confirm_gated_state_backup_restore",
+        ("400",),
     ),
     AgentActionContract(
         "provider_refresh_public_start",

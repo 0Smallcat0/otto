@@ -353,7 +353,12 @@ from src.local_terminal.rates_data import (
     fetch_treasury_yield_curve,
     rates_data_payload,
 )
-from src.local_terminal.storage import LocalStateStore, state_root_from_env
+from src.local_terminal.storage import (
+    STATE_BACKUP_COUNT,
+    LocalStateStore,
+    StateRestoreError,
+    state_root_from_env,
+)
 from src.local_terminal.support import (
     help_payload,
     local_update_status,
@@ -1839,6 +1844,14 @@ class AlgoStrategyDeleteUpdate(BaseModel):
     confirm: bool = Field(default=False)
 
 
+class LocalStateRestoreUpdate(BaseModel):
+    model_config = ConfigDict(extra="forbid")
+
+    kind: str = Field(min_length=1)
+    slot: int = Field(default=1, ge=1, le=STATE_BACKUP_COUNT)
+    confirm: bool = Field(default=False)
+
+
 class AlgoRunBacktestUpdate(BaseModel):
     strategy_id: str | None = Field(default=None)
     strategy: dict[str, Any] | None = Field(default=None)
@@ -2201,6 +2214,15 @@ def create_app(frontend_dist: Path | None = None) -> FastAPI:
     @app.get("/api/local-state/backups")
     def local_state_backups() -> dict[str, Any]:
         return STORE.state_backup_index()
+
+    @app.post("/api/local-state/restore")
+    def local_state_restore(update: LocalStateRestoreUpdate) -> dict[str, Any]:
+        if not update.confirm:
+            raise HTTPException(status_code=400, detail="Restore confirmation is required")
+        try:
+            return STORE.restore_state_backup(update.kind, update.slot)
+        except StateRestoreError as exc:
+            raise HTTPException(status_code=400, detail=str(exc)) from exc
 
     @app.get("/api/agent-contract")
     def agent_contract() -> dict[str, Any]:

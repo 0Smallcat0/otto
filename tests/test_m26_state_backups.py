@@ -132,7 +132,8 @@ def test_backup_index_endpoint_is_metadata_only(tmp_path, monkeypatch) -> None:
     assert body["summary"]["protected_file_count"] == 17  # 15 + watchlist + news digest (M27-R2)
     assert body["summary"]["backup_file_count"] == 0
     assert body["summary"]["keep_backups"] == STATE_BACKUP_COUNT
-    assert body["safety"]["restore_endpoint_available"] is False
+    assert body["safety"]["restore_endpoint_available"] is True
+    assert body["safety"]["restore_endpoint"] == "/api/local-state/restore"
     assert body["safety"]["mutates_local_state"] is False
 
     store = server.STORE
