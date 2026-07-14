@@ -56,6 +56,21 @@ from src.local_terminal.research_data import (
 
 ROOT = Path(__file__).resolve().parents[2]
 
+
+def default_state_root(module_root: Path = ROOT) -> Path:
+    """Where user state lives by default.
+
+    In a repo checkout (``pyproject.toml`` beside ``src/``) state stays inside
+    the repository, as always. Installed as a wheel (pip/uvx) there is no
+    repository, so state moves to ``~/.otto`` — never into site-packages.
+    """
+    if (module_root / "pyproject.toml").is_file():
+        return module_root
+    return Path.home() / ".otto"
+
+
+DEFAULT_STATE_ROOT = default_state_root()
+
 DEFAULT_SETTINGS: dict[str, Any] = {
     "theme": "system",
     "default_route": "dashboard",
@@ -87,7 +102,7 @@ DEFAULT_LAYOUT: dict[str, Any] = {
 
 @dataclass(frozen=True)
 class LocalStateStore:
-    root: Path = ROOT
+    root: Path = DEFAULT_STATE_ROOT
 
     @property
     def settings_path(self) -> Path:
@@ -1287,12 +1302,15 @@ def _sec_submission_payload_cik(payload: dict[str, Any]) -> str:
 def state_root_from_env() -> Path:
     raw_root = os.environ.get("LOCAL_TERMINAL_STATE_ROOT")
     if not raw_root:
-        return ROOT
+        return DEFAULT_STATE_ROOT
 
     root = Path(raw_root)
     resolved = root.resolve()
-    if not resolved.is_relative_to(ROOT.resolve()):
-        raise ValueError("LOCAL_TERMINAL_STATE_ROOT must stay inside the repository")
+    if not resolved.is_relative_to(DEFAULT_STATE_ROOT.resolve()):
+        raise ValueError(
+            "LOCAL_TERMINAL_STATE_ROOT must stay inside the repository "
+            "(or inside ~/.otto for an installed, non-checkout run)"
+        )
     return resolved
 
 

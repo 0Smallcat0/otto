@@ -17,17 +17,17 @@ runs the backtest through MCP, and reports success — each step landing live in
 dashboard's **AI ACTIVITY** feed, with the finished run on the Backtests wall.
 `LIVE OFF · EXEC OFF` is structural, not a setting.*
 
-## Quick start — give your agent a terminal (90 seconds)
+## Quick start — give your agent a terminal (30 seconds)
 
-Requires [uv](https://docs.astral.sh/uv/) and Python 3.12. Clone and sync:
+Requires [uv](https://docs.astral.sh/uv/) and Python 3.12. One line — no clone,
+no build, no separate server step (the MCP server auto-starts the terminal
+backend, and state lives in `~/.otto`):
 
 ```bash
-git clone https://github.com/0Smallcat0/otto
-cd otto && uv sync
+claude mcp add otto -- uvx --from git+https://github.com/0Smallcat0/otto otto-mcp
 ```
 
-Register the MCP server with [Claude Code](https://claude.com/claude-code) — it
-auto-starts the terminal backend on first use, no separate server step:
+Working from a checkout instead? Clone, `uv sync`, then:
 
 ```bash
 claude mcp add otto -- uv --directory /absolute/path/to/otto run otto-mcp
