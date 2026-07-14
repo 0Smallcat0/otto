@@ -2,6 +2,10 @@
 
 ## Unreleased
 
+- Console entry points `otto` (terminal server) and `otto-mcp` (stdio MCP
+  server), so a fresh clone is one `uv sync` away from
+  `claude mcp add otto -- uv --directory <repo> run otto-mcp`. README leads
+  with a verified 90-second quickstart.
 - `POST /api/local-state/restore` (M26 S2.1): confirm-gated restore of any
   protected state file from its rotating backup slots. The pre-restore
   version rotates into slot 1 first, so every restore is itself undoable;

@@ -17,6 +17,43 @@ runs the backtest through MCP, and reports success — each step landing live in
 dashboard's **AI ACTIVITY** feed, with the finished run on the Backtests wall.
 `LIVE OFF · EXEC OFF` is structural, not a setting.*
 
+## Quick start — give your agent a terminal (90 seconds)
+
+Requires [uv](https://docs.astral.sh/uv/) and Python 3.12. Clone and sync:
+
+```bash
+git clone https://github.com/0Smallcat0/otto
+cd otto && uv sync
+```
+
+Register the MCP server with [Claude Code](https://claude.com/claude-code) — it
+auto-starts the terminal backend on first use, no separate server step:
+
+```bash
+claude mcp add otto -- uv --directory /absolute/path/to/otto run otto-mcp
+```
+
+(Any MCP client works — the server is newline-delimited JSON-RPC over stdio,
+standard library only.) Then just ask:
+
+- *"What can this terminal do? List the routes and the actions I can run."*
+- *"Refresh public market data and show me the BTC snapshot."*
+- *"Run an SMA-cross backtest on BTCUSDT and summarize the result."*
+- *"You wrote a bad watchlist — restore it from its latest backup."*
+
+The agent gets six tools (`terminal_status`, `list_routes`, `get_route`,
+`list_actions`, `run_action`, `refresh_public_data`) over a 115-action,
+safety-gated contract. Live trading, credential entry, and code execution are
+structurally unreachable through this surface — see the eval table below for
+what refusal-grading means.
+
+Want the human dashboard too?
+
+```bash
+cd frontend && npm install && npm run build   # one-time UI build
+uv run otto                                   # http://127.0.0.1:8765/
+```
+
 ## Measured operability — not just "AI-powered"
 
 "An AI can operate it" is a testable claim, so Otto ships a benchmark for it. The
