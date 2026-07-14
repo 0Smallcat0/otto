@@ -15,6 +15,10 @@ dependencies = [
     "uvicorn[standard]",
 ]
 
+[project.scripts]
+otto = "src.local_terminal.server:main"
+otto-mcp = "src.local_terminal.mcp_server:main"
+
 [project.optional-dependencies]
 dev = [
     "httpx",
