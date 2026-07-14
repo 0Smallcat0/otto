@@ -2,6 +2,11 @@
 
 ## Unreleased
 
+- Zero-clone install mode: running from a wheel (pip/uvx, no repo checkout)
+  now keeps state under `~/.otto` instead of assuming a repository around the
+  package, and the MCP autostart runs the backend from there. Quickstart is
+  now one line:
+  `claude mcp add otto -- uvx --from git+https://github.com/0Smallcat0/otto otto-mcp`.
 - Console entry points `otto` (terminal server) and `otto-mcp` (stdio MCP
   server), so a fresh clone is one `uv sync` away from
   `claude mcp add otto -- uv --directory <repo> run otto-mcp`. README leads

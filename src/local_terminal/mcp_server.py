@@ -507,6 +507,21 @@ def _repo_root() -> Path:
     return Path(__file__).resolve().parents[2]
 
 
+def _spawn_cwd() -> Path:
+    """Working directory for the auto-started backend.
+
+    A repo checkout runs from the repo root, as always. Installed as a wheel
+    (pip/uvx) there is no repo; the backend keeps its state under ~/.otto
+    (see storage.default_state_root), so run from there — it always exists.
+    """
+    root = _repo_root()
+    if (root / "pyproject.toml").is_file():
+        return root
+    fallback = Path.home() / ".otto"
+    fallback.mkdir(parents=True, exist_ok=True)
+    return fallback
+
+
 def _backend_reachable(base_url: str, timeout: float = 2.0) -> bool:
     try:
         with urllib.request.urlopen(base_url.rstrip("/") + "/api/health", timeout=timeout) as resp:
@@ -517,7 +532,7 @@ def _backend_reachable(base_url: str, timeout: float = 2.0) -> bool:
 
 def _spawn_backend() -> None:
     kwargs: dict[str, Any] = {
-        "cwd": str(_repo_root()),
+        "cwd": str(_spawn_cwd()),
         "stdout": subprocess.DEVNULL,
         "stderr": subprocess.DEVNULL,
         "stdin": subprocess.DEVNULL,
