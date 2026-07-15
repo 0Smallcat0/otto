@@ -6,17 +6,17 @@ from zipfile import ZIP_DEFLATED, ZipFile
 
 from fastapi.testclient import TestClient
 
-from src.local_terminal import server
-from src.local_terminal import provider_refresh as provider_refresh_service
-from src.local_terminal.provider_refresh import (
+from otto.local_terminal import server
+from otto.local_terminal import provider_refresh as provider_refresh_service
+from otto.local_terminal.provider_refresh import (
     PublicProviderRefreshCallbacks,
     complete_public_provider_refresh_job,
     create_public_provider_refresh_job,
     provider_refresh_result,
     provider_refresh_summary,
 )
-from src.local_terminal.providers import ENTRY_REQUIRED_FIELDS, ERROR_STATES, providers_payload
-from src.local_terminal.storage import LocalStateStore
+from otto.local_terminal.providers import ENTRY_REQUIRED_FIELDS, ERROR_STATES, providers_payload
+from otto.local_terminal.storage import LocalStateStore
 
 
 def _live_market_cache() -> dict[str, object]:

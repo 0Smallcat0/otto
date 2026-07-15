@@ -3,8 +3,8 @@ from pathlib import Path
 
 from fastapi.testclient import TestClient
 
-from src.local_terminal import server
-from src.local_terminal.storage import LocalStateStore
+from otto.local_terminal import server
+from otto.local_terminal.storage import LocalStateStore
 
 
 def test_ai_chat_session_lifecycle_writes_local_state_and_requires_delete_confirmation(

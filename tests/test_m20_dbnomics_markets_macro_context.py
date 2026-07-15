@@ -3,10 +3,10 @@ from pathlib import Path
 
 from fastapi.testclient import TestClient
 
-from src.local_terminal import server
-from src.local_terminal.markets import default_markets_layout, markets_payload
-from src.local_terminal.research_data import research_data_payload
-from src.local_terminal.storage import LocalStateStore
+from otto.local_terminal import server
+from otto.local_terminal.markets import default_markets_layout, markets_payload
+from otto.local_terminal.research_data import research_data_payload
+from otto.local_terminal.storage import LocalStateStore
 
 
 DBNOMICS_SERIES_ID = "INSEE/IPC-2015/A.IPC.SO.00.00.INDICE.ENSEMBLE.FE.SO.BRUT.2015.FALSE"

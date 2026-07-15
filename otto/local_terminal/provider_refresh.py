@@ -12,7 +12,7 @@ from threading import Lock
 from typing import Any, Callable
 from uuid import uuid4
 
-from src.local_terminal.storage import LocalStateStore
+from otto.local_terminal.storage import LocalStateStore
 
 RUN_ID_PATTERN = re.compile(r"^provider-refresh-[0-9a-f]{12}$")
 JOB_STATUS_FILE = "job_status.json"
@@ -673,7 +673,7 @@ def provider_refresh_schedule_plan_payload(
     """Return read-only due/stale state for manual public refresh planning."""
 
     if provider_payload is None:
-        from src.local_terminal.providers import providers_payload
+        from otto.local_terminal.providers import providers_payload
 
         provider_payload = providers_payload(store)
     provider_payload = provider_payload if isinstance(provider_payload, dict) else {}

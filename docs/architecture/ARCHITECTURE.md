@@ -55,7 +55,7 @@ A conventional app treats automation as an afterthought bolted onto a human UI.
 Otto reverses the dependency order:
 
 1. **Contract first.** Every capability is declared in
-   `src/local_terminal/agent_contract.py`: endpoint, request/response shape,
+   `otto/local_terminal/agent_contract.py`: endpoint, request/response shape,
    mutation flags, artifact roots, safety class, confirmation requirement,
    expected error codes. The contract is served at `/api/agent-contract`.
 2. **Derived surfaces.** The MCP tool set, the UI capability catalog, and the
@@ -70,17 +70,17 @@ Otto reverses the dependency order:
 
 ## Backend layout
 
-- `src/local_terminal/server.py` — FastAPI app; every route handler validates
+- `otto/local_terminal/server.py` — FastAPI app; every route handler validates
   against the contract types. `LOCAL_TERMINAL_HOST/PORT` env overrides support
   parallel sandboxed instances.
-- `src/local_terminal/storage.py` — repo-local persistence with
+- `otto/local_terminal/storage.py` — repo-local persistence with
   `LOCAL_TERMINAL_STATE_ROOT` isolation (used by tests and evals) and rotating
   `.bak` slots for protected files.
 - Domain modules are flat, dependency-light files (watchlist, portfolio,
   crypto paper ledger, backtest, algo, news + digest, quant_lab, quantlib,
   governance, ...). Data providers live beside them (`*_data.py`), each with a
   deterministic offline fallback.
-- `src/local_terminal/mcp_server.py` — zero-dependency stdio MCP server;
+- `otto/local_terminal/mcp_server.py` — zero-dependency stdio MCP server;
   injectable transport (urllib at runtime, in-process TestClient in tests).
 
 ## Research pipeline (quant)

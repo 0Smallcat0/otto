@@ -3,15 +3,15 @@ from pathlib import Path
 
 from fastapi.testclient import TestClient
 
-from src.local_terminal import server
-from src.local_terminal.fmp_data import (
+from otto.local_terminal import server
+from otto.local_terminal.fmp_data import (
     FMP_PROVIDER_ID,
     FMP_WATCHLIST,
     fmp_quote_watchlist_payload,
     fmp_symbol_list,
     normalize_fmp_quote,
 )
-from src.local_terminal.storage import LocalStateStore
+from otto.local_terminal.storage import LocalStateStore
 
 
 def _synthetic_fmp_value() -> str:

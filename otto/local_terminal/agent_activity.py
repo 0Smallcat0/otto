@@ -9,8 +9,8 @@ from pathlib import Path
 from typing import Any
 from uuid import uuid4
 
-from src.local_terminal.agent_contract import ACTION_CONTRACTS, ROUTE_CONTRACTS
-from src.local_terminal.secret_gate import contains_secret_material
+from otto.local_terminal.agent_contract import ACTION_CONTRACTS, ROUTE_CONTRACTS
+from otto.local_terminal.secret_gate import contains_secret_material
 
 AGENT_ACTIVITY_PATH = "artifacts/agent_activity/activity.jsonl"
 AGENT_ACTIVITY_CONTRACT = "agent_activity_journal_v1"

@@ -3,8 +3,8 @@ from pathlib import Path
 
 from fastapi.testclient import TestClient
 
-from src.local_terminal import server
-from src.local_terminal.storage import LocalStateStore, _relative
+from otto.local_terminal import server
+from otto.local_terminal.storage import LocalStateStore, _relative
 
 
 def test_local_state_store_writes_repo_local_json(tmp_path: Path) -> None:

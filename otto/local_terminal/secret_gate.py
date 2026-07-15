@@ -11,7 +11,7 @@ import re
 from pathlib import Path
 from typing import Any
 
-from src.local_terminal.local_secrets import (
+from otto.local_terminal.local_secrets import (
     LOCAL_SECRET_STORE,
     local_secret_status,
 )

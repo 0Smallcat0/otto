@@ -3,9 +3,9 @@ from pathlib import Path
 
 from fastapi.testclient import TestClient
 
-from src.local_terminal import server
-from src.local_terminal.storage import LocalStateStore
-from src.local_terminal.twelve_data import (
+from otto.local_terminal import server
+from otto.local_terminal.storage import LocalStateStore
+from otto.local_terminal.twelve_data import (
     TWELVE_DATA_PROVIDER_ID,
     TWELVE_DATA_WATCHLIST,
     normalize_twelve_data_quote,

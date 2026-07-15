@@ -16,8 +16,8 @@ dependencies = [
 ]
 
 [project.scripts]
-otto = "src.local_terminal.server:main"
-otto-mcp = "src.local_terminal.mcp_server:main"
+otto = "otto.local_terminal.server:main"
+otto-mcp = "otto.local_terminal.mcp_server:main"
 
 [project.optional-dependencies]
 dev = [
@@ -28,7 +28,7 @@ dev = [
 
 [tool.setuptools.packages.find]
 where = ["."]
-include = ["src", "src.*"]
+include = ["otto", "otto.*"]
 
 [tool.ruff]
 target-version = "py312"

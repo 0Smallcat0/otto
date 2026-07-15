@@ -10,7 +10,7 @@ from pathlib import Path
 
 from fastapi.testclient import TestClient
 
-from src.local_terminal.server import create_app
+from otto.local_terminal.server import create_app
 
 
 def _write_fake_dist(dist: Path) -> None:

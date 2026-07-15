@@ -78,7 +78,7 @@ methodology: [ADR-0004](docs/architecture/ADR-0004-eval-methodology.md).
 - **Single-process local app** — a FastAPI backend serves both the JSON API and the built
   React UI at `http://127.0.0.1:8765/`.
 - **AI operator surface** — a standard-library-only [MCP](https://modelcontextprotocol.io)
-  server (`src/local_terminal/mcp_server.py`) exposes routes and gated actions as tools.
+  server (`otto/local_terminal/mcp_server.py`) exposes routes and gated actions as tools.
 - **Safety-gated by design** — live trading, credential entry, and code execution are off
   by default and refuse loudly; the default runtime is read-only / paper / dry-run.
 - **Public, no-key market data** where available (crypto, equities, FX, macro), with an
@@ -117,12 +117,12 @@ Single-process self-use (serves the built UI + API at `http://127.0.0.1:8765/`):
 
 ```powershell
 # Windows
-.\.venv\Scripts\python.exe -m src.local_terminal
+.\.venv\Scripts\python.exe -m otto.local_terminal
 ```
 
 ```bash
 # macOS / Linux
-python -m src.local_terminal
+python -m otto.local_terminal
 ```
 
 Build the frontend once (or after UI changes):
@@ -137,7 +137,7 @@ to the backend).
 ## AI operation
 
 Otto is driven by plain-language commands: you tell the agent what you want, and it operates
-the terminal through the MCP tool surface (`python -m src.local_terminal.mcp_server`,
+the terminal through the MCP tool surface (`python -m otto.local_terminal.mcp_server`,
 registered in [`.mcp.json`](.mcp.json)). See [docs/AI_OPERATOR_GUIDE.md](docs/AI_OPERATOR_GUIDE.md).
 Live trading, credential entry, and disabled runtimes stay gated behind explicit contracts.
 
@@ -152,7 +152,7 @@ derived from it. Full write-up with system diagram:
 [ADR-0003 safety gates](docs/architecture/ADR-0003-safety-gates.md) ·
 [ADR-0004 eval methodology](docs/architecture/ADR-0004-eval-methodology.md).
 
-- `src/local_terminal/` — FastAPI backend: routes, action contract, provider adapters,
+- `otto/local_terminal/` — FastAPI backend: routes, action contract, provider adapters,
   safety/secret gates, local state storage, and the MCP operator server.
 - `frontend/` — React + Vite single-page UI, served static in production.
 - `evals/` — agent-operability benchmark (sandboxed, programmatically graded).

@@ -9,8 +9,8 @@ fallback for checkout runs.
 import tomllib
 from pathlib import Path
 
-from src.local_terminal import mcp_server
-from src.local_terminal.server import _package_version
+from otto.local_terminal import mcp_server
+from otto.local_terminal.server import _package_version
 
 PYPROJECT_VERSION = tomllib.loads(
     (Path(__file__).resolve().parents[1] / "pyproject.toml").read_text(encoding="utf-8")

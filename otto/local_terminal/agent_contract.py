@@ -7,7 +7,7 @@ from datetime import UTC, datetime
 from pathlib import Path
 from typing import Any
 
-from src.local_terminal.contracts import SHELL_ROUTES
+from otto.local_terminal.contracts import SHELL_ROUTES
 
 
 @dataclass(frozen=True)

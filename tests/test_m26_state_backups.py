@@ -9,8 +9,8 @@ import json
 
 from fastapi.testclient import TestClient
 
-from src.local_terminal import server
-from src.local_terminal.storage import STATE_BACKUP_COUNT, LocalStateStore
+from otto.local_terminal import server
+from otto.local_terminal.storage import STATE_BACKUP_COUNT, LocalStateStore
 
 
 def _read(path) -> dict:
@@ -84,7 +84,7 @@ def test_backups_do_not_match_json_globs(tmp_path) -> None:
 
 
 def test_forum_orphan_scan_ignores_backups(tmp_path) -> None:
-    from src.local_terminal.forum import _orphan_post_dirs
+    from otto.local_terminal.forum import _orphan_post_dirs
 
     store = LocalStateStore(root=tmp_path)
     store.write_forum_state({})

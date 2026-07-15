@@ -9,7 +9,7 @@ autostart runs the backend from there.
 
 from pathlib import Path
 
-from src.local_terminal import mcp_server, storage
+from otto.local_terminal import mcp_server, storage
 
 
 def test_checkout_keeps_state_in_repo(tmp_path) -> None:

@@ -14,8 +14,8 @@ import json
 import pytest
 from fastapi.testclient import TestClient
 
-from src.local_terminal import server
-from src.local_terminal.storage import (
+from otto.local_terminal import server
+from otto.local_terminal.storage import (
     STATE_BACKUP_COUNT,
     LocalStateStore,
     StateRestoreError,

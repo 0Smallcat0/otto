@@ -21,10 +21,10 @@ from typing import Any
 
 from fastapi.testclient import TestClient
 
-from src.local_terminal import server
-from src.local_terminal.agent_contract import ACTION_CONTRACTS
-from src.local_terminal.markets import default_markets_layout, markets_payload
-from src.local_terminal.storage import LocalStateStore
+from otto.local_terminal import server
+from otto.local_terminal.agent_contract import ACTION_CONTRACTS
+from otto.local_terminal.markets import default_markets_layout, markets_payload
+from otto.local_terminal.storage import LocalStateStore
 
 
 def _fake_tickers(symbols: list[str]) -> list[dict[str, str]]:
@@ -332,7 +332,7 @@ def test_every_response_contract_key_resolves(tmp_path, monkeypatch) -> None:
 
 def test_activity_event_contract_documents_the_state_enum() -> None:
     """The request_contract prose must name every accepted state (M26 S1.4)."""
-    from src.local_terminal.agent_activity import AGENT_ACTIVITY_STATES
+    from otto.local_terminal.agent_activity import AGENT_ACTIVITY_STATES
 
     action = next(a for a in ACTION_CONTRACTS if a.action_id == "agent_activity_event")
     for state in sorted(AGENT_ACTIVITY_STATES):

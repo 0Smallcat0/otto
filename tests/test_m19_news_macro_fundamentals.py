@@ -3,15 +3,15 @@ from pathlib import Path
 
 from fastapi.testclient import TestClient
 
-from src.local_terminal import server
-from src.local_terminal.research_data import (
+from otto.local_terminal import server
+from otto.local_terminal.research_data import (
     normalize_dbnomics_series,
     normalize_sec_company_submissions,
     normalize_sec_company_tickers,
     normalize_sec_companyfacts,
     research_data_payload,
 )
-from src.local_terminal.storage import LocalStateStore
+from otto.local_terminal.storage import LocalStateStore
 
 
 def _now() -> str:

@@ -4,9 +4,9 @@ from datetime import UTC, datetime, timedelta
 
 from fastapi.testclient import TestClient
 
-from src.local_terminal import server
-from src.local_terminal.storage import LocalStateStore
-from src.local_terminal.twelve_data import TWELVE_DATA_PROVIDER_ID
+from otto.local_terminal import server
+from otto.local_terminal.storage import LocalStateStore
+from otto.local_terminal.twelve_data import TWELVE_DATA_PROVIDER_ID
 
 
 def _fake_series(*, symbol: str, api_key: str, timeout: float = 10.0):

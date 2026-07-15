@@ -20,7 +20,7 @@ from evals.run_eval import (
     summarize,
     validate_suite,
 )
-from src.local_terminal.server import _port_from_env
+from otto.local_terminal.server import _port_from_env
 
 
 def _suite() -> dict:

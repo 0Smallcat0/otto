@@ -18,7 +18,7 @@ Design:
 
 Usage (registered in an MCP client, e.g. Claude Code ``.mcp.json``):
 
-    python -m src.local_terminal.mcp_server
+    python -m otto.local_terminal.mcp_server
 
 On startup the server auto-starts the local terminal if it is not already reachable
 (disable with ``LOCAL_TERMINAL_MCP_AUTOSTART=0``). If the terminal is unavailable and
@@ -92,7 +92,7 @@ def http_transport(base_url: str = DEFAULT_BASE_URL, timeout: float = 30.0) -> T
         except urllib.error.URLError as exc:  # connection refused / DNS / timeout
             raise TerminalUnavailable(
                 f"Cannot reach the local terminal at {base_url}. "
-                "Start it with: python -m src.local_terminal"
+                "Start it with: python -m otto.local_terminal"
             ) from exc
 
     return _call
@@ -561,7 +561,7 @@ def _spawn_backend() -> None:
         kwargs["creationflags"] = 0x00000008 | 0x00000200  # DETACHED_PROCESS | NEW_PROCESS_GROUP
     else:
         kwargs["start_new_session"] = True
-    subprocess.Popen([sys.executable, "-m", "src.local_terminal"], **kwargs)
+    subprocess.Popen([sys.executable, "-m", "otto.local_terminal"], **kwargs)
 
 
 def ensure_backend(

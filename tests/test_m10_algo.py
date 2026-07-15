@@ -3,10 +3,10 @@ from pathlib import Path
 
 from fastapi.testclient import TestClient
 
-from src.local_terminal import server
-from src.local_terminal.markets import default_markets_layout, markets_payload
-from src.local_terminal.research_lineage import scan_artifact_hash
-from src.local_terminal.storage import LocalStateStore
+from otto.local_terminal import server
+from otto.local_terminal.markets import default_markets_layout, markets_payload
+from otto.local_terminal.research_lineage import scan_artifact_hash
+from otto.local_terminal.storage import LocalStateStore
 
 
 def _fake_tickers(symbols: list[str]) -> list[dict[str, str]]:

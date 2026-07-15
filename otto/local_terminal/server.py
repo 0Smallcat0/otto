@@ -17,7 +17,7 @@ from fastapi.responses import RedirectResponse
 from fastapi.staticfiles import StaticFiles
 from pydantic import AliasChoices, BaseModel, ConfigDict, Field
 
-from src.local_terminal.algo import (
+from otto.local_terminal.algo import (
     AlgoError,
     algo_payload,
     algo_scan_readiness_payload,
@@ -27,53 +27,53 @@ from src.local_terminal.algo import (
     scan_market,
     select_strategy,
 )
-from src.local_terminal.advanced_context import advanced_context_payload
-from src.local_terminal.artifact_readers import (
+from otto.local_terminal.advanced_context import advanced_context_payload
+from otto.local_terminal.artifact_readers import (
     backtest_run_detail_payload,
     news_brief_detail_payload,
 )
-from src.local_terminal.twse_history import (
+from otto.local_terminal.twse_history import (
     TwseHistoryError,
     build_twse_history,
     fetch_twse_stock_day,
 )
-from src.local_terminal.twelve_data_history import (
+from otto.local_terminal.twelve_data_history import (
     MAX_HISTORY_SYMBOLS,
     TwelveDataHistoryError,
     fetch_twelve_data_time_series,
     history_refresh_summary,
     normalize_time_series,
 )
-from src.local_terminal.news_digest import (
+from otto.local_terminal.news_digest import (
     NewsDigestError,
     build_live_sections,
     is_digest_fresh,
     news_digest_payload,
     write_news_digest,
 )
-from src.local_terminal.watchlist import (
+from otto.local_terminal.watchlist import (
     WatchlistError,
     update_watchlist,
     watchlist_payload,
 )
-from src.local_terminal.advanced_outputs import (
+from otto.local_terminal.advanced_outputs import (
     advanced_workflow_output_packet,
     write_advanced_workflow_output_packet,
 )
-from src.local_terminal.agent_contract import (
+from otto.local_terminal.agent_contract import (
     agent_action_preflight_payload,
     agent_operability_payload,
 )
-from src.local_terminal.agent_activity import (
+from otto.local_terminal.agent_activity import (
     AgentActivityError,
     agent_activity_payload,
     append_agent_activity_event,
 )
-from src.local_terminal.artifact_lifecycle import (
+from otto.local_terminal.artifact_lifecycle import (
     artifact_lifecycle_payload,
     run_artifact_archive_plan,
 )
-from src.local_terminal.alpha_vantage_data import (
+from otto.local_terminal.alpha_vantage_data import (
     ALPHA_VANTAGE_DEFAULT_ETF_SYMBOL,
     ALPHA_VANTAGE_DEFAULT_SYMBOL,
     ALPHA_VANTAGE_ETF_WATCHLIST,
@@ -88,20 +88,20 @@ from src.local_terminal.alpha_vantage_data import (
     fetch_alpha_vantage_currency_exchange_rate,
     fetch_alpha_vantage_global_quote,
 )
-from src.local_terminal.contracts import (
+from otto.local_terminal.contracts import (
     DEFAULT_LOCAL_PROFILE_POLICY,
     DEFAULT_SAFETY_INVARIANTS,
     GLOBAL_MENUS,
     SHELL_ROUTE_IDS,
     SHELL_ROUTES,
 )
-from src.local_terminal.crypto_data import (
+from otto.local_terminal.crypto_data import (
     DEFAULT_INTERVAL,
     DEFAULT_SYMBOL,
     crypto_detail_payload,
     fetch_public_crypto_detail,
 )
-from src.local_terminal.backtest import (
+from otto.local_terminal.backtest import (
     BACKTEST_PROVIDER,
     BacktestError,
     PUBLIC_BACKTEST_PROVIDER,
@@ -115,25 +115,25 @@ from src.local_terminal.backtest import (
     run_walk_forward,
     write_backtest_comparison_packet,
 )
-from src.local_terminal.bea_data import (
+from otto.local_terminal.bea_data import (
     BEA_PROVIDER_ID,
     bea_regional_payload,
     fetch_bea_regional_data,
 )
-from src.local_terminal.census_data import (
+from otto.local_terminal.census_data import (
     CENSUS_PROVIDER_ID,
     census_acs_profile_payload,
     fetch_census_acs_profile_data,
 )
-from src.local_terminal.eurostat_data import (
+from otto.local_terminal.eurostat_data import (
     eurostat_hicp_payload,
     fetch_eurostat_hicp,
 )
-from src.local_terminal.bls_data import (
+from otto.local_terminal.bls_data import (
     bls_data_payload,
     fetch_bls_latest_series,
 )
-from src.local_terminal.chat import (
+from otto.local_terminal.chat import (
     ChatError,
     append_chat_message,
     chat_context_contract,
@@ -145,21 +145,21 @@ from src.local_terminal.chat import (
     rename_chat_session,
     select_chat_session,
 )
-from src.local_terminal.command_center import (
+from otto.local_terminal.command_center import (
     command_center_payload,
     command_center_preflight_matrix_payload,
 )
-from src.local_terminal.commodity_data import (
+from otto.local_terminal.commodity_data import (
     commodity_data_payload,
     fetch_cftc_cot_legacy_futures,
     fetch_world_bank_commodity_prices,
 )
-from src.local_terminal.eia_data import (
+from otto.local_terminal.eia_data import (
     EIA_PROVIDER_ID,
     eia_energy_payload,
     fetch_eia_energy_series,
 )
-from src.local_terminal.code_workspace import (
+from otto.local_terminal.code_workspace import (
     CodeWorkspaceError,
     add_cell,
     analyze_notebook,
@@ -175,15 +175,15 @@ from src.local_terminal.code_workspace import (
     select_cell,
     select_notebook,
 )
-from src.local_terminal.crypto import (
+from otto.local_terminal.crypto import (
     SUPPORTED_SYMBOLS as PAPER_WATCHLIST_SYMBOLS,
     PaperOrderError,
     cancel_paper_order,
     crypto_payload,
     place_paper_order,
 )
-from src.local_terminal.dashboard import apply_dashboard_template, dashboard_payload
-from src.local_terminal.forum import (
+from otto.local_terminal.dashboard import apply_dashboard_template, dashboard_payload
+from otto.local_terminal.forum import (
     ForumError,
     add_forum_reply,
     create_forum_post,
@@ -192,51 +192,51 @@ from src.local_terminal.forum import (
     select_forum_channel,
     select_forum_post,
 )
-from src.local_terminal.fund_data import fetch_sec_fund_tickers, fund_data_payload
-from src.local_terminal.finnhub_data import (
+from otto.local_terminal.fund_data import fetch_sec_fund_tickers, fund_data_payload
+from otto.local_terminal.finnhub_data import (
     FINNHUB_PROVIDER_ID,
     fetch_finnhub_quote,
     finnhub_quote_watchlist_payload,
     finnhub_symbol_list,
 )
-from src.local_terminal.fmp_data import (
+from otto.local_terminal.fmp_data import (
     FMP_PROVIDER_ID,
     FMP_WATCHLIST,
     fetch_fmp_quote,
     fmp_quote_watchlist_payload,
     fmp_symbol_list,
 )
-from src.local_terminal.fred_data import (
+from otto.local_terminal.fred_data import (
     FRED_PROVIDER_ID,
     fetch_fred_series_observations,
     fred_data_payload,
 )
-from src.local_terminal.fx_data import (
+from otto.local_terminal.fx_data import (
     fetch_bank_of_canada_valet_fx_reference_rates,
     fetch_ecb_fx_reference_rates,
     fetch_federal_reserve_h10_reference_rates,
     fx_data_payload,
 )
-from src.local_terminal.governance import governance_payload
-from src.local_terminal.live_safety import (
+from otto.local_terminal.governance import governance_payload
+from otto.local_terminal.live_safety import (
     disabled_live_action_response,
     live_safety_payload,
 )
-from src.local_terminal.local_secrets import (
+from otto.local_terminal.local_secrets import (
     LocalSecretError,
     forget_local_data_provider_secret,
     local_secret_status,
     read_local_data_provider_secret,
     store_local_data_provider_secret,
 )
-from src.local_terminal.markets import fetch_binance_tickers, markets_payload
-from src.local_terminal.moex_data import (
+from otto.local_terminal.markets import fetch_binance_tickers, markets_payload
+from otto.local_terminal.moex_data import (
     MOEX_WATCHLIST,
     fetch_moex_quote_snapshot,
     moex_quote_snapshot_payload,
     moex_symbol_list,
 )
-from src.local_terminal.news import (
+from otto.local_terminal.news import (
     NewsError,
     fetch_public_news,
     news_payload,
@@ -244,7 +244,7 @@ from src.local_terminal.news import (
     news_topic_entity_map_payload,
     write_news_research_brief,
 )
-from src.local_terminal.nodes import (
+from otto.local_terminal.nodes import (
     NodesError,
     clear_workflow,
     disabled_runtime_response,
@@ -258,45 +258,45 @@ from src.local_terminal.nodes import (
     select_node,
     select_workflow,
 )
-from src.local_terminal.research_lineage import (
+from otto.local_terminal.research_lineage import (
     ResearchLineageError,
     normalize_research_lineage,
 )
-from src.local_terminal.nasdaq_trader_data import (
+from otto.local_terminal.nasdaq_trader_data import (
     fetch_nasdaq_trader_symbol_directory,
     nasdaq_trader_symbol_search_payload,
     nasdaq_trader_symbol_directory_payload,
 )
-from src.local_terminal.openfigi_data import (
+from otto.local_terminal.openfigi_data import (
     OPENFIGI_WATCHLIST,
     fetch_openfigi_mapping,
     openfigi_mapping_payload,
     openfigi_symbol_list,
 )
-from src.local_terminal.stooq_data import (
+from otto.local_terminal.stooq_data import (
     STOOQ_WATCHLIST,
     fetch_stooq_quote_snapshot,
     stooq_quote_snapshot_payload,
     stooq_symbol_list,
 )
-from src.local_terminal.yahoo_data import (
+from otto.local_terminal.yahoo_data import (
     YAHOO_WATCHLIST,
     fetch_yahoo_quote_snapshot,
     yahoo_quote_snapshot_payload,
     yahoo_symbol_list,
 )
-from src.local_terminal.twse_data import (
+from otto.local_terminal.twse_data import (
     fetch_twse_quote_snapshot,
     twse_quote_snapshot_payload,
     twse_symbol_list,
 )
-from src.local_terminal.twelve_data import (
+from otto.local_terminal.twelve_data import (
     TWELVE_DATA_PROVIDER_ID,
     fetch_twelve_data_quote,
     twelve_data_quote_watchlist_payload,
     twelve_data_symbol_list,
 )
-from src.local_terminal.portfolio import (
+from otto.local_terminal.portfolio import (
     PortfolioError,
     create_portfolio,
     delete_portfolio,
@@ -312,9 +312,9 @@ from src.local_terminal.portfolio import (
     select_portfolio,
     write_portfolio_report,
 )
-from src.local_terminal.provider_acquisition import provider_acquisition_gate_payload
-from src.local_terminal.providers import provider_cache_payload, providers_payload
-from src.local_terminal.provider_refresh import (
+from otto.local_terminal.provider_acquisition import provider_acquisition_gate_payload
+from otto.local_terminal.providers import provider_cache_payload, providers_payload
+from otto.local_terminal.provider_refresh import (
     PublicProviderRefreshCallbacks,
     complete_public_provider_refresh_job,
     create_public_provider_refresh_job,
@@ -324,7 +324,7 @@ from src.local_terminal.provider_refresh import (
     read_public_provider_refresh_job,
     run_public_provider_refresh,
 )
-from src.local_terminal.quant_lab import (
+from otto.local_terminal.quant_lab import (
     QuantLabDisabledError,
     QuantLabError,
     disabled_quant_lab_response,
@@ -333,7 +333,7 @@ from src.local_terminal.quant_lab import (
     run_local_preview,
     select_module,
 )
-from src.local_terminal.quantlib import (
+from otto.local_terminal.quantlib import (
     QuantLibError,
     disabled_quantlib_response,
     quantlib_calculation_health_payload,
@@ -342,24 +342,24 @@ from src.local_terminal.quantlib import (
     select_quantlib_action,
     select_quantlib_module,
 )
-from src.local_terminal.research_data import (
+from otto.local_terminal.research_data import (
     ResearchDataError,
     fetch_dbnomics_series,
     fetch_public_research_data,
     research_data_payload,
 )
-from src.local_terminal.rates_data import (
+from otto.local_terminal.rates_data import (
     fetch_nyfed_sofr,
     fetch_treasury_yield_curve,
     rates_data_payload,
 )
-from src.local_terminal.storage import (
+from otto.local_terminal.storage import (
     STATE_BACKUP_COUNT,
     LocalStateStore,
     StateRestoreError,
     state_root_from_env,
 )
-from src.local_terminal.support import (
+from otto.local_terminal.support import (
     help_payload,
     local_update_status,
     run_diagnostics,
@@ -4572,7 +4572,7 @@ def main() -> None:
             "&& npm --prefix frontend run build)"
         )
     uvicorn.run(
-        "src.local_terminal.server:app",
+        "otto.local_terminal.server:app",
         host=DEFAULT_HOST,
         port=DEFAULT_PORT,
         reload=False,

@@ -4,8 +4,8 @@ from pathlib import Path
 
 from fastapi.testclient import TestClient
 
-from src.local_terminal import server
-from src.local_terminal.backtest import (
+from otto.local_terminal import server
+from otto.local_terminal.backtest import (
     BacktestError,
     backtest_artifact_health_payload,
     backtest_data_readiness_payload,
@@ -23,7 +23,7 @@ from src.local_terminal.backtest import (
     write_backtest_comparison_packet,
     walk_forward_windows,
 )
-from src.local_terminal.storage import LocalStateStore
+from otto.local_terminal.storage import LocalStateStore
 
 
 def test_backtest_api_writes_required_artifacts(tmp_path: Path, monkeypatch) -> None:

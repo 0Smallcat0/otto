@@ -17,7 +17,7 @@ Created: 2026-07-07 | Owner direction: 對話即介面、AI 全權負責操作�
 3. **Slice 粒度**:每個 slice 獨立可交付、一個 commit、附測試,約一個工作段可完成;slice 之間任意中斷都安全。
 4. **Commit 前門檻**:目標測試檔綠 → `python -m pytest -q` 全量綠(基線 407,只增不減)→ ruff 綠。全量約 18 分鐘,開發中先跑目標檔。
 5. **本里程碑純後端**:不碰 `frontend/`(避開 e2e 文案耦合與 styles.css 亮色主題禁區);若某 slice 確需 UI 露出,獨立開 slice 並先讀 memory `m25-ui-overhaul`。
-6. **後端不自動 reload**:改 `server.py`/`storage.py` 等之後,`:8765` 必須 kill 重啟(`.venv/Scripts/python.exe -m src.local_terminal`)才吃新 code。
+6. **後端不自動 reload**:改 `server.py`/`storage.py` 等之後,`:8765` 必須 kill 重啟(`.venv/Scripts/python.exe -m otto.local_terminal`)才吃新 code。
 
 ## 2. 破壞性操作鐵則(2026-07-07 事故的直接產物)
 
@@ -32,7 +32,7 @@ Created: 2026-07-07 | Owner direction: 對話即介面、AI 全權負責操作�
 ### Phase 0 — 防護網(最優先;AI 全權寫入的前提是可撤銷)
 
 #### S0.1 狀態檔備份輪替
-- **改哪**:`src/local_terminal/storage.py` — `_write_json(path, payload, root)`(≈L1311,唯一寫入漏斗,已有 atomic tmp+replace)加 keyword 參數 `keep_backups: int = 0`;寫入前若目標已存在,輪替 `<name>.json.bak1..bakN`(bak1 最新,N=3)。
+- **改哪**:`otto/local_terminal/storage.py` — `_write_json(path, payload, root)`(≈L1311,唯一寫入漏斗,已有 atomic tmp+replace)加 keyword 參數 `keep_backups: int = 0`;寫入前若目標已存在,輪替 `<name>.json.bak1..bakN`(bak1 最新,N=3)。
 - **開啟備份的寫入點(使用者狀態,12 類)**:`write_portfolio_state`、`write_paper_state`、`write_algo_state`、`write_nodes_state`、`write_code_state`、`write_quant_lab_state`、`write_quantlib_state`、`write_forum_state`、`write_chat_state`、`write_profile`、`write_settings`、`write_layout`/`write_dashboard_layout`/`write_markets_layout`/`write_news_layout`。
 - **不備份**:所有 `write_*_cache`(市場快取可再生且高頻,備份只會製造 IO 噪音)。
 - **測試**(新檔 `tests/test_m26_state_backups.py`):首寫無 bak;二寫產 bak1=前一版內容;連寫 N+2 次只留 N 份且順序正確;read 路徑完全不受 bak 檔影響;bak 檔名不被 storage 的其他 glob 掃到(檢查 artifact 索引/supervision 不會把 .bak 當 artifact)。
@@ -48,7 +48,7 @@ Created: 2026-07-07 | Owner direction: 對話即介面、AI 全權負責操作�
 
 #### S1.1 portfolio select 端點(缺口 A)
 - **背景**:目前 create/import/link/demo 都會劫持 active 指標,卻沒有任何「切回去」的手段——事故當天無法即時還原 active 的根因。
-- **改哪**:`src/local_terminal/portfolio.py` 加 `select_portfolio(state, portfolio_id)`(unknown id → `PortfolioError`);`server.py` 加 `POST /api/portfolio/select` + `PortfolioSelectUpdate(BaseModel)`(`model_config = ConfigDict(extra="forbid")`,`portfolio_id: str = Field(min_length=1)`);`agent_contract.py` 註冊 action(safety_class `local_portfolio_state_only`)。
+- **改哪**:`otto/local_terminal/portfolio.py` 加 `select_portfolio(state, portfolio_id)`(unknown id → `PortfolioError`);`server.py` 加 `POST /api/portfolio/select` + `PortfolioSelectUpdate(BaseModel)`(`model_config = ConfigDict(extra="forbid")`,`portfolio_id: str = Field(min_length=1)`);`agent_contract.py` 註冊 action(safety_class `local_portfolio_state_only`)。
 - **測試**(`tests/test_m26_portfolio_select.py`):select 存在的 book → active 變更且持久化;unknown id → 400;select 後 GET /api/portfolio 與 dashboard 讀取跟隨。
 - **注意**:回應 payload 直接複用現有 portfolio route payload 組裝函式,response_contract 照實寫(吃 S1.3 的教訓)。
 
@@ -110,7 +110,7 @@ Created: 2026-07-07 | Owner direction: 對話即介面、AI 全權負責操作�
 **手動 fallback**(端點不可用或檔案系統層問題時):
 1. 停後端(kill `:8765` process)。
 2. `<name>.json.bak1` 是最近一版;copy 蓋回 `<name>.json`。
-3. 重啟 `.venv/Scripts/python.exe -m src.local_terminal`,GET 對應路由確認。
+3. 重啟 `.venv/Scripts/python.exe -m otto.local_terminal`,GET 對應路由確認。
 
 ## 6. 風險與緩解
 

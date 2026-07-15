@@ -2,8 +2,8 @@
 
 from fastapi.testclient import TestClient
 
-from src.local_terminal import server
-from src.local_terminal.storage import LocalStateStore
+from otto.local_terminal import server
+from otto.local_terminal.storage import LocalStateStore
 
 
 def _client(tmp_path, monkeypatch) -> TestClient:
@@ -65,7 +65,7 @@ def test_digest_sections_replace_the_daily_overview(tmp_path, monkeypatch) -> No
 
 def test_item_ids_are_stable_across_refreshes() -> None:
     """The digest is keyed by item_id; ids must not change for the same article."""
-    from src.local_terminal.news import _parse_rss
+    from otto.local_terminal.news import _parse_rss
 
     body = (
         b"<rss><channel>"
@@ -93,7 +93,7 @@ def test_digest_actions_registered_in_contract(tmp_path, monkeypatch) -> None:
 
 
 def test_finance_relevance_gate_drops_noise_keeps_finance() -> None:
-    from src.local_terminal.news import _is_finance_relevant
+    from otto.local_terminal.news import _is_finance_relevant
 
     assert _is_finance_relevant({"title": "AI stocks sink and drag markets lower"})
     assert _is_finance_relevant({"title": "10-year yield seen slipping as Fed bets ease"})
@@ -104,7 +104,7 @@ def test_finance_relevance_gate_drops_noise_keeps_finance() -> None:
 
 
 def test_build_live_sections_buckets_by_category_freshest_first() -> None:
-    from src.local_terminal.news_digest import build_live_sections
+    from otto.local_terminal.news_digest import build_live_sections
 
     sections = build_live_sections([
         {"category": "CRPT", "title": "BTC older", "age_minutes": 90},
@@ -121,7 +121,7 @@ def test_build_live_sections_buckets_by_category_freshest_first() -> None:
 
 
 def test_is_digest_fresh_only_today() -> None:
-    from src.local_terminal.news_digest import is_digest_fresh
+    from otto.local_terminal.news_digest import is_digest_fresh
 
     assert is_digest_fresh("2026-07-08T09:00:00Z", "2026-07-08") is True
     assert is_digest_fresh("2026-07-07T23:59:00Z", "2026-07-08") is False
@@ -173,7 +173,7 @@ def test_fresh_curated_digest_is_kept(tmp_path, monkeypatch) -> None:
 
 def test_digest_guard_drops_mojibake_entries() -> None:
     """U+FFFD in a digest entry marks a decode failure — it must never render."""
-    from src.local_terminal.news_digest import (
+    from otto.local_terminal.news_digest import (
         normalize_news_digest_state,
         write_news_digest,
     )

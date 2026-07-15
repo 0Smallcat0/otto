@@ -3,9 +3,9 @@ from pathlib import Path
 
 from fastapi.testclient import TestClient
 
-from src.local_terminal import server
-from src.local_terminal.dashboard import DASHBOARD_WIDGET_CATALOG, dashboard_payload
-from src.local_terminal.storage import LocalStateStore
+from otto.local_terminal import server
+from otto.local_terminal.dashboard import DASHBOARD_WIDGET_CATALOG, dashboard_payload
+from otto.local_terminal.storage import LocalStateStore
 
 
 def test_dashboard_payload_exposes_catalog_templates_and_local_status() -> None:

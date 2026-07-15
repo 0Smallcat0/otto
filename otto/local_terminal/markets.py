@@ -10,8 +10,8 @@ from urllib.error import URLError
 from urllib.parse import quote
 from urllib.request import urlopen
 
-from src.local_terminal.nasdaq_trader_data import nasdaq_trader_symbol_search_payload
-from src.local_terminal.research_lineage import enrich_source_coverage_row
+from otto.local_terminal.nasdaq_trader_data import nasdaq_trader_symbol_search_payload
+from otto.local_terminal.research_lineage import enrich_source_coverage_row
 
 
 DEFAULT_MARKET_COLUMNS: list[str] = [

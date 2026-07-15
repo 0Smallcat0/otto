@@ -2,15 +2,15 @@ from pathlib import Path
 
 from fastapi.testclient import TestClient
 
-from src.local_terminal import server
-from src.local_terminal.eurostat_data import (
+from otto.local_terminal import server
+from otto.local_terminal.eurostat_data import (
     EUROSTAT_PROVIDER_ID,
     eurostat_hicp_payload,
     normalize_eurostat_hicp,
 )
-from src.local_terminal.markets import default_markets_layout, markets_payload
-from src.local_terminal.research_data import research_data_payload
-from src.local_terminal.storage import LocalStateStore
+from otto.local_terminal.markets import default_markets_layout, markets_payload
+from otto.local_terminal.research_data import research_data_payload
+from otto.local_terminal.storage import LocalStateStore
 
 
 def _raw() -> dict[str, object]:
