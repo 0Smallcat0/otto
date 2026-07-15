@@ -35,11 +35,30 @@ import time
 import urllib.error
 import urllib.parse
 import urllib.request
+from importlib.metadata import PackageNotFoundError, version as _dist_version
 from pathlib import Path
 from typing import Any, Callable
 
+
+def _package_version() -> str:
+    """Single-source the version: installed dist metadata, else pyproject."""
+    try:
+        return _dist_version("otto")
+    except PackageNotFoundError:
+        pass
+    try:
+        import tomllib
+
+        raw = (Path(__file__).resolve().parents[2] / "pyproject.toml").read_text(
+            encoding="utf-8"
+        )
+        return str(tomllib.loads(raw)["project"]["version"])
+    except (OSError, KeyError, ValueError):
+        return "0.0.0+unknown"
+
+
 SERVER_NAME = "otto"
-SERVER_VERSION = "0.1.0"
+SERVER_VERSION = _package_version()
 DEFAULT_PROTOCOL_VERSION = "2025-06-18"
 DEFAULT_BASE_URL = os.environ.get("LOCAL_TERMINAL_URL", "http://127.0.0.1:8765")
 MAX_RESULT_CHARS = 40000

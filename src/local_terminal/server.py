@@ -2114,9 +2114,16 @@ class PortfolioBacktestLinkUpdate(BaseModel):
 
 def _package_version() -> str:
     try:
-        return version("local-terminal")
+        return version("otto")
     except PackageNotFoundError:
-        return "0.1.0"
+        pass
+    try:
+        import tomllib
+
+        raw = (REPO_ROOT / "pyproject.toml").read_text(encoding="utf-8")
+        return str(tomllib.loads(raw)["project"]["version"])
+    except (OSError, KeyError, ValueError):
+        return "0.0.0+unknown"
 
 
 def health_payload() -> dict[str, Any]:

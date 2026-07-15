@@ -2,6 +2,9 @@
 
 ## Unreleased
 
+- Health and MCP `serverInfo` now report the real project version
+  (single-sourced from dist metadata, pyproject fallback) instead of a
+  hard-coded `0.1.0`.
 - Zero-clone install mode: running from a wheel (pip/uvx, no repo checkout)
   now keeps state under `~/.otto` instead of assuming a repository around the
   package, and the MCP autostart runs the backend from there. Quickstart is
