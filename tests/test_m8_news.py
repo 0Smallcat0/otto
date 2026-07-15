@@ -4,8 +4,8 @@ from pathlib import Path
 
 from fastapi.testclient import TestClient
 
-from src.local_terminal import server
-from src.local_terminal.news import (
+from otto.local_terminal import server
+from otto.local_terminal.news import (
     NewsError,
     fetch_gdelt_doc_articles,
     news_research_brief_index,
@@ -13,7 +13,7 @@ from src.local_terminal.news import (
     news_topic_entity_map_payload,
     normalize_news_layout,
 )
-from src.local_terminal.storage import LocalStateStore
+from otto.local_terminal.storage import LocalStateStore
 
 
 def _published(hours_ago: int) -> str:
@@ -412,7 +412,7 @@ def test_gdelt_doc_articles_are_metadata_only() -> None:
 
 def test_unparseable_news_date_stays_unknown_not_now() -> None:
     """A garbled date must never be stamped 'now' — that floats junk to the top."""
-    from src.local_terminal.news import _age_minutes, _normalize_item, _parse_date
+    from otto.local_terminal.news import _age_minutes, _normalize_item, _parse_date
 
     assert _parse_date("") == ""
     assert _parse_date("not a real date") == ""

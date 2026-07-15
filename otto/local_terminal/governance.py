@@ -7,20 +7,20 @@ from datetime import UTC, datetime
 from pathlib import Path
 from typing import Any
 
-from src.local_terminal.agent_contract import agent_operability_payload
-from src.local_terminal.artifact_lifecycle import artifact_lifecycle_payload
-from src.local_terminal.contracts import (
+from otto.local_terminal.agent_contract import agent_operability_payload
+from otto.local_terminal.artifact_lifecycle import artifact_lifecycle_payload
+from otto.local_terminal.contracts import (
     DEFAULT_LOCAL_PROFILE_POLICY,
     DEFAULT_SAFETY_INVARIANTS,
     is_repo_local_path,
 )
-from src.local_terminal.live_safety import live_safety_payload
-from src.local_terminal.provider_refresh import (
+from otto.local_terminal.live_safety import live_safety_payload
+from otto.local_terminal.provider_refresh import (
     provider_refresh_lifecycle_payload,
     provider_refresh_schedule_plan_payload,
 )
-from src.local_terminal.providers import providers_payload
-from src.local_terminal.secret_gate import secret_gate_payload
+from otto.local_terminal.providers import providers_payload
+from otto.local_terminal.secret_gate import secret_gate_payload
 
 
 APPEARANCE_TOKEN_SOURCE = "frontend/src/theme.css"

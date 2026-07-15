@@ -3,9 +3,9 @@ from pathlib import Path
 
 from fastapi.testclient import TestClient
 
-from src.local_terminal import server
-from src.local_terminal.portfolio import portfolio_report_health_payload, portfolio_report_index
-from src.local_terminal.storage import LocalStateStore
+from otto.local_terminal import server
+from otto.local_terminal.portfolio import portfolio_report_health_payload, portfolio_report_index
+from otto.local_terminal.storage import LocalStateStore
 
 
 def _public_market_cache() -> dict[str, object]:

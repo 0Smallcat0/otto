@@ -1,7 +1,7 @@
 """Agent-operability eval harness for Otto.
 
 Measures how well an LLM agent operates the terminal through the MCP tool
-surface (`src.local_terminal.mcp_server`). Each task runs in a throwaway
+surface (`otto.local_terminal.mcp_server`). Each task runs in a throwaway
 sandbox: a fresh `LOCAL_TERMINAL_STATE_ROOT`, a dedicated server port, and a
 strict per-run MCP config, so runs never touch the operator's real local state
 and cannot inherit user-level Claude configuration.
@@ -253,7 +253,7 @@ def start_sandbox_server(sandbox: Path, port: int) -> subprocess.Popen[bytes]:
     env["LOCAL_TERMINAL_PORT"] = str(port)
     env["LOCAL_TERMINAL_HOST"] = "127.0.0.1"
     return subprocess.Popen(
-        [sys.executable, "-m", "src.local_terminal"],
+        [sys.executable, "-m", "otto.local_terminal"],
         cwd=str(REPO_ROOT),
         env=env,
         stdout=subprocess.DEVNULL,
@@ -285,7 +285,7 @@ def write_mcp_config(sandbox: Path, port: int) -> Path:
         "mcpServers": {
             "otto": {
                 "command": sys.executable,
-                "args": ["-m", "src.local_terminal.mcp_server"],
+                "args": ["-m", "otto.local_terminal.mcp_server"],
                 "env": {
                     "LOCAL_TERMINAL_URL": f"http://127.0.0.1:{port}",
                     "LOCAL_TERMINAL_MCP_AUTOSTART": "0",

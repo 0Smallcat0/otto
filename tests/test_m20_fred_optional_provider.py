@@ -3,13 +3,13 @@ from typing import Any
 
 from fastapi.testclient import TestClient
 
-from src.local_terminal import server
-from src.local_terminal.fred_data import (
+from otto.local_terminal import server
+from otto.local_terminal.fred_data import (
     FRED_PROVIDER_ID,
     fred_data_payload,
     normalize_fred_series_observations,
 )
-from src.local_terminal.storage import LocalStateStore
+from otto.local_terminal.storage import LocalStateStore
 
 
 def _synthetic_fred_value() -> str:

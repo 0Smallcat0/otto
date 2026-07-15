@@ -5,12 +5,12 @@ from pathlib import Path
 
 from fastapi.testclient import TestClient
 
-from src.local_terminal import server
-from src.local_terminal.artifact_lifecycle import (
+from otto.local_terminal import server
+from otto.local_terminal.artifact_lifecycle import (
     artifact_lifecycle_payload,
     run_artifact_archive_plan,
 )
-from src.local_terminal.storage import LocalStateStore
+from otto.local_terminal.storage import LocalStateStore
 
 
 def _client(tmp_path: Path, monkeypatch) -> TestClient:

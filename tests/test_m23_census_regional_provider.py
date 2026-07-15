@@ -5,15 +5,15 @@ from typing import Any
 
 from fastapi.testclient import TestClient
 
-from src.local_terminal import server
-from src.local_terminal.census_data import (
+from otto.local_terminal import server
+from otto.local_terminal.census_data import (
     CENSUS_PROVIDER_ID,
     census_acs_profile_payload,
     normalize_census_acs_profile_data,
 )
-from src.local_terminal.markets import default_markets_layout, markets_payload
-from src.local_terminal.research_data import research_data_payload
-from src.local_terminal.storage import LocalStateStore
+from otto.local_terminal.markets import default_markets_layout, markets_payload
+from otto.local_terminal.research_data import research_data_payload
+from otto.local_terminal.storage import LocalStateStore
 
 
 def _synthetic_census_value() -> str:

@@ -14,8 +14,8 @@ from pathlib import Path
 from typing import Any
 from uuid import uuid4
 
-from src.local_terminal.crypto_data import crypto_detail_payload
-from src.local_terminal.research_lineage import (
+from otto.local_terminal.crypto_data import crypto_detail_payload
+from otto.local_terminal.research_lineage import (
     ResearchLineageError,
     normalize_research_lineage,
     with_backtest_lineage,

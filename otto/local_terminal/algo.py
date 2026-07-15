@@ -10,14 +10,14 @@ from pathlib import Path
 from typing import Any
 from uuid import uuid4
 
-from src.local_terminal.backtest import (
+from otto.local_terminal.backtest import (
     BacktestError,
     backtest_strategy_catalog,
     normalize_strategy_parameters,
     run_backtest,
 )
-from src.local_terminal.markets import default_markets_layout, markets_payload
-from src.local_terminal.research_lineage import (
+from otto.local_terminal.markets import default_markets_layout, markets_payload
+from otto.local_terminal.research_lineage import (
     ResearchLineageError,
     lineage_from_source_row,
     normalize_research_lineage,

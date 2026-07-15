@@ -2,14 +2,14 @@ from pathlib import Path
 
 from fastapi.testclient import TestClient
 
-from src.local_terminal import server
-from src.local_terminal.nasdaq_trader_data import (
+from otto.local_terminal import server
+from otto.local_terminal.nasdaq_trader_data import (
     NASDAQ_TRADER_PROVIDER_ID,
     nasdaq_trader_symbol_search_payload,
     nasdaq_trader_symbol_directory_payload,
     normalize_nasdaq_trader_symbol_directory,
 )
-from src.local_terminal.storage import LocalStateStore
+from otto.local_terminal.storage import LocalStateStore
 
 
 def _raw_directory() -> dict[str, str]:

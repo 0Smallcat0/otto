@@ -12,7 +12,7 @@ from __future__ import annotations
 import copy
 from typing import Any
 
-from src.local_terminal.crypto import SUPPORTED_SYMBOLS
+from otto.local_terminal.crypto import SUPPORTED_SYMBOLS
 
 WATCHLIST_GROUPS: tuple[str, ...] = ("crypto", "us", "tw", "fx")
 MAX_SYMBOLS_PER_GROUP = 20

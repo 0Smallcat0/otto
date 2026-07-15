@@ -6,14 +6,14 @@ from typing import Any
 
 from fastapi.testclient import TestClient
 
-from src.local_terminal import server
-from src.local_terminal.eia_data import (
+from otto.local_terminal import server
+from otto.local_terminal.eia_data import (
     EIA_PROVIDER_ID,
     eia_energy_payload,
     normalize_eia_energy_series,
 )
-from src.local_terminal.markets import default_markets_layout, markets_payload
-from src.local_terminal.storage import LocalStateStore
+from otto.local_terminal.markets import default_markets_layout, markets_payload
+from otto.local_terminal.storage import LocalStateStore
 
 
 def _synthetic_eia_value() -> str:

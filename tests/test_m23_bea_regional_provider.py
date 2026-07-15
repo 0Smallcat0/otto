@@ -5,15 +5,15 @@ from typing import Any
 
 from fastapi.testclient import TestClient
 
-from src.local_terminal import server
-from src.local_terminal.bea_data import (
+from otto.local_terminal import server
+from otto.local_terminal.bea_data import (
     BEA_PROVIDER_ID,
     bea_regional_payload,
     normalize_bea_regional_data,
 )
-from src.local_terminal.markets import default_markets_layout, markets_payload
-from src.local_terminal.research_data import research_data_payload
-from src.local_terminal.storage import LocalStateStore
+from otto.local_terminal.markets import default_markets_layout, markets_payload
+from otto.local_terminal.research_data import research_data_payload
+from otto.local_terminal.storage import LocalStateStore
 
 
 def _synthetic_bea_value() -> str:

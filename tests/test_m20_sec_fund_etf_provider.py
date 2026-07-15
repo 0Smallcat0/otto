@@ -3,11 +3,11 @@ from pathlib import Path
 
 from fastapi.testclient import TestClient
 
-from src.local_terminal import server
-from src.local_terminal.fund_data import fund_data_payload, normalize_sec_fund_tickers
-from src.local_terminal.markets import default_markets_layout, markets_payload
-from src.local_terminal.providers import providers_payload
-from src.local_terminal.storage import LocalStateStore
+from otto.local_terminal import server
+from otto.local_terminal.fund_data import fund_data_payload, normalize_sec_fund_tickers
+from otto.local_terminal.markets import default_markets_layout, markets_payload
+from otto.local_terminal.providers import providers_payload
+from otto.local_terminal.storage import LocalStateStore
 
 
 def _now() -> str:

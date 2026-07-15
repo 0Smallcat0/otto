@@ -2,9 +2,9 @@
 
 from fastapi.testclient import TestClient
 
-from src.local_terminal import server
-from src.local_terminal.storage import LocalStateStore
-from src.local_terminal.yahoo_data import (
+from otto.local_terminal import server
+from otto.local_terminal.storage import LocalStateStore
+from otto.local_terminal.yahoo_data import (
     YAHOO_PROVIDER_ID,
     YAHOO_WATCHLIST,
     normalize_yahoo_quote_snapshot,

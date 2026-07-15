@@ -1,7 +1,7 @@
 from fastapi.testclient import TestClient
 
-from src.local_terminal.contracts import GLOBAL_MENUS, SHELL_ROUTES
-from src.local_terminal.server import create_app, health_payload, shell_contract_payload
+from otto.local_terminal.contracts import GLOBAL_MENUS, SHELL_ROUTES
+from otto.local_terminal.server import create_app, health_payload, shell_contract_payload
 
 
 def test_health_payload_exposes_local_foundation_state() -> None:

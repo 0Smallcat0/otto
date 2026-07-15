@@ -10,30 +10,30 @@ from datetime import UTC, datetime
 from typing import Any
 from urllib.parse import quote
 
-from src.local_terminal.bea_data import (
+from otto.local_terminal.bea_data import (
     BEA_PROVIDER_ID,
     bea_regional_payload,
     bea_provider_entry_summary,
 )
-from src.local_terminal.bls_data import (
+from otto.local_terminal.bls_data import (
     bls_data_payload,
     bls_provider_entry_summary,
     fetch_bls_latest_series,
     normalize_bls_latest_series,
 )
-from src.local_terminal.census_data import (
+from otto.local_terminal.census_data import (
     CENSUS_PROVIDER_ID,
     census_acs_profile_payload,
     census_provider_entry_summary,
 )
-from src.local_terminal.eurostat_data import (
+from otto.local_terminal.eurostat_data import (
     EUROSTAT_PROVIDER_ID,
     eurostat_hicp_payload,
     eurostat_provider_entry_summary,
     fetch_eurostat_hicp,
     normalize_eurostat_hicp,
 )
-from src.local_terminal.fred_data import (
+from otto.local_terminal.fred_data import (
     FRED_PROVIDER_ID,
     fred_data_payload,
     fred_provider_entry_summary,

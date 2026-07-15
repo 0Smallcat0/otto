@@ -4,8 +4,8 @@ from typing import Any
 
 from fastapi.testclient import TestClient
 
-from src.local_terminal import server
-from src.local_terminal.alpha_vantage_data import (
+from otto.local_terminal import server
+from otto.local_terminal.alpha_vantage_data import (
     ALPHA_VANTAGE_DEFAULT_ETF_SYMBOL,
     ALPHA_VANTAGE_ETF_WATCHLIST,
     ALPHA_VANTAGE_FX_WATCHLIST,
@@ -19,8 +19,8 @@ from src.local_terminal.alpha_vantage_data import (
     normalize_alpha_vantage_currency_exchange_rate,
     normalize_alpha_vantage_global_quote,
 )
-from src.local_terminal.markets import default_markets_layout, markets_payload
-from src.local_terminal.storage import LocalStateStore
+from otto.local_terminal.markets import default_markets_layout, markets_payload
+from otto.local_terminal.storage import LocalStateStore
 
 
 def _synthetic_alpha_value() -> str:

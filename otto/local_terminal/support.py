@@ -9,18 +9,18 @@ from pathlib import Path
 from typing import Any
 from uuid import uuid4
 
-from src.local_terminal.agent_contract import agent_operability_payload
-from src.local_terminal.artifact_lifecycle import artifact_lifecycle_payload
-from src.local_terminal.contracts import (
+from otto.local_terminal.agent_contract import agent_operability_payload
+from otto.local_terminal.artifact_lifecycle import artifact_lifecycle_payload
+from otto.local_terminal.contracts import (
     DEFAULT_LOCAL_PROFILE_POLICY,
     DEFAULT_SAFETY_INVARIANTS,
     GLOBAL_MENUS,
     SHELL_ROUTES,
     is_repo_local_path,
 )
-from src.local_terminal.forum import forum_artifact_health
-from src.local_terminal.governance import governance_summary
-from src.local_terminal.provider_refresh import provider_refresh_lifecycle_payload
+from otto.local_terminal.forum import forum_artifact_health
+from otto.local_terminal.governance import governance_summary
+from otto.local_terminal.provider_refresh import provider_refresh_lifecycle_payload
 
 
 HELP_SECTIONS: tuple[dict[str, Any], ...] = (

@@ -8,8 +8,8 @@ from decimal import Decimal, InvalidOperation, ROUND_HALF_UP
 from typing import Any
 from uuid import uuid4
 
-from src.local_terminal.crypto_data import crypto_detail_payload
-from src.local_terminal.markets import default_markets_layout, markets_payload
+from otto.local_terminal.crypto_data import crypto_detail_payload
+from otto.local_terminal.markets import default_markets_layout, markets_payload
 
 
 SUPPORTED_SYMBOLS = ("BTCUSDT", "ETHUSDT", "SOLUSDT")

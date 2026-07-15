@@ -7,7 +7,7 @@ terminal through a small, safe tool surface. This guide explains how.
 ## 1. Start the terminal (one command)
 
 ```powershell
-.\.venv\Scripts\python.exe -m src.local_terminal
+.\.venv\Scripts\python.exe -m otto.local_terminal
 ```
 
 This serves the UI + API at `http://127.0.0.1:8765/`. Open that URL to watch what the
@@ -33,7 +33,7 @@ AI works.
   "mcpServers": {
     "local-terminal": {
       "command": ".venv/Scripts/python.exe",
-      "args": ["-m", "src.local_terminal.mcp_server"],
+      "args": ["-m", "otto.local_terminal.mcp_server"],
       "env": { "LOCAL_TERMINAL_URL": "http://127.0.0.1:8765" }
     }
   }
@@ -51,7 +51,7 @@ Add to `~/.codex/config.toml`:
 ```toml
 [mcp_servers.local-terminal]
 command = "D:/FinceptLocalTerminal/.venv/Scripts/python.exe"
-args = ["-m", "src.local_terminal.mcp_server"]
+args = ["-m", "otto.local_terminal.mcp_server"]
 env = { LOCAL_TERMINAL_URL = "http://127.0.0.1:8765" }
 ```
 

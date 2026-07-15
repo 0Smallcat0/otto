@@ -2,9 +2,9 @@ from pathlib import Path
 
 from fastapi.testclient import TestClient
 
-from src.local_terminal import server
-from src.local_terminal.storage import LocalStateStore
-from src.local_terminal.twse_data import (
+from otto.local_terminal import server
+from otto.local_terminal.storage import LocalStateStore
+from otto.local_terminal.twse_data import (
     TWSE_PROVIDER_ID,
     TWSE_WATCHLIST,
     normalize_twse_quote_snapshot,

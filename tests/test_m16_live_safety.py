@@ -1,10 +1,10 @@
 from fastapi.testclient import TestClient
 
-from src.local_terminal.server import create_app
+from otto.local_terminal.server import create_app
 
 
 def test_live_safety_disabled_response_handles_unknown_actions() -> None:
-    from src.local_terminal.live_safety import disabled_live_action_response
+    from otto.local_terminal.live_safety import disabled_live_action_response
 
     response = disabled_live_action_response("unexpected_live_path")
 
@@ -59,9 +59,9 @@ def test_live_safety_contract_is_disabled_and_gate_complete() -> None:
 
 
 def test_live_safety_action_endpoints_are_rejected_without_side_effects(tmp_path, monkeypatch) -> None:
-    from src.local_terminal import server
-    from src.local_terminal.live_safety import DISABLED_ENDPOINTS
-    from src.local_terminal.storage import LocalStateStore
+    from otto.local_terminal import server
+    from otto.local_terminal.live_safety import DISABLED_ENDPOINTS
+    from otto.local_terminal.storage import LocalStateStore
 
     monkeypatch.setattr(server, "STORE", LocalStateStore(root=tmp_path))
     client = TestClient(server.create_app())
@@ -95,7 +95,7 @@ def test_live_safety_action_endpoints_are_rejected_without_side_effects(tmp_path
 
 
 def test_live_safety_disabled_endpoint_registry_covers_all_actions() -> None:
-    from src.local_terminal.live_safety import DISABLED_ACTIONS, DISABLED_ENDPOINTS
+    from otto.local_terminal.live_safety import DISABLED_ACTIONS, DISABLED_ENDPOINTS
 
     action_ids = {action["action_id"] for action in DISABLED_ACTIONS}
     endpoint_action_ids = {route["action_id"] for route in DISABLED_ENDPOINTS}

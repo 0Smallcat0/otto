@@ -2,7 +2,7 @@
   "mcpServers": {
     "otto": {
       "command": ".venv/Scripts/python.exe",
-      "args": ["-m", "src.local_terminal.mcp_server"],
+      "args": ["-m", "otto.local_terminal.mcp_server"],
       "env": {
         "LOCAL_TERMINAL_URL": "http://127.0.0.1:8765",
         "PYTHONUTF8": "1",

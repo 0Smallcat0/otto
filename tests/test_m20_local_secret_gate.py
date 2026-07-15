@@ -4,21 +4,21 @@ from pathlib import Path
 import pytest
 from fastapi.testclient import TestClient
 
-from src.local_terminal import server
-from src.local_terminal.local_secrets import (
+from otto.local_terminal import server
+from otto.local_terminal.local_secrets import (
     LOCAL_SECRET_CONSENT,
     forget_local_data_provider_secret,
     read_local_data_provider_secret,
     store_local_data_provider_secret,
 )
-from src.local_terminal.providers import providers_payload
-from src.local_terminal.secret_gate import (
+from otto.local_terminal.providers import providers_payload
+from otto.local_terminal.secret_gate import (
     REDACTION_MARKER,
     contains_secret_material,
     redact_secret_material,
     secret_gate_payload,
 )
-from src.local_terminal.storage import LocalStateStore
+from otto.local_terminal.storage import LocalStateStore
 
 
 ROOT = Path(__file__).resolve().parents[1]

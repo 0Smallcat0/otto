@@ -5,7 +5,7 @@ from __future__ import annotations
 from datetime import UTC, datetime
 from typing import Any
 
-from src.local_terminal.provider_acquisition import provider_acquisition_gate_payload
+from otto.local_terminal.provider_acquisition import provider_acquisition_gate_payload
 
 
 COMMAND_CENTER_VERSION = "m22-command-center-v1"

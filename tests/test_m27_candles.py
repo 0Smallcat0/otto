@@ -4,8 +4,8 @@ import json
 
 from fastapi.testclient import TestClient
 
-from src.local_terminal import server
-from src.local_terminal.storage import LocalStateStore
+from otto.local_terminal import server
+from otto.local_terminal.storage import LocalStateStore
 
 
 def _seed_candles(store: LocalStateStore, symbol: str = "BTCUSDT", timeframe: str = "15m") -> None:

@@ -3,9 +3,9 @@ from pathlib import Path
 
 from fastapi.testclient import TestClient
 
-from src.local_terminal import server
-from src.local_terminal.quantlib import QUICK_ACTIONS
-from src.local_terminal.storage import LocalStateStore
+from otto.local_terminal import server
+from otto.local_terminal.quantlib import QUICK_ACTIONS
+from otto.local_terminal.storage import LocalStateStore
 
 
 def _client(tmp_path: Path, monkeypatch) -> TestClient:

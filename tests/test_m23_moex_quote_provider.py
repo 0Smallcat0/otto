@@ -2,15 +2,15 @@ from pathlib import Path
 
 from fastapi.testclient import TestClient
 
-from src.local_terminal import server
-from src.local_terminal.moex_data import (
+from otto.local_terminal import server
+from otto.local_terminal.moex_data import (
     MOEX_PROVIDER_ID,
     MOEX_WATCHLIST,
     moex_quote_snapshot_payload,
     moex_symbol_list,
     normalize_moex_quote_snapshot,
 )
-from src.local_terminal.storage import LocalStateStore
+from otto.local_terminal.storage import LocalStateStore
 
 
 def _raw(symbol: str = "SBER") -> dict[str, object]:

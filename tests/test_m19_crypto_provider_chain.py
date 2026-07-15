@@ -6,10 +6,10 @@ from typing import Any
 
 from fastapi.testclient import TestClient
 
-from src.local_terminal import crypto_data
-from src.local_terminal import server
-from src.local_terminal.crypto_data import crypto_detail_payload
-from src.local_terminal.storage import LocalStateStore
+from otto.local_terminal import crypto_data
+from otto.local_terminal import server
+from otto.local_terminal.crypto_data import crypto_detail_payload
+from otto.local_terminal.storage import LocalStateStore
 
 
 def _tickers(symbols: list[str]) -> list[dict[str, str]]:

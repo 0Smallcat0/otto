@@ -13,8 +13,8 @@ from typing import Any
 
 from fastapi.testclient import TestClient
 
-from src.local_terminal import mcp_server
-from src.local_terminal.server import create_app
+from otto.local_terminal import mcp_server
+from otto.local_terminal.server import create_app
 
 
 def _make_client() -> mcp_server.TerminalClient:
@@ -160,7 +160,7 @@ def test_unavailable_terminal_reports_clean_error() -> None:
     def dead_transport(method: str, path: str, body: dict[str, Any] | None) -> tuple[int, Any]:
         raise mcp_server.TerminalUnavailable(
             "Cannot reach the local terminal at http://127.0.0.1:8765. "
-            "Start it with: python -m src.local_terminal"
+            "Start it with: python -m otto.local_terminal"
         )
 
     client = mcp_server.TerminalClient(dead_transport)

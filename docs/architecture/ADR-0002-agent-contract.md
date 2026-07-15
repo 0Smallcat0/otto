@@ -13,12 +13,12 @@ never considered.
 ## Decision
 
 All agent operation flows through one typed, versioned contract
-(`src/local_terminal/agent_contract.py`, served at `/api/agent-contract`):
+(`otto/local_terminal/agent_contract.py`, served at `/api/agent-contract`):
 
 - Every route and action declares its endpoint, request/response contract,
   mutation flags, artifact roots, confirmation requirement, safety class, and
   expected error codes.
-- The MCP server (`src/local_terminal/mcp_server.py`) derives its tool surface
+- The MCP server (`otto/local_terminal/mcp_server.py`) derives its tool surface
   from this contract at runtime and **refuses** any action that is
   safety-disabled or touches local secrets. New endpoints are unreachable by
   agents until they are contractually declared.

@@ -15,7 +15,7 @@ export default defineConfig({
   webServer: [
     {
       command:
-        ".\\.venv\\Scripts\\python.exe -m uvicorn src.local_terminal.server:app --host 127.0.0.1 --port 8765",
+        ".\\.venv\\Scripts\\python.exe -m uvicorn otto.local_terminal.server:app --host 127.0.0.1 --port 8765",
       cwd: "..",
       env: {
         ...process.env,

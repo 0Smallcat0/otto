@@ -13,8 +13,8 @@ from pathlib import Path
 
 from fastapi.testclient import TestClient
 
-from src.local_terminal import backtest
-from src.local_terminal.server import create_app
+from otto.local_terminal import backtest
+from otto.local_terminal.server import create_app
 
 
 def test_run_optimize_default_grid_ranks_and_writes(tmp_path: Path) -> None:

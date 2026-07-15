@@ -3,7 +3,7 @@ from pathlib import Path
 
 import yaml
 
-from src.local_terminal.contracts import (
+from otto.local_terminal.contracts import (
     DEFAULT_LOCAL_PROFILE_POLICY,
     DEFAULT_SAFETY_INVARIANTS,
     GLOBAL_MENUS,

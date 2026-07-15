@@ -11,43 +11,43 @@ from datetime import UTC, datetime
 from pathlib import Path
 from typing import Any
 
-from src.local_terminal.algo import (
+from otto.local_terminal.algo import (
     default_algo_state,
     normalize_algo_state,
     scan_artifact_manifest,
     scan_report_text,
 )
-from src.local_terminal.dashboard import (
+from otto.local_terminal.dashboard import (
     default_dashboard_layout,
     normalize_dashboard_layout,
 )
-from src.local_terminal.chat import default_chat_state, normalize_chat_state
-from src.local_terminal.code_workspace import (
+from otto.local_terminal.chat import default_chat_state, normalize_chat_state
+from otto.local_terminal.code_workspace import (
     code_analysis_manifest,
     code_analysis_report_text,
     default_code_state,
     normalize_code_state,
     notebook_to_ipynb,
 )
-from src.local_terminal.crypto import default_paper_state, normalize_paper_state
-from src.local_terminal.news_digest import default_news_digest_state, normalize_news_digest_state
-from src.local_terminal.watchlist import default_watchlist_state, normalize_watchlist_state
-from src.local_terminal.forum import default_forum_state, normalize_forum_state
-from src.local_terminal.markets import default_markets_layout, normalize_markets_layout
-from src.local_terminal.news import default_news_layout, normalize_news_layout
-from src.local_terminal.nodes import (
+from otto.local_terminal.crypto import default_paper_state, normalize_paper_state
+from otto.local_terminal.news_digest import default_news_digest_state, normalize_news_digest_state
+from otto.local_terminal.watchlist import default_watchlist_state, normalize_watchlist_state
+from otto.local_terminal.forum import default_forum_state, normalize_forum_state
+from otto.local_terminal.markets import default_markets_layout, normalize_markets_layout
+from otto.local_terminal.news import default_news_layout, normalize_news_layout
+from otto.local_terminal.nodes import (
     default_nodes_state,
     dry_run_artifact_manifest,
     dry_run_report_text,
     normalize_nodes_state,
 )
-from src.local_terminal.portfolio import (
+from otto.local_terminal.portfolio import (
     default_portfolio_state,
     normalize_portfolio_state,
 )
-from src.local_terminal.quant_lab import default_quant_lab_state, normalize_quant_lab_state
-from src.local_terminal.quantlib import default_quantlib_state, normalize_quantlib_state
-from src.local_terminal.research_data import (
+from otto.local_terminal.quant_lab import default_quant_lab_state, normalize_quant_lab_state
+from otto.local_terminal.quantlib import default_quantlib_state, normalize_quantlib_state
+from otto.local_terminal.research_data import (
     SEC_DEFAULT_COMPANY_WATCHLIST,
     safe_sec_cik,
     sec_xbrl_frame_cache_path,
@@ -60,7 +60,7 @@ ROOT = Path(__file__).resolve().parents[2]
 def default_state_root(module_root: Path = ROOT) -> Path:
     """Where user state lives by default.
 
-    In a repo checkout (``pyproject.toml`` beside ``src/``) state stays inside
+    In a repo checkout (``pyproject.toml`` beside ``otto/``) state stays inside
     the repository, as always. Installed as a wheel (pip/uvx) there is no
     repository, so state moves to ``~/.otto`` — never into site-packages.
     """

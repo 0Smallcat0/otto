@@ -2,6 +2,11 @@
 
 ## Unreleased
 
+- Package renamed `src.local_terminal` → `otto.local_terminal`: the project
+  now installs a proper top-level `otto` package instead of squatting the
+  generic `src` name, clearing the path to a PyPI release. Checkout
+  invocations change to `python -m otto.local_terminal`; the `otto` /
+  `otto-mcp` entry points and the uvx one-liner are unaffected.
 - Health and MCP `serverInfo` now report the real project version
   (single-sourced from dist metadata, pyproject fallback) instead of a
   hard-coded `0.1.0`.

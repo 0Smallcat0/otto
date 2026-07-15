@@ -2,14 +2,14 @@ from pathlib import Path
 
 from fastapi.testclient import TestClient
 
-from src.local_terminal import server
-from src.local_terminal.openfigi_data import (
+from otto.local_terminal import server
+from otto.local_terminal.openfigi_data import (
     OPENFIGI_PROVIDER_ID,
     normalize_openfigi_mapping,
     openfigi_mapping_payload,
     openfigi_symbol_list,
 )
-from src.local_terminal.storage import LocalStateStore
+from otto.local_terminal.storage import LocalStateStore
 
 
 def _raw_mapping() -> list[dict[str, object]]:

@@ -14,7 +14,7 @@ from datetime import UTC, datetime
 from typing import Any
 from urllib.parse import urlencode
 
-from src.local_terminal.twelve_data import TWELVE_DATA_PROVIDER_ID
+from otto.local_terminal.twelve_data import TWELVE_DATA_PROVIDER_ID
 
 HISTORY_INTERVAL = "1day"
 HISTORY_OUTPUTSIZE = 120

@@ -4,12 +4,12 @@ from pathlib import Path
 
 from fastapi.testclient import TestClient
 
-from src.local_terminal import server
-from src.local_terminal.provider_refresh import (
+from otto.local_terminal import server
+from otto.local_terminal.provider_refresh import (
     provider_refresh_lifecycle_payload,
     provider_refresh_schedule_plan_payload,
 )
-from src.local_terminal.storage import LocalStateStore
+from otto.local_terminal.storage import LocalStateStore
 
 
 def _write_json(path: Path, payload: dict[str, object]) -> None:

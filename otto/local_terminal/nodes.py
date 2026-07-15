@@ -10,7 +10,7 @@ from pathlib import Path
 from typing import Any
 from uuid import uuid4
 
-from src.local_terminal.advanced_context import sanitize_advanced_context
+from otto.local_terminal.advanced_context import sanitize_advanced_context
 
 
 MAX_WORKFLOWS = 80

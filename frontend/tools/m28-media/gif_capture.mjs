@@ -10,7 +10,7 @@ const mcpConfig = {
   mcpServers: {
     otto: {
       command: process.env.PYTHON || "../.venv/Scripts/python.exe",
-      args: ["-m", "src.local_terminal.mcp_server"],
+      args: ["-m", "otto.local_terminal.mcp_server"],
       env: { LOCAL_TERMINAL_URL: BASE, LOCAL_TERMINAL_MCP_AUTOSTART: "0", PYTHONPATH: "D:/Otto" },
     },
   },

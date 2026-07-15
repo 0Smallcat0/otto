@@ -11,7 +11,7 @@ from pathlib import Path
 from typing import Any
 from uuid import uuid4
 
-from src.local_terminal.advanced_context import context_for_artifact, sanitize_advanced_context
+from otto.local_terminal.advanced_context import context_for_artifact, sanitize_advanced_context
 
 
 MAX_NOTEBOOKS = 60

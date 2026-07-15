@@ -2,15 +2,15 @@ from pathlib import Path
 
 from fastapi.testclient import TestClient
 
-from src.local_terminal import server
-from src.local_terminal.agent_contract import (
+from otto.local_terminal import server
+from otto.local_terminal.agent_contract import (
     ACTION_CONTRACTS,
     ROUTE_CONTRACTS,
     agent_action_preflight_payload,
     agent_operability_payload,
 )
-from src.local_terminal.contracts import SHELL_ROUTE_IDS
-from src.local_terminal.storage import LocalStateStore
+from otto.local_terminal.contracts import SHELL_ROUTE_IDS
+from otto.local_terminal.storage import LocalStateStore
 
 
 def _client(tmp_path: Path, monkeypatch) -> TestClient:

@@ -3,15 +3,15 @@ from pathlib import Path
 
 from fastapi.testclient import TestClient
 
-from src.local_terminal import server
-from src.local_terminal.finnhub_data import (
+from otto.local_terminal import server
+from otto.local_terminal.finnhub_data import (
     FINNHUB_PROVIDER_ID,
     FINNHUB_WATCHLIST,
     finnhub_quote_watchlist_payload,
     finnhub_symbol_list,
     normalize_finnhub_quote,
 )
-from src.local_terminal.storage import LocalStateStore
+from otto.local_terminal.storage import LocalStateStore
 
 
 def _synthetic_finnhub_value() -> str:
