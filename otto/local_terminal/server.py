@@ -280,8 +280,10 @@ from otto.local_terminal.stooq_data import (
     stooq_symbol_list,
 )
 from otto.local_terminal.yahoo_data import (
+    YAHOO_MAX_WATCHLIST,
     YAHOO_WATCHLIST,
     fetch_yahoo_quote_snapshot,
+    yahoo_lookup_symbols,
     yahoo_quote_snapshot_payload,
     yahoo_symbol_list,
 )
@@ -1844,6 +1846,12 @@ class AlgoStrategyDeleteUpdate(BaseModel):
     confirm: bool = Field(default=False)
 
 
+class MarketsQuoteLookupUpdate(BaseModel):
+    model_config = ConfigDict(extra="forbid")
+
+    symbols: list[str] = Field(min_length=1, max_length=YAHOO_MAX_WATCHLIST)
+
+
 class LocalStateRestoreUpdate(BaseModel):
     model_config = ConfigDict(extra="forbid")
 
@@ -2573,6 +2581,25 @@ def create_app(frontend_dist: Path | None = None) -> FastAPI:
                 symbols=update.symbols if update else None,
             )
         )
+
+    @app.post("/api/markets/quotes/lookup")
+    def markets_quote_lookup(update: MarketsQuoteLookupUpdate) -> dict[str, Any]:
+        safe_symbols = yahoo_lookup_symbols(update.symbols)
+        if not safe_symbols:
+            raise HTTPException(
+                status_code=400,
+                detail="No valid symbols to look up (letters/digits with . ^ = - only)",
+            )
+        payload = _public_yahoo_payload(
+            _yahoo_quote_snapshot_payload_from_store(refresh=True, symbols=safe_symbols)
+        )
+        return {
+            "requested_symbols": safe_symbols,
+            "status": payload.get("status", {}),
+            "quotes": payload.get("quotes", []),
+            "summary": payload.get("summary", {}),
+            "entry": payload.get("entry", {}),
+        }
 
     @app.post("/api/stooq/quote-snapshots/refresh")
     def refresh_stooq_quote_snapshots(

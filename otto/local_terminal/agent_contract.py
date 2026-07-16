@@ -108,6 +108,7 @@ ROUTE_CONTRACTS: tuple[RouteAgentContract, ...] = (
         ("market_data",),
         (
             "markets_refresh_public",
+            "markets_quote_lookup",
             "markets_watchlist_index",
             "markets_watchlist_update",
             "markets_quote_reference_coverage",
@@ -796,6 +797,39 @@ ACTION_CONTRACTS: tuple[AgentActionContract, ...] = (
         False,
         "public_read_only_market_data",
         ("provider_unavailable", "rate_limited"),
+    ),
+    AgentActionContract(
+        "markets_quote_lookup",
+        "markets",
+        "Look up live quotes for any symbols on demand",
+        "POST",
+        "/api/markets/quotes/lookup",
+        (
+            '{"symbols":["TSLA","2330.TW"]}; ANY Yahoo Finance symbol works — US/TW '
+            "stocks, indices (^GSPC), FX (EURUSD=X), crypto (BTC-USD) — not just the "
+            "stored watchlist; 1..8 symbols per call; all-invalid symbols return 400"
+        ),
+        (
+            "requested_symbols",
+            "status",
+            "status.state",
+            "quotes",
+            "quotes[].symbol",
+            "quotes[].price",
+            "quotes[].change_percent",
+            "quotes[].currency",
+            "summary",
+        ),
+        (
+            "fetches live public no-key Yahoo quotes for exactly the requested symbols "
+            "with stale-cache fallback per symbol; rows are delayed and not orderable"
+        ),
+        True,
+        False,
+        False,
+        False,
+        "public_read_only_market_data",
+        ("provider_unavailable", "rate_limited", "400"),
     ),
     AgentActionContract(
         "markets_moex_quote_snapshot_refresh",
