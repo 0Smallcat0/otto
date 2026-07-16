@@ -2,6 +2,12 @@
 
 ## Unreleased
 
+- `POST /api/markets/quotes/lookup` (`markets_quote_lookup`, 116 actions):
+  ask for live quotes on ANY Yahoo Finance symbol — US/TW stocks, indices,
+  FX, crypto — not just the stored watchlists. Explicit symbols only: an
+  all-invalid request is refused instead of silently answered with the
+  default watchlist. Flat response (status/quotes/summary) an agent can
+  read without spelunking the markets payload.
 - Package renamed `src.local_terminal` → `otto.local_terminal`: the project
   now installs a proper top-level `otto` package instead of squatting the
   generic `src` name, clearing the path to a PyPI release. Checkout

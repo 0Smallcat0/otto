@@ -136,6 +136,30 @@ def yahoo_symbol_list(raw_symbols: list[str] | str | None = None) -> list[str]:
     return symbols or list(YAHOO_WATCHLIST)
 
 
+def yahoo_lookup_symbols(raw_symbols: list[str] | str | None) -> list[str]:
+    """Sanitized symbols for an explicit lookup — NO watchlist fallback.
+
+    A lookup means "quote exactly what I asked for"; silently answering with
+    the default watchlist when every requested symbol is invalid would be a
+    lie. Returns an empty list in that case so callers can refuse.
+    """
+    raw_values: list[Any]
+    if isinstance(raw_symbols, str):
+        raw_values = [value.strip() for value in raw_symbols.replace(";", ",").split(",")]
+    elif isinstance(raw_symbols, list):
+        raw_values = raw_symbols
+    else:
+        raw_values = []
+    symbols: list[str] = []
+    for value in raw_values:
+        symbol = _safe_symbol(value)
+        if symbol and symbol not in symbols:
+            symbols.append(symbol)
+        if len(symbols) >= YAHOO_MAX_WATCHLIST:
+            break
+    return symbols
+
+
 def fetch_yahoo_quote_snapshot(*, symbol: str, timeout: float = 6.0) -> dict[str, Any]:
     safe_symbol = _safe_symbol(symbol) or YAHOO_WATCHLIST[0]
     url = f"{YAHOO_QUOTE_URL}{quote(safe_symbol, safe='^=.-')}?range=1d&interval=1d"
