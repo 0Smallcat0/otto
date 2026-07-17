@@ -181,6 +181,7 @@ from otto.local_terminal.crypto import (
     PaperOrderError,
     cancel_paper_order,
     crypto_payload,
+    paper_summary_payload,
     place_paper_order,
 )
 from otto.local_terminal.dashboard import apply_dashboard_template, dashboard_payload
@@ -2814,6 +2815,14 @@ def create_app(frontend_dist: Path | None = None) -> FastAPI:
     @app.get("/api/crypto")
     def crypto() -> dict[str, Any]:
         return crypto_payload(
+            STORE.read_paper_state(),
+            STORE.read_market_cache(),
+            STORE.read_crypto_detail_cache(),
+        )
+
+    @app.get("/api/crypto/summary")
+    def crypto_summary() -> dict[str, Any]:
+        return paper_summary_payload(
             STORE.read_paper_state(),
             STORE.read_market_cache(),
             STORE.read_crypto_detail_cache(),

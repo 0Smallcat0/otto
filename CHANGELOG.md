@@ -2,6 +2,11 @@
 
 ## Unreleased
 
+- `GET /api/crypto/summary` (`paper_account_summary`, dogfood P1): the
+  decision-loop view in ~1.5KB instead of the 74k-char full paper payload —
+  account with total P&L, positions marked to the freshest known price with
+  unrealized P&L, open orders, and per-symbol quote age against the 900s
+  fill gate with the refresh action to run when stale.
 - Paper-fill honesty (dogfood P0s): a MARKET paper order on a quote older
   than 15 minutes is refused with a "refresh first" error instead of
   filling at a phantom price, and a carried-forward quote past the TTL is
