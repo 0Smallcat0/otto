@@ -129,6 +129,109 @@ def crypto_payload(
     }
 
 
+def paper_summary_payload(
+    state: dict[str, Any],
+    market_cache: dict[str, Any] | None = None,
+    detail_cache: dict[str, Any] | None = None,
+) -> dict[str, Any]:
+    """Everything an agent needs to run the decision loop, in ~1KB.
+
+    The full paper payload runs 74k+ chars (2026-07-17 dogfood P1) — order
+    history, depth ladders, raw trades, candles — while the decision loop
+    needs exactly: account, positions marked to the freshest known price,
+    per-symbol quote freshness against the fill gate's TTL, and open orders.
+    """
+    paper_state = normalize_paper_state(state)
+    detail = crypto_detail_payload(detail_cache or {})
+    market = markets_payload(default_markets_layout(), market_cache or {}, detail)
+    market = _market_with_detail_fallback(market, detail)
+    prices = _prices_from_rows(market["rows"])
+    account = _account_with_equity(paper_state, prices)
+
+    quotes: list[dict[str, Any]] = []
+    freshest_by_symbol: dict[str, dict[str, Any]] = {}
+    for row in market["rows"]:
+        symbol = str(row.get("symbol", ""))
+        snapshot = _quote_snapshot(symbol, market, detail)
+        age = _quote_age_seconds(snapshot["retrieved_at"])
+        entry = {
+            "symbol": symbol,
+            "price": snapshot["price"],
+            "chg_pct": str(row.get("chg_pct", "N/A")),
+            "state": snapshot["state"],
+            "retrieved_at": snapshot["retrieved_at"],
+            "age_seconds": None if age is None else int(age),
+        }
+        quotes.append(entry)
+        freshest_by_symbol[symbol] = entry
+
+    positions = []
+    for symbol, position in paper_state["positions"].items():
+        quantity = Decimal(position["quantity"])
+        avg_price = Decimal(position["avg_price"])
+        last = prices.get(symbol)
+        unrealized = (quantity * (last - avg_price)) if last is not None else None
+        positions.append(
+            {
+                "symbol": symbol,
+                "quantity": _amount(quantity),
+                "avg_price": _money(avg_price),
+                "last_price": _money(last) if last is not None else "N/A",
+                "unrealized_pnl": _money(unrealized) if unrealized is not None else "N/A",
+                "unrealized_pnl_pct": (
+                    f"{(last / avg_price - 1) * 100:.2f}"
+                    if last is not None and avg_price
+                    else "N/A"
+                ),
+                "quote_age_seconds": freshest_by_symbol.get(symbol, {}).get("age_seconds"),
+            }
+        )
+
+    open_orders = [
+        {
+            "order_id": order["order_id"],
+            "symbol": order["symbol"],
+            "side": order["side"],
+            "type": order["type"],
+            "quantity": order["quantity"],
+            "limit_price": order.get("limit_price"),
+            "created_at": order["created_at"],
+        }
+        for order in paper_state["orders"]
+        if order["status"] == "WORKING"
+    ]
+
+    ages = [entry["age_seconds"] for entry in quotes]
+    all_fresh = bool(ages) and all(
+        age is not None and age <= QUOTE_FRESHNESS_TTL_SECONDS for age in ages
+    )
+    initial = Decimal(account.get("initial_cash", "0"))
+    equity = Decimal(account["equity"])
+    return {
+        "mode": "paper",
+        "as_of": _utc_now(),
+        "account": {
+            **account,
+            "total_pnl": _money(equity - initial),
+            "total_pnl_pct": f"{(equity / initial - 1) * 100:.3f}" if initial else "N/A",
+        },
+        "positions": positions,
+        "open_orders": open_orders,
+        "quotes": quotes,
+        "freshness": {
+            "ttl_seconds": QUOTE_FRESHNESS_TTL_SECONDS,
+            "all_fresh": all_fresh,
+            "refresh_action": "crypto_refresh_public",
+            "note": "MARKET fills are refused when the symbol quote is older than ttl_seconds",
+        },
+        "safety": {
+            "paper_only": True,
+            "live_execution": "disabled",
+            "real_orders": False,
+        },
+    }
+
+
 def place_paper_order(
     state: dict[str, Any],
     request: dict[str, Any],

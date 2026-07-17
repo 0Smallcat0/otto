@@ -166,7 +166,12 @@ ROUTE_CONTRACTS: tuple[RouteAgentContract, ...] = (
         "Paper",
         ("paper_account", "orders", "ledger"),
         ("artifacts/paper",),
-        ("crypto_submit_paper_order", "crypto_cancel_paper_order", "crypto_reset_paper"),
+        (
+            "paper_account_summary",
+            "crypto_submit_paper_order",
+            "crypto_cancel_paper_order",
+            "crypto_reset_paper",
+        ),
         ("live_order_submit",),
     ),
     RouteAgentContract(
@@ -2088,6 +2093,45 @@ ACTION_CONTRACTS: tuple[AgentActionContract, ...] = (
         False,
         "public_read_only_market_data_no_broker_mutation",
         ("provider_unavailable", "rate_limited"),
+    ),
+    AgentActionContract(
+        "paper_account_summary",
+        "paper",
+        "Read compact paper account summary for decision loops",
+        "GET",
+        "/api/crypto/summary",
+        (
+            "empty body; ~1KB agent view: account with total P&L, positions marked to "
+            "the freshest known price with unrealized P&L, open orders, per-symbol "
+            "quote age vs the 900s fill gate, and the refresh action to run when stale"
+        ),
+        (
+            "as_of",
+            "account",
+            "account.equity",
+            "account.total_pnl",
+            "positions",
+            "positions[].symbol",
+            "positions[].unrealized_pnl",
+            "positions[].quote_age_seconds",
+            "open_orders",
+            "quotes",
+            "quotes[].symbol",
+            "quotes[].age_seconds",
+            "freshness",
+            "freshness.all_fresh",
+            "safety",
+        ),
+        (
+            "read-only compact view of the paper ledger and quote freshness; the full "
+            "payload with history/depth/candles stays on the paper route read"
+        ),
+        False,
+        False,
+        False,
+        False,
+        "local_paper_state_read_only",
+        (),
     ),
     AgentActionContract(
         "crypto_submit_paper_order",
