@@ -57,6 +57,36 @@ real product debt.
 | 5 | **P2** | Information step is empty by default (digest auto-expired); assembling fresh news costs 3 heavyweight calls | A single "current information packet" read: freshest headlines + digest in one bounded response |
 | 6 | **P2** | Account equity is marked-to-stale prices (same root as #1/#2) | Falls out of fixing #1/#2 |
 
+## Iteration 2 (2026-07-18): fix, use again, verify
+
+Both P0s fixed and re-drilled live the next day, use-fix-use:
+
+1. **Freshness gate** (`QUOTE_FRESHNESS_TTL_SECONDS = 900` in `crypto.py`):
+   a MARKET paper order on a quote older than 15 minutes is refused with
+   `Refusing MARKET fill on a stale quote ... Refresh public crypto data
+   first`, and a carried-forward quote past the TTL is demoted to
+   `stale_cache` everywhere it is recorded — never labeled `live` again.
+   Replaying yesterday's trade against the same stale cache: **HTTP 400,
+   quote age 645004s** — the phantom fill is now impossible.
+2. **Ticker fallback chain** (`fetch_public_crypto_tickers` in
+   `crypto_data.py`): the ticker snapshot now rides the same
+   Binance-then-Kraken chain as depth/trades/candles, with Kraken rows
+   normalized to the Binance ticker shape. Immediately after the gate
+   landed, this gap surfaced live exactly as predicted: refresh returned
+   200 but the ticker stayed at 07-10 and the gate blocked ALL paper
+   trading. With the chain fixed: refresh → ticker current
+   (2026-07-17T23:04Z) → MARKET SOL fill at 74.99, `quote_state: live`,
+   fresh timestamp.
+
+Measured damage from the original bug: ETH's real price at drill time was
+1837.68 vs the phantom fill at 1799.97 — a **2.1% fictitious price** on the
+ledger.
+
+New finding from iteration 2 (added to the backlog): when Kraken supplies
+the ticker rows, the pipeline still stamps them `source: binance_public` —
+the fetcher abstraction drops the provenance label (P3; honesty nit, not a
+trading hazard).
+
 ## Method note
 
 Chain: status → ledger → market refresh → news read → transparent mechanical

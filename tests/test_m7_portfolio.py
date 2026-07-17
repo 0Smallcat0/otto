@@ -1,3 +1,5 @@
+from datetime import UTC, datetime
+
 import json
 from pathlib import Path
 
@@ -13,7 +15,7 @@ def _public_market_cache() -> dict[str, object]:
         "status": {
             "source": "binance_public",
             "state": "live",
-            "last_update": "2026-05-23T00:00:00Z",
+            "last_update": datetime.now(UTC).isoformat(timespec="seconds"),
             "message": "Public read-only Binance data refreshed.",
             "provider_id": "binance_spot_public",
             "cache_path": "market_data/crypto_latest.json",
@@ -35,7 +37,7 @@ def _public_market_cache() -> dict[str, object]:
                 "source": "binance_public",
                 "state": "live",
                 "provider_id": "binance_spot_public",
-                "retrieved_at": "2026-05-23T00:00:00Z",
+                "retrieved_at": datetime.now(UTC).isoformat(timespec="seconds"),
                 "cache_path": "market_data/crypto_latest.json",
             }
         ],
@@ -47,7 +49,7 @@ def _offline_fixture_market_cache() -> dict[str, object]:
         "status": {
             "source": "offline_fixture",
             "state": "offline",
-            "last_update": "2026-05-23T00:00:00Z",
+            "last_update": datetime.now(UTC).isoformat(timespec="seconds"),
             "provider_id": "",
             "cache_path": "market_data/crypto_latest.json",
         },
@@ -58,7 +60,7 @@ def _offline_fixture_market_cache() -> dict[str, object]:
                 "chg_pct": "5.00",
                 "source": "offline_fixture",
                 "state": "offline",
-                "retrieved_at": "2026-05-23T00:00:00Z",
+                "retrieved_at": datetime.now(UTC).isoformat(timespec="seconds"),
                 "cache_path": "market_data/crypto_latest.json",
             }
         ],

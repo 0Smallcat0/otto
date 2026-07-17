@@ -300,6 +300,82 @@ def fetch_kraken_crypto_detail(
     )
 
 
+def fetch_kraken_tickers(
+    symbols: list[str],
+    timeout: float = 6.0,
+    *,
+    reader: Any = None,
+) -> list[dict[str, Any]]:
+    """Binance-shaped 24h ticker rows from Kraken's public Ticker endpoint.
+
+    Exists so the ticker snapshot follows the same fallback chain as
+    depth/trades/candles (2026-07-17 dogfood: Kraken refreshed candles while
+    the ticker cache silently stayed a week old, and the freshness gate then
+    blocked all paper trading).
+    """
+    read = reader or _read_json_url
+    rows: list[dict[str, Any]] = []
+    for symbol in symbols:
+        pair = KRAKEN_PAIRS.get(symbol)
+        if not pair:
+            continue
+        data = _kraken_result(read(f"{KRAKEN_BASE_URL}/Ticker?{urlencode({'pair': pair})}", timeout))
+        entry = _first_result(data)
+        if not isinstance(entry, dict):
+            continue
+
+        def pick(key: str, index: int = 0) -> str:
+            value = entry.get(key)
+            if isinstance(value, list) and len(value) > index:
+                return str(value[index])
+            if isinstance(value, (str, int, float)):
+                return str(value)
+            return ""
+
+        last, opened = pick("c"), pick("o")
+        try:
+            change = float(last) - float(opened)
+            change_pct = (change / float(opened) * 100) if float(opened) else 0.0
+            change_text, change_pct_text = f"{change:.8f}", f"{change_pct:.3f}"
+        except (TypeError, ValueError):
+            change_text, change_pct_text = "0", "0"
+        rows.append(
+            {
+                "symbol": symbol,
+                "lastPrice": last,
+                "priceChange": change_text,
+                "priceChangePercent": change_pct_text,
+                "highPrice": pick("h", 1),
+                "lowPrice": pick("l", 1),
+                "volume": pick("v", 1),
+                "bidPrice": pick("b"),
+                "askPrice": pick("a"),
+                "openPrice": opened,
+            }
+        )
+    if not rows:
+        raise ValueError("Kraken ticker fallback returned no rows")
+    return rows
+
+
+def fetch_public_crypto_tickers(
+    symbols: list[str],
+    timeout: float = 6.0,
+    *,
+    primary: Any = None,
+    fallback: Any = None,
+) -> list[dict[str, Any]]:
+    """Ticker chain aligned with the detail chain: Binance first, then Kraken."""
+    from otto.local_terminal.markets import fetch_binance_tickers
+
+    first = primary or fetch_binance_tickers
+    second = fallback or fetch_kraken_tickers
+    try:
+        return first(symbols, timeout=min(timeout, 3.0))
+    except (OSError, TimeoutError, ValueError, HTTPError, URLError):
+        return second(symbols, timeout=timeout)
+
+
 def fetch_coinbase_crypto_detail(
     *,
     symbol: str = DEFAULT_SYMBOL,
