@@ -2,6 +2,13 @@
 
 ## Unreleased
 
+- Paper-fill honesty (dogfood P0s): a MARKET paper order on a quote older
+  than 15 minutes is refused with a "refresh first" error instead of
+  filling at a phantom price, and a carried-forward quote past the TTL is
+  demoted to `stale_cache` — never relabeled `live`. The crypto ticker
+  snapshot now rides the same Binance→Kraken fallback chain as
+  depth/trades/candles, so a blocked primary no longer strands the ticker
+  (and, with the gate, all paper trading) on week-old data.
 - `POST /api/markets/quotes/lookup` (`markets_quote_lookup`, 116 actions):
   ask for live quotes on ANY Yahoo Finance symbol — US/TW stocks, indices,
   FX, crypto — not just the stored watchlists. Explicit symbols only: an

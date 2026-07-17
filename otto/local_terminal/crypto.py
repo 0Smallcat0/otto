@@ -163,6 +163,15 @@ def place_paper_order(
     prices = _prices_from_rows(market["rows"])
     price = _paper_price(symbol, prices, limit_price)
     quote_snapshot = _quote_snapshot(symbol, market, detail)
+    if order_type == "MARKET":
+        age = _quote_age_seconds(quote_snapshot["retrieved_at"])
+        if age is None or age > QUOTE_FRESHNESS_TTL_SECONDS:
+            age_text = "unknown" if age is None else f"{int(age)}s"
+            raise PaperOrderError(
+                f"Refusing MARKET fill on a stale quote for {symbol}: quote age "
+                f"{age_text} exceeds {QUOTE_FRESHNESS_TTL_SECONDS}s. "
+                "Refresh public crypto data first (crypto_refresh_public)."
+            )
     exposure_price = _exposure_price(order_type, price, limit_price, stop_price)
     notional = quantity * exposure_price
     fee = (notional * FEE_RATE).quantize(Decimal("0.01"), rounding=ROUND_HALF_UP)
@@ -330,6 +339,21 @@ def _watchlist_from_market_rows(rows: list[dict[str, str]]) -> list[dict[str, st
     return watchlist
 
 
+QUOTE_FRESHNESS_TTL_SECONDS = 900
+
+
+def _quote_age_seconds(retrieved_at: str) -> float | None:
+    """Seconds since the quote was captured; None when the stamp is unusable."""
+    raw = str(retrieved_at or "").strip()
+    try:
+        stamp = datetime.fromisoformat(raw.replace("Z", "+00:00"))
+    except ValueError:
+        return None
+    if stamp.tzinfo is None:
+        stamp = stamp.replace(tzinfo=UTC)
+    return (datetime.now(tz=UTC) - stamp).total_seconds()
+
+
 def _quote_snapshot(symbol: str, market: dict[str, Any], detail: dict[str, Any]) -> dict[str, str]:
     market_status = market.get("status") if isinstance(market.get("status"), dict) else {}
     detail_status = detail.get("status") if isinstance(detail.get("status"), dict) else {}
@@ -358,6 +382,12 @@ def _quote_snapshot(symbol: str, market: dict[str, Any], detail: dict[str, Any])
         or market_status.get("cache_path")
         or f"market_data/crypto/{symbol}/{detail_status.get('timeframe') or '15m'}.json"
     )
+    # A cached row keeps the state it had WHEN CAPTURED ("live"). Carrying
+    # that forward past the freshness TTL is a lie an agent will act on
+    # (2026-07-17 dogfood: a MARKET order filled at a 7-day-old "live" quote).
+    age = _quote_age_seconds(retrieved_at)
+    if state == "live" and (age is None or age > QUOTE_FRESHNESS_TTL_SECONDS):
+        state = "stale_cache"
     return {
         "symbol": symbol,
         "price": str(row.get("price") or "N/A"),

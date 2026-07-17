@@ -100,6 +100,7 @@ from otto.local_terminal.crypto_data import (
     DEFAULT_SYMBOL,
     crypto_detail_payload,
     fetch_public_crypto_detail,
+    fetch_public_crypto_tickers,
 )
 from otto.local_terminal.backtest import (
     BACKTEST_PROVIDER,
@@ -229,7 +230,7 @@ from otto.local_terminal.local_secrets import (
     read_local_data_provider_secret,
     store_local_data_provider_secret,
 )
-from otto.local_terminal.markets import fetch_binance_tickers, markets_payload
+from otto.local_terminal.markets import markets_payload
 from otto.local_terminal.moex_data import (
     MOEX_WATCHLIST,
     fetch_moex_quote_snapshot,
@@ -390,7 +391,7 @@ DEFAULT_PORT = _port_from_env("LOCAL_TERMINAL_PORT", 8765)
 REPO_ROOT = Path(__file__).resolve().parents[2]
 DEFAULT_FRONTEND_DIST = REPO_ROOT / "frontend" / "dist"
 STORE = LocalStateStore(root=state_root_from_env())
-MARKET_FETCHER = fetch_binance_tickers
+MARKET_FETCHER = fetch_public_crypto_tickers
 CRYPTO_DETAIL_FETCHER = fetch_public_crypto_detail
 NEWS_FETCHER = fetch_public_news
 RESEARCH_FETCHER = fetch_public_research_data
