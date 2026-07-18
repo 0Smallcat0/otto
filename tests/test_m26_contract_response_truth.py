@@ -76,6 +76,7 @@ _STRATEGY_BODY = {
 # Skipped actions and why. Everything else must execute.
 SKIP_REASONS = {
     "markets_quote_lookup": "live network fetch by design; covered by test_quote_lookup with an injected fetcher",
+    "equity_submit_paper_order": "fills at a live network quote by design; covered by test_equity_paper with an injected fetcher",
     "markets_candles_read": "needs a candle cache (network refresh); covered by test_m27_candles with a seeded cache",
     "store_optional_data_provider_secret": "writes the real DPAPI secret store",
     "crypto_reset_paper": "destructive paper-ledger wipe; delete path covered by m16 tests",

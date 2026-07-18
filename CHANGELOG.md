@@ -2,6 +2,14 @@
 
 ## Unreleased
 
+- US-equity paper ledger (`equity_submit_paper_order` /
+  `equity_paper_summary`, 119 actions): cross-asset allocation closes the
+  loop on stocks. The fill price is fetched live at submit (Yahoo public
+  quote) so there is no stale-fill window at all; failed, non-USD, or stale
+  quotes refuse the order. v1 scope stated, not implied: MARKET-only,
+  USD-only (no silent FX), zero-commission assumption on every fill record.
+  Separate USD book from the crypto USDT book; state file backup-protected
+  and restorable like every other ledger.
 - `POST /api/crypto/refresh` accepts `"view":"summary"`: refresh and read
   the decision-loop state in one ~1.4KB call instead of the 180KB full
   refresh response.
