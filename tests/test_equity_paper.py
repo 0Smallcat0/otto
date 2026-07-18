@@ -173,3 +173,136 @@ def test_contract_registration(tmp_path, monkeypatch) -> None:
     assert actions["equity_paper_summary"]["method"] == "GET"
     paper_route = next(r for r in contract["routes"] if r["route_id"] == "paper")
     assert "equity_submit_paper_order" in paper_route["recommended_actions"]
+
+
+# ---- TW book (TWD, board lots, real fee/tax rules) ----
+
+from otto.local_terminal.equity_paper import (  # noqa: E402
+    TW_BOOK,
+    default_tw_equity_paper_state,
+)
+
+
+def _tw_quote(price: str = "600.00", previous_close: str = "590.00",
+              age_seconds: float = 5.0, symbol: str = "2330.TW") -> dict:
+    row = _quote(symbol=symbol, price=price, currency="TWD", age_seconds=age_seconds)
+    row["previous_close"] = previous_close
+    return row
+
+
+def test_tw_buy_charges_brokerage_and_sell_adds_tax() -> None:
+    state, order = place_equity_paper_order(
+        default_tw_equity_paper_state(),
+        {"symbol": "2330.TW", "side": "BUY", "quantity": "1000"},
+        _tw_quote(price="600.00"),
+        TW_BOOK,
+    )
+    # notional 600000, brokerage 0.1425% = 855.00
+    assert state["account"]["cash"] == "2399145.00"
+    assert state["fills"][-1]["fee"] == "855.00"
+    assert state["fills"][-1]["tax"] == "0.00"
+
+    state, _ = place_equity_paper_order(
+        state,
+        {"symbol": "2330.TW", "side": "SELL", "quantity": "1000"},
+        _tw_quote(price="610.00", previous_close="600.00"),
+        TW_BOOK,
+    )
+    # proceeds 610000 - fee 869.25 - tax 1830 = 607300.75
+    assert state["fills"][-1]["fee"] == "869.25"
+    assert state["fills"][-1]["tax"] == "1830.00"
+    assert state["account"]["cash"] == "3006445.75"
+    assert "2330.TW" not in state["positions"]
+
+
+def test_tw_minimum_brokerage_fee_applies() -> None:
+    state, _ = place_equity_paper_order(
+        default_tw_equity_paper_state(),
+        {"symbol": "1234.TW", "side": "BUY", "quantity": "1000"},
+        _tw_quote(price="10.00", previous_close="10.00", symbol="1234.TW"),
+        TW_BOOK,
+    )
+    # notional 10000 -> 0.1425% = 14.25 -> below NT$20 minimum
+    assert state["fills"][-1]["fee"] == "20.00"
+
+
+def test_tw_odd_lot_is_refused_not_rounded() -> None:
+    with pytest.raises(EquityOrderError, match="board lots"):
+        place_equity_paper_order(
+            default_tw_equity_paper_state(),
+            {"symbol": "2330.TW", "side": "BUY", "quantity": "500"},
+            _tw_quote(),
+            TW_BOOK,
+        )
+
+
+def test_tw_daily_limit_guard_refuses_anomalous_quotes() -> None:
+    with pytest.raises(EquityOrderError, match="daily limit band"):
+        place_equity_paper_order(
+            default_tw_equity_paper_state(),
+            {"symbol": "2330.TW", "side": "BUY", "quantity": "1000"},
+            _tw_quote(price="700.00", previous_close="600.00"),  # +16.7%
+            TW_BOOK,
+        )
+
+
+def test_tw_book_refuses_usd_symbols() -> None:
+    with pytest.raises(EquityOrderError, match="TWD-quoted symbols only"):
+        place_equity_paper_order(
+            default_tw_equity_paper_state(),
+            {"symbol": "AAPL", "side": "BUY", "quantity": "1000"},
+            _quote(symbol="AAPL", currency="USD"),
+            TW_BOOK,
+        )
+
+
+def test_tw_endpoint_fills_via_injected_lookup(tmp_path, monkeypatch) -> None:
+    monkeypatch.setattr(server, "STORE", LocalStateStore(root=tmp_path))
+
+    def _fake_yahoo(*, symbol: str) -> dict:
+        return {
+            "symbol": symbol,
+            "currency": "TWD",
+            "exchangeName": "TAI",
+            "fullExchangeName": "Taiwan",
+            "regularMarketPrice": 600.0,
+            "chartPreviousClose": 595.0,
+            "regularMarketDayHigh": 605.0,
+            "regularMarketDayLow": 590.0,
+            "regularMarketVolume": 1000,
+            "regularMarketTime": int(datetime.now(tz=UTC).timestamp()),
+        }
+
+    monkeypatch.setattr(server, "YAHOO_FETCHER", _fake_yahoo)
+    client = TestClient(server.create_app())
+
+    response = client.post(
+        "/api/equity/tw/orders",
+        json={"symbol": "2330.tw", "side": "BUY", "quantity": "1000"},
+    )
+    assert response.status_code == 200
+    body = response.json()
+    assert body["submitted_order"]["symbol"] == "2330.TW"
+    assert body["asset_class"] == "tw_equity"
+    assert body["scope"]["lot_size"] == 1000
+
+    odd = client.post(
+        "/api/equity/tw/orders",
+        json={"symbol": "2330.TW", "side": "BUY", "quantity": "500"},
+    )
+    assert odd.status_code == 400
+
+    summary = client.get("/api/equity/tw/summary").json()
+    assert summary["positions"][0]["quantity"] == "1000"
+    assert summary["account"]["quote_asset"] == "TWD"
+
+
+def test_tw_state_is_backup_protected(tmp_path) -> None:
+    store = LocalStateStore(root=tmp_path)
+    store.write_tw_equity_paper_state(default_tw_equity_paper_state())
+    store.write_tw_equity_paper_state(default_tw_equity_paper_state())
+    backup = store.tw_equity_paper_state_path.with_name(
+        store.tw_equity_paper_state_path.name + ".bak1"
+    )
+    assert backup.is_file()
+    assert "tw_equity_paper_state" in dict(store.protected_state_files())
