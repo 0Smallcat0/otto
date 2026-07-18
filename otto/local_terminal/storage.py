@@ -32,7 +32,9 @@ from otto.local_terminal.code_workspace import (
 from otto.local_terminal.crypto import default_paper_state, normalize_paper_state
 from otto.local_terminal.equity_paper import (
     default_equity_paper_state,
+    default_tw_equity_paper_state,
     normalize_equity_paper_state,
+    normalize_tw_equity_paper_state,
 )
 from otto.local_terminal.news_digest import default_news_digest_state, normalize_news_digest_state
 from otto.local_terminal.watchlist import default_watchlist_state, normalize_watchlist_state
@@ -148,6 +150,10 @@ class LocalStateStore:
     @property
     def equity_paper_state_path(self) -> Path:
         return self.root / "artifacts" / "paper" / "equity_paper_state.json"
+
+    @property
+    def tw_equity_paper_state_path(self) -> Path:
+        return self.root / "artifacts" / "paper" / "tw_equity_paper_state.json"
 
     @property
     def portfolio_state_path(self) -> Path:
@@ -1024,6 +1030,17 @@ class LocalStateStore:
             keep_backups=STATE_BACKUP_COUNT,
         )
 
+    def read_tw_equity_paper_state(self) -> dict[str, Any]:
+        return _read_json(self.tw_equity_paper_state_path, default_tw_equity_paper_state())
+
+    def write_tw_equity_paper_state(self, payload: dict[str, Any]) -> dict[str, Any]:
+        return _write_json(
+            self.tw_equity_paper_state_path,
+            normalize_tw_equity_paper_state(payload),
+            self.root,
+            keep_backups=STATE_BACKUP_COUNT,
+        )
+
     def read_paper_state(self) -> dict[str, Any]:
         return _read_json(self.paper_state_path, default_paper_state())
 
@@ -1069,6 +1086,7 @@ class LocalStateStore:
             ("forum_state", self.forum_state_path),
             ("paper_state", self.paper_state_path),
             ("equity_paper_state", self.equity_paper_state_path),
+            ("tw_equity_paper_state", self.tw_equity_paper_state_path),
             ("portfolio_state", self.portfolio_state_path),
             ("watchlist_state", self.watchlist_state_path),
             ("news_digest_state", self.news_digest_state_path),

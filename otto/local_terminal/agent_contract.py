@@ -169,8 +169,10 @@ ROUTE_CONTRACTS: tuple[RouteAgentContract, ...] = (
         (
             "paper_account_summary",
             "equity_paper_summary",
+            "tw_equity_paper_summary",
             "crypto_submit_paper_order",
             "equity_submit_paper_order",
+            "tw_equity_submit_paper_order",
             "crypto_cancel_paper_order",
             "crypto_reset_paper",
         ),
@@ -2195,6 +2197,69 @@ ACTION_CONTRACTS: tuple[AgentActionContract, ...] = (
             "safety",
         ),
         "read-only compact view of the equity paper ledger",
+        False,
+        False,
+        False,
+        False,
+        "local_paper_state_read_only",
+        (),
+    ),
+    AgentActionContract(
+        "tw_equity_submit_paper_order",
+        "paper",
+        "Submit TW-equity paper order (TWD book, board lots)",
+        "POST",
+        "/api/equity/tw/orders",
+        (
+            '{"symbol":"2330.TW","side":"BUY"|"SELL","quantity":"1000"}; MARKET only; '
+            "TWD-quoted .TW symbols only; quantities must be multiples of the "
+            "1000-share board lot (odd lots refused, never rounded); fills at a live "
+            "Yahoo quote with a ±10% daily-limit sanity guard; fees are real TW "
+            "rules: 0.1425% brokerage per side (NT$20 min), 0.3% tax on sells"
+        ),
+        (
+            "submitted_order",
+            "submitted_order.order_id",
+            "submitted_order.quote_age_seconds",
+            "account",
+            "account.equity",
+            "positions",
+            "scope",
+            "safety",
+        ),
+        (
+            "mutates the local TWD equity paper ledger only; live execution stays "
+            "disabled; separate TWD book from the USD and USDT books"
+        ),
+        True,
+        False,
+        False,
+        False,
+        "paper_ledger_order_no_live_execution",
+        ("400 validation", "provider_unavailable"),
+    ),
+    AgentActionContract(
+        "tw_equity_paper_summary",
+        "paper",
+        "Read compact TW-equity paper summary",
+        "GET",
+        "/api/equity/tw/summary",
+        (
+            "empty body; ~1KB view of the TWD equity book: account with total P&L, "
+            "positions marked to the latest cached lookup quote with age, and the "
+            "scope statement (board lots, TW fees/taxes, daily-limit guard)"
+        ),
+        (
+            "asset_class",
+            "account",
+            "account.equity",
+            "account.total_pnl",
+            "positions",
+            "order_count",
+            "scope",
+            "safety",
+        ),
+        "read-only compact view of the TW equity paper ledger",
         False,
         False,
         False,

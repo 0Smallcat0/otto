@@ -2,6 +2,14 @@
 
 ## Unreleased
 
+- TW-equity paper ledger (`tw_equity_submit_paper_order` /
+  `tw_equity_paper_summary`, 121 actions): the honest answer to "why was
+  2330.TW refused" — not silent FX into the USD book, but a real TWD book
+  with real market rules: 1000-share board lots (odd lots refused, never
+  rounded), 0.1425% brokerage per side with the NT$20 minimum, 0.3%
+  transaction tax on sells, and a ±10% daily-limit sanity guard against
+  the previous close. Fills at a live Yahoo quote like the US book; third
+  independent ledger (TWD / USD / USDT), backup-protected and restorable.
 - US-equity paper ledger (`equity_submit_paper_order` /
   `equity_paper_summary`, 119 actions): cross-asset allocation closes the
   loop on stocks. The fill price is fetched live at submit (Yahoo public
