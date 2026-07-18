@@ -168,7 +168,9 @@ ROUTE_CONTRACTS: tuple[RouteAgentContract, ...] = (
         ("artifacts/paper",),
         (
             "paper_account_summary",
+            "equity_paper_summary",
             "crypto_submit_paper_order",
+            "equity_submit_paper_order",
             "crypto_cancel_paper_order",
             "crypto_reset_paper",
         ),
@@ -2131,6 +2133,68 @@ ACTION_CONTRACTS: tuple[AgentActionContract, ...] = (
             "read-only compact view of the paper ledger and quote freshness; the full "
             "payload with history/depth/candles stays on the paper route read"
         ),
+        False,
+        False,
+        False,
+        False,
+        "local_paper_state_read_only",
+        (),
+    ),
+    AgentActionContract(
+        "equity_submit_paper_order",
+        "paper",
+        "Submit US-equity paper order (fills at a live quote)",
+        "POST",
+        "/api/equity/orders",
+        (
+            '{"symbol":"AAPL","side":"BUY"|"SELL","quantity":"1"}; MARKET only in v1; '
+            "any Yahoo US symbol; the fill price is fetched live at submit — a failed "
+            "or non-USD or stale quote refuses the order instead of guessing; "
+            "zero-commission assumption, no slippage model (stated on every fill)"
+        ),
+        (
+            "submitted_order",
+            "submitted_order.order_id",
+            "submitted_order.quote_age_seconds",
+            "account",
+            "account.equity",
+            "positions",
+            "scope",
+            "safety",
+        ),
+        (
+            "mutates the local US-equity paper ledger only; live execution stays "
+            "disabled; separate USD book from the crypto USDT book"
+        ),
+        True,
+        False,
+        False,
+        False,
+        "paper_ledger_order_no_live_execution",
+        ("400 validation", "provider_unavailable"),
+    ),
+    AgentActionContract(
+        "equity_paper_summary",
+        "paper",
+        "Read compact US-equity paper summary",
+        "GET",
+        "/api/equity/summary",
+        (
+            "empty body; ~1KB view of the USD equity book: account with total P&L, "
+            "positions marked to the latest cached lookup quote with age, and the "
+            "v1 scope statement (MARKET-only, USD-only, zero-commission assumption)"
+        ),
+        (
+            "asset_class",
+            "account",
+            "account.equity",
+            "account.total_pnl",
+            "positions",
+            "order_count",
+            "scope",
+            "safety",
+        ),
+        "read-only compact view of the equity paper ledger",
         False,
         False,
         False,

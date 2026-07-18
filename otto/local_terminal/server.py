@@ -185,6 +185,11 @@ from otto.local_terminal.crypto import (
     place_paper_order,
 )
 from otto.local_terminal.dashboard import apply_dashboard_template, dashboard_payload
+from otto.local_terminal.equity_paper import (
+    EquityOrderError,
+    equity_summary_payload,
+    place_equity_paper_order,
+)
 from otto.local_terminal.forum import (
     ForumError,
     add_forum_reply,
@@ -1848,6 +1853,15 @@ class AlgoStrategyDeleteUpdate(BaseModel):
     confirm: bool = Field(default=False)
 
 
+class EquityPaperOrderUpdate(BaseModel):
+    model_config = ConfigDict(extra="forbid")
+
+    symbol: str = Field(min_length=1)
+    side: str = Field(pattern="^(BUY|SELL|buy|sell)$")
+    quantity: str | float | int = Field()
+    order_type: str = Field(default="MARKET")
+
+
 class MarketsQuoteLookupUpdate(BaseModel):
     model_config = ConfigDict(extra="forbid")
 
@@ -2820,6 +2834,47 @@ def create_app(frontend_dist: Path | None = None) -> FastAPI:
             STORE.read_market_cache(),
             STORE.read_crypto_detail_cache(),
         )
+
+    @app.post("/api/equity/orders")
+    def submit_equity_paper_order(update: EquityPaperOrderUpdate) -> dict[str, Any]:
+        symbol = update.symbol.strip().upper()
+        lookup = _yahoo_quote_snapshot_payload_from_store(refresh=True, symbols=[symbol])
+        rows = [row for row in lookup.get("quotes", []) if isinstance(row, dict)]
+        quote_row = rows[0] if rows else None
+        try:
+            state, order = place_equity_paper_order(
+                STORE.read_equity_paper_state(),
+                {**update.model_dump(), "symbol": symbol},
+                quote_row,
+            )
+        except EquityOrderError as exc:
+            raise HTTPException(status_code=400, detail=str(exc)) from exc
+        STORE.write_equity_paper_state(state)
+        held = sorted(state.get("positions", {}))
+        marks = (
+            _yahoo_quote_snapshot_payload_from_store(refresh=False, symbols=held).get(
+                "quotes", []
+            )
+            if held
+            else []
+        )
+        return {
+            "submitted_order": order,
+            **equity_summary_payload(state, marks),
+        }
+
+    @app.get("/api/equity/summary")
+    def equity_summary() -> dict[str, Any]:
+        state = STORE.read_equity_paper_state()
+        held = sorted(state.get("positions", {}))
+        marks = (
+            _yahoo_quote_snapshot_payload_from_store(refresh=False, symbols=held).get(
+                "quotes", []
+            )
+            if held
+            else []
+        )
+        return equity_summary_payload(state, marks)
 
     @app.get("/api/crypto/summary")
     def crypto_summary() -> dict[str, Any]:

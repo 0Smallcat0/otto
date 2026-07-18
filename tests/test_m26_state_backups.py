@@ -129,7 +129,7 @@ def test_backup_index_endpoint_is_metadata_only(tmp_path, monkeypatch) -> None:
     empty = client.get("/api/local-state/backups")
     assert empty.status_code == 200
     body = empty.json()
-    assert body["summary"]["protected_file_count"] == 17  # 15 + watchlist + news digest (M27-R2)
+    assert body["summary"]["protected_file_count"] == 18  # 15 + watchlist + news digest + equity paper
     assert body["summary"]["backup_file_count"] == 0
     assert body["summary"]["keep_backups"] == STATE_BACKUP_COUNT
     assert body["safety"]["restore_endpoint_available"] is True
