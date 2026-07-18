@@ -2000,6 +2000,7 @@ class PaperOrderCancelUpdate(BaseModel):
 class CryptoRefreshUpdate(BaseModel):
     symbol: str = Field(default=DEFAULT_SYMBOL)
     timeframe: str = Field(default=DEFAULT_INTERVAL)
+    view: str = Field(default="full", pattern="^(full|summary)$")
 
 
 class BacktestRunUpdate(BaseModel):
@@ -2850,6 +2851,12 @@ def create_app(frontend_dist: Path | None = None) -> FastAPI:
         )
         if detail.get("cache"):
             STORE.write_crypto_detail_cache(detail["cache"])
+        if update.view == "summary":
+            return paper_summary_payload(
+                STORE.read_paper_state(),
+                STORE.read_market_cache(),
+                STORE.read_crypto_detail_cache(update.symbol, update.timeframe),
+            )
         return crypto_payload(
             STORE.read_paper_state(),
             STORE.read_market_cache(),

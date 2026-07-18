@@ -2,6 +2,9 @@
 
 ## Unreleased
 
+- `POST /api/crypto/refresh` accepts `"view":"summary"`: refresh and read
+  the decision-loop state in one ~1.4KB call instead of the 180KB full
+  refresh response.
 - `GET /api/crypto/summary` (`paper_account_summary`, dogfood P1): the
   decision-loop view in ~1.5KB instead of the 74k-char full paper payload —
   account with total P&L, positions marked to the freshest known price with

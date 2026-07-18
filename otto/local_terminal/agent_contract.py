@@ -2084,7 +2084,12 @@ ACTION_CONTRACTS: tuple[AgentActionContract, ...] = (
         "Refresh public crypto quotes and candles",
         "POST",
         "/api/crypto/refresh",
-        'optional {"symbol":"BTCUSDT","timeframe":"15m"}; public no-key Binance data, refreshes the whole paper watchlist',
+        (
+            'optional {"symbol":"BTCUSDT","timeframe":"15m","view":"summary"}; public '
+            "no-key data (Binance, Kraken fallback), refreshes the whole paper "
+            'watchlist; "view":"summary" returns the ~1KB decision-loop summary '
+            "instead of the full payload"
+        ),
         ("market", "watchlist", "quote", "account", "positions", "orders"),
         "refreshes public read-only crypto ticker/candle caches without broker mutation",
         True,

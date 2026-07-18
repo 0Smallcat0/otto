@@ -89,6 +89,45 @@ def test_summary_flags_stale_quotes_for_the_gate() -> None:
     assert summary["freshness"]["refresh_action"] == "crypto_refresh_public"
 
 
+def test_refresh_view_summary_returns_the_compact_payload(tmp_path, monkeypatch) -> None:
+    monkeypatch.setattr(server, "STORE", LocalStateStore(root=tmp_path))
+    monkeypatch.setattr(
+        server,
+        "MARKET_FETCHER",
+        lambda symbols, timeout=3.0: [
+            {
+                "symbol": symbol,
+                "lastPrice": "100.0",
+                "priceChange": "1.0",
+                "priceChangePercent": "1.0",
+                "highPrice": "101.0",
+                "lowPrice": "99.0",
+                "volume": "10",
+                "bidPrice": "99.9",
+                "askPrice": "100.1",
+                "openPrice": "99.0",
+            }
+            for symbol in symbols
+        ],
+    )
+
+    def _no_detail(**kwargs):
+        raise OSError("detail provider offline in test")
+
+    monkeypatch.setattr(server, "CRYPTO_DETAIL_FETCHER", _no_detail)
+    client = TestClient(server.create_app())
+
+    compact = client.post("/api/crypto/refresh", json={"view": "summary"})
+    assert compact.status_code == 200
+    body = compact.json()
+    assert "freshness" in body and "depth" not in body
+    assert len(json.dumps(body)) < 4000
+    assert body["freshness"]["all_fresh"] is True
+
+    bad = client.post("/api/crypto/refresh", json={"view": "everything"})
+    assert bad.status_code == 422
+
+
 def test_summary_endpoint_and_contract(tmp_path, monkeypatch) -> None:
     monkeypatch.setattr(server, "STORE", LocalStateStore(root=tmp_path))
     client = TestClient(server.create_app())
