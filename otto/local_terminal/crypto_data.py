@@ -365,15 +365,39 @@ def fetch_public_crypto_tickers(
     primary: Any = None,
     fallback: Any = None,
 ) -> list[dict[str, Any]]:
-    """Ticker chain aligned with the detail chain: Binance first, then Kraken."""
+    """Ticker chain aligned with the detail chain: Binance first, then Kraken.
+
+    Rows carry `_source`/`_provider_id` so the caller can label the data with
+    the provider that actually served it. Without this the pipeline stamped
+    every row `binance_public` even when Kraken answered — a small lie of the
+    same family as the stale-quote bug (2026-07-17 dogfood P3).
+    """
     from otto.local_terminal.markets import fetch_binance_tickers
 
     first = primary or fetch_binance_tickers
     second = fallback or fetch_kraken_tickers
     try:
-        return first(symbols, timeout=min(timeout, 3.0))
+        return _stamped(first(symbols, timeout=min(timeout, 3.0)), BINANCE_TICKER_PROVENANCE)
     except (OSError, TimeoutError, ValueError, HTTPError, URLError):
-        return second(symbols, timeout=timeout)
+        return _stamped(second(symbols, timeout=timeout), KRAKEN_TICKER_PROVENANCE)
+
+
+BINANCE_TICKER_PROVENANCE = {
+    "_source": "binance_public",
+    "_provider_id": "binance_spot_public",
+    "_message": "Public read-only Binance data refreshed.",
+}
+KRAKEN_TICKER_PROVENANCE = {
+    "_source": "kraken_public",
+    "_provider_id": "kraken_public_market_data",
+    "_message": "Public read-only Kraken data refreshed (Binance unavailable).",
+}
+
+
+def _stamped(rows: Any, provenance: dict[str, str]) -> list[dict[str, Any]]:
+    if not isinstance(rows, list):
+        return rows
+    return [{**row, **provenance} if isinstance(row, dict) else row for row in rows]
 
 
 def fetch_coinbase_crypto_detail(

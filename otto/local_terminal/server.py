@@ -252,6 +252,7 @@ from otto.local_terminal.news import (
     news_topic_entity_map_payload,
     write_news_research_brief,
 )
+from otto.local_terminal.news_packet import PACKET_MAX_ITEMS, news_packet_payload
 from otto.local_terminal.nodes import (
     NodesError,
     clear_workflow,
@@ -1861,6 +1862,14 @@ class EquityPaperOrderUpdate(BaseModel):
     side: str = Field(pattern="^(BUY|SELL|buy|sell)$")
     quantity: str | float | int = Field()
     order_type: str = Field(default="MARKET")
+
+
+class NewsPacketUpdate(BaseModel):
+    model_config = ConfigDict(extra="forbid")
+
+    symbols: list[str] = Field(default_factory=list, max_length=20)
+    limit: int = Field(default=8, ge=1, le=PACKET_MAX_ITEMS)
+    refresh: bool = Field(default=False)
 
 
 class MarketsQuoteLookupUpdate(BaseModel):
@@ -3896,6 +3905,16 @@ def create_app(frontend_dist: Path | None = None) -> FastAPI:
         STORE.write_news_layout(update.model_dump())
         payload = _news_payload_from_store(refresh=False)
         return _public_news_payload(_attach_news_research_brief_index(payload))
+
+    @app.post("/api/news/packet")
+    def news_packet(update: NewsPacketUpdate) -> dict[str, Any]:
+        payload = _news_payload_from_store(refresh=update.refresh)
+        return news_packet_payload(
+            payload,
+            news_digest_payload(STORE.read_news_digest_state()),
+            symbols=update.symbols,
+            limit=update.limit,
+        )
 
     @app.post("/api/news/refresh")
     def refresh_news() -> dict[str, Any]:
