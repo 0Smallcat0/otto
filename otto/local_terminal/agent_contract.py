@@ -2183,9 +2183,10 @@ ACTION_CONTRACTS: tuple[AgentActionContract, ...] = (
         "GET",
         "/api/equity/summary",
         (
-            "empty body; ~1KB view of the USD equity book: account with total P&L, "
-            "positions marked to the latest cached lookup quote with age, and the "
-            "v1 scope statement (MARKET-only, USD-only, zero-commission assumption)"
+            "optional ?refresh=true; ~1KB view of the USD equity book: account with "
+            "total P&L, positions marked to the latest cached lookup quote with age "
+            "(refresh=true fetches current prices for held symbols so unrealized P&L "
+            "is real rather than cost-basis), and the v1 scope statement"
         ),
         (
             "asset_class",
@@ -2286,9 +2287,10 @@ ACTION_CONTRACTS: tuple[AgentActionContract, ...] = (
         "GET",
         "/api/equity/tw/summary",
         (
-            "empty body; ~1KB view of the TWD equity book: account with total P&L, "
-            "positions marked to the latest cached lookup quote with age, and the "
-            "scope statement (board lots, TW fees/taxes, daily-limit guard)"
+            "optional ?refresh=true; ~1KB view of the TWD equity book: account with "
+            "total P&L, positions marked to the latest cached lookup quote with age "
+            "(refresh=true fetches current prices for held symbols), and the scope "
+            "statement (board lots, TW fees/taxes, daily-limit guard)"
         ),
         (
             "asset_class",

@@ -2,6 +2,10 @@
 
 ## Unreleased
 
+- Equity summaries accept `?refresh=true`, fetching current prices for held
+  symbols only. Without it a book read after a restart marked positions at
+  their own cost basis and reported no unrealized P&L — quiet, but the same
+  class of error as a stale fill. The default read stays a cheap local read.
 - Ticker rows now name the provider that actually served them (dogfood P3):
   the fetcher chain stamps provenance and the markets status/rows carry it,
   so Kraken-supplied quotes stop being labeled `binance_public` with

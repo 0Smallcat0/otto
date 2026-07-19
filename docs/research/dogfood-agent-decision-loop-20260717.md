@@ -87,6 +87,38 @@ the ticker rows, the pipeline still stamps them `source: binance_public` —
 the fetcher abstraction drops the provenance label (P3; honesty nit, not a
 trading hazard).
 
+## Iteration 3 (2026-07-19): the whole loop, re-run and measured
+
+All six findings closed; the same decision cycle re-run end to end against
+live public data.
+
+| | First run (07-17) | Third run (07-19) |
+|---|---|---|
+| Calls to see state + information | 2 (starved) | 4 (complete) |
+| Bytes the agent must read | ~250,000 | **7,289** |
+| Tradeable universe | 3 crypto pairs | 3 crypto pairs + any US symbol + TW board lots |
+| Quote trust | 7-day-old price labeled `live` | every quote carries age; fills refuse stale |
+| Information step | empty (digest expired) | 17 of 63 items matched to holdings, newest 142 min |
+| Provider labeling | Kraken data labeled Binance | status names the provider that served |
+
+The loop now reads: crypto book (refresh+summary, 1,445 B) → US book
+(759 B) → TW book (863 B) → information packet (4,714 B). Positions across
+three currencies, every quote age-stamped, headlines tagged to holdings
+including Chinese-language coverage of 2330.TW.
+
+**New finding from this run (fixed same day):** the equity summaries marked
+positions against whatever lookup quote happened to be cached, so a book
+read after a restart valued positions at their own cost basis and reported
+no unrealized P&L. Both equity summaries now accept `?refresh=true`, which
+fetches current prices for held symbols only; the default read stays a
+cheap local read. Marking a position at its own cost and calling the result
+equity is the same class of error as the stale fill — it just fails quietly
+instead of loudly.
+
+One display artifact confirmed *not* a bug: replacement characters in a
+headline appeared in the terminal, but the payload bytes were clean UTF-8
+(the console codepage mangles the display, not the data).
+
 ## Method note
 
 Chain: status → ledger → market refresh → news read → transparent mechanical

@@ -1126,6 +1126,21 @@ def _stooq_quote_snapshot_payload_from_store(
     return payload
 
 
+def _equity_marks(state: dict[str, Any], *, refresh: bool) -> list[dict[str, Any]]:
+    """Mark quotes for the symbols a book holds.
+
+    Reads cached lookup quotes by default so the summary stays a cheap local
+    read; `refresh=true` fetches current prices for held symbols only, which
+    is what a decision loop needs to see real unrealized P&L instead of
+    positions marked at their own cost (2026-07-19 dogfood).
+    """
+    held = sorted(state.get("positions", {}))
+    if not held:
+        return []
+    payload = _yahoo_quote_snapshot_payload_from_store(refresh=refresh, symbols=held)
+    return [row for row in payload.get("quotes", []) if isinstance(row, dict)]
+
+
 def _yahoo_quote_snapshot_payload_from_store(
     *,
     refresh: bool = False,
@@ -2903,30 +2918,16 @@ def create_app(frontend_dist: Path | None = None) -> FastAPI:
         }
 
     @app.get("/api/equity/tw/summary")
-    def tw_equity_summary() -> dict[str, Any]:
+    def tw_equity_summary(refresh: bool = False) -> dict[str, Any]:
         state = STORE.read_tw_equity_paper_state()
-        held = sorted(state.get("positions", {}))
-        marks = (
-            _yahoo_quote_snapshot_payload_from_store(refresh=False, symbols=held).get(
-                "quotes", []
-            )
-            if held
-            else []
+        return equity_summary_payload(
+            state, _equity_marks(state, refresh=refresh), TW_BOOK
         )
-        return equity_summary_payload(state, marks, TW_BOOK)
 
     @app.get("/api/equity/summary")
-    def equity_summary() -> dict[str, Any]:
+    def equity_summary(refresh: bool = False) -> dict[str, Any]:
         state = STORE.read_equity_paper_state()
-        held = sorted(state.get("positions", {}))
-        marks = (
-            _yahoo_quote_snapshot_payload_from_store(refresh=False, symbols=held).get(
-                "quotes", []
-            )
-            if held
-            else []
-        )
-        return equity_summary_payload(state, marks)
+        return equity_summary_payload(state, _equity_marks(state, refresh=refresh))
 
     @app.get("/api/crypto/summary")
     def crypto_summary() -> dict[str, Any]:
