@@ -306,3 +306,53 @@ def test_tw_state_is_backup_protected(tmp_path) -> None:
     )
     assert backup.is_file()
     assert "tw_equity_paper_state" in dict(store.protected_state_files())
+
+
+def test_summary_refresh_marks_positions_to_current_prices(tmp_path, monkeypatch) -> None:
+    """P4 (2026-07-19 dogfood): a summary that marks at cost hides P&L.
+
+    The default read stays cheap and local; ?refresh=true fetches current
+    prices for held symbols only, so the decision loop sees real unrealized
+    P&L instead of positions valued at their own cost basis.
+    """
+    monkeypatch.setattr(server, "STORE", LocalStateStore(root=tmp_path))
+    price = {"value": 300.0}
+
+    def _fake_yahoo(*, symbol: str) -> dict:
+        return {
+            "symbol": symbol,
+            "currency": "USD",
+            "exchangeName": "NMS",
+            "fullExchangeName": "NasdaqGS",
+            "regularMarketPrice": price["value"],
+            "chartPreviousClose": 300.0,
+            "regularMarketDayHigh": 320.0,
+            "regularMarketDayLow": 295.0,
+            "regularMarketVolume": 1000,
+            "regularMarketTime": int(datetime.now(tz=UTC).timestamp()),
+        }
+
+    monkeypatch.setattr(server, "YAHOO_FETCHER", _fake_yahoo)
+    client = TestClient(server.create_app())
+    assert client.post(
+        "/api/equity/orders", json={"symbol": "AAPL", "side": "BUY", "quantity": "2"}
+    ).status_code == 200
+
+    price["value"] = 330.0  # market moves after the fill
+    refreshed = client.get("/api/equity/summary?refresh=true").json()
+    position = refreshed["positions"][0]
+    assert position["last_price"] == "330.00"
+    assert position["unrealized_pnl"] == "60.00"
+    assert refreshed["account"]["equity"] == "100060.00"
+
+    # default read is still a cheap local read (no fetch): it serves the cache
+    cached = client.get("/api/equity/summary").json()
+    assert cached["positions"][0]["last_price"] in {"330.00", "300.00"}
+
+
+def test_tw_summary_accepts_refresh_flag(tmp_path, monkeypatch) -> None:
+    monkeypatch.setattr(server, "STORE", LocalStateStore(root=tmp_path))
+    client = TestClient(server.create_app())
+    empty = client.get("/api/equity/tw/summary?refresh=true")
+    assert empty.status_code == 200
+    assert empty.json()["positions"] == []  # no holdings, no network needed
