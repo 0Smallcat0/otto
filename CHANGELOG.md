@@ -2,6 +2,18 @@
 
 ## Unreleased
 
+- Ticker rows now name the provider that actually served them (dogfood P3):
+  the fetcher chain stamps provenance and the markets status/rows carry it,
+  so Kraken-supplied quotes stop being labeled `binance_public` with
+  `fallback_used: false`. Fetchers that return bare rows keep the previous
+  Binance defaults.
+- `POST /api/news/packet` (`news_information_packet`, dogfood P2): the
+  judgment step in one ~4KB read — bounded headlines with age, the operator
+  digest when written, feed freshness including failed sources, and items
+  tagged with the held symbols they mention (matched first, then freshest).
+  The tagging declares itself keyword-based, so an unmatched item is never
+  reported as irrelevant. Live probe: 6 of 63 items returned, 16 matched
+  across BTC/ETH/AAPL/2330.TW including Chinese-language coverage.
 - TW-equity paper ledger (`tw_equity_submit_paper_order` /
   `tw_equity_paper_summary`, 121 actions): the honest answer to "why was
   2330.TW refused" — not silent FX into the USD book, but a real TWD book

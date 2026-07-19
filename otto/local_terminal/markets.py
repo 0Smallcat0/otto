@@ -351,14 +351,15 @@ def markets_payload(
     if refresh and fetcher is not None:
         try:
             live_tickers = fetcher(symbols)
+            provenance = _ticker_provenance(live_tickers)
             status = _status(
-                source="binance_public",
+                source=provenance["source"],
                 state="live",
                 last_update=_utc_now(),
-                message="Public read-only Binance data refreshed.",
-                provider_id="binance_spot_public",
+                message=provenance["message"],
+                provider_id=provenance["provider_id"],
                 cache_path="market_data/crypto_latest.json",
-                fallback_used=False,
+                fallback_used=provenance["fallback_used"],
             )
             rows = _rows_from_tickers(live_tickers, symbols, status=status)
             cache = {"status": status, "rows": rows}
@@ -513,6 +514,32 @@ def _layout_symbols(layout: dict[str, Any]) -> list[str]:
             if symbol not in symbols:
                 symbols.append(symbol)
     return symbols or list(DEFAULT_MARKET_SYMBOLS)
+
+
+def _ticker_provenance(tickers: Any) -> dict[str, Any]:
+    """Which provider actually served these rows.
+
+    A fetcher chain stamps `_source`/`_provider_id` on the rows it returns;
+    without that the status block would claim Binance for data a fallback
+    provider supplied (2026-07-17 dogfood P3).
+    """
+    default = {
+        "source": "binance_public",
+        "provider_id": "binance_spot_public",
+        "message": "Public read-only Binance data refreshed.",
+        "fallback_used": False,
+    }
+    if isinstance(tickers, (list, tuple)):
+        for ticker in tickers:
+            if isinstance(ticker, dict) and ticker.get("_source"):
+                source = str(ticker["_source"])
+                return {
+                    "source": source,
+                    "provider_id": str(ticker.get("_provider_id") or source),
+                    "message": str(ticker.get("_message") or f"Public read-only {source} data refreshed."),
+                    "fallback_used": source != default["source"],
+                }
+    return default
 
 
 def _rows_from_tickers(

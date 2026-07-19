@@ -230,6 +230,7 @@ ROUTE_CONTRACTS: tuple[RouteAgentContract, ...] = (
         ),
         ("artifacts/news",),
         (
+            "news_information_packet",
             "news_refresh",
             "news_layout_save",
             "news_research_brief",
@@ -2203,6 +2204,46 @@ ACTION_CONTRACTS: tuple[AgentActionContract, ...] = (
         False,
         "local_paper_state_read_only",
         (),
+    ),
+    AgentActionContract(
+        "news_information_packet",
+        "news",
+        "Read one bounded information packet for a decision",
+        "POST",
+        "/api/news/packet",
+        (
+            '{"symbols":["BTCUSDT","AAPL"],"limit":8,"refresh":false}; one ~2KB read '
+            "for the judgment step: bounded headlines with age, the operator digest "
+            "when written, and feed freshness; items mentioning a held symbol are "
+            'tagged and sorted first; "refresh":true pulls public feeds first'
+        ),
+        (
+            "requested_symbols",
+            "items",
+            "items[].title",
+            "items[].age_minutes",
+            "items[].matched_symbols",
+            "summary",
+            "summary.matched_count",
+            "summary.newest_age_minutes",
+            "freshness",
+            "freshness.feed_state",
+            "matching",
+            "matching.mode",
+            "digest",
+            "safety",
+        ),
+        (
+            "read-only bounded news view; symbol matching is keyword-based over "
+            "title/summary/tags and says so, so an unmatched item is never reported "
+            "as irrelevant"
+        ),
+        False,
+        False,
+        False,
+        False,
+        "public_read_only_news_no_broker_mutation",
+        ("provider_unavailable",),
     ),
     AgentActionContract(
         "tw_equity_submit_paper_order",

@@ -1,0 +1,166 @@
+"""One-call information packet for the agent decision loop.
+
+The 2026-07-17 dogfood found the judgment step starved: the digest had
+auto-expired, and assembling anything readable cost three heavyweight calls
+whose responses the agent could not afford to read. This builds the
+information half of the loop the same way `paper_account_summary` built the
+position half — bounded, freshness-labeled, and honest about its limits:
+
+- headlines are capped and trimmed to the fields a decision needs;
+- every item carries its age, so "no news" and "stale news" never look alike;
+- when the caller names its holdings, items are tagged with the symbols they
+  mention, and the packet says plainly that the match is keyword-based over
+  title/summary/tags — an unmatched item is not evidence of irrelevance.
+"""
+
+from __future__ import annotations
+
+from typing import Any
+
+PACKET_MAX_ITEMS = 12
+PACKET_TITLE_CHARS = 160
+PACKET_SUMMARY_CHARS = 240
+MATCH_MODE_NOTE = (
+    "keyword match over title/summary/tags; an item without a matched symbol "
+    "is not evidence that it is irrelevant"
+)
+
+# Aliases only where the ticker alone would miss obvious coverage. Kept small
+# on purpose: a long guessed table would produce confident wrong matches.
+SYMBOL_ALIASES: dict[str, tuple[str, ...]] = {
+    "BTC": ("bitcoin",),
+    "ETH": ("ethereum", "ether"),
+    "SOL": ("solana",),
+    "2330": ("tsmc", "taiwan semiconductor", "台積電"),
+    "AAPL": ("apple",),
+    "MSFT": ("microsoft",),
+    "NVDA": ("nvidia",),
+    "TSLA": ("tesla",),
+    "GOOGL": ("google", "alphabet"),
+    "AMZN": ("amazon",),
+    "META": ("meta platforms", "facebook"),
+    "SPY": ("s&p 500", "sp500"),
+}
+
+_QUOTE_SUFFIXES = ("USDT", "USDC", "USD", "TWD")
+
+
+def symbol_terms(symbol: str) -> list[str]:
+    """Search terms for one holding: its root plus curated aliases."""
+    raw = str(symbol or "").strip().upper()
+    if not raw:
+        return []
+    root = raw.split(".")[0]
+    for suffix in _QUOTE_SUFFIXES:
+        if root.endswith(suffix) and len(root) > len(suffix):
+            root = root[: -len(suffix)]
+            break
+    terms = [root.lower()]
+    terms.extend(alias.lower() for alias in SYMBOL_ALIASES.get(root, ()))
+    return list(dict.fromkeys(term for term in terms if term))
+
+
+def news_packet_payload(
+    news: dict[str, Any],
+    digest: dict[str, Any] | None = None,
+    *,
+    symbols: list[str] | None = None,
+    limit: int = 8,
+) -> dict[str, Any]:
+    """Bounded headlines + digest + freshness, tagged against held symbols."""
+    bounded_limit = max(1, min(int(limit or 8), PACKET_MAX_ITEMS))
+    held = [str(symbol).strip().upper() for symbol in (symbols or []) if str(symbol).strip()]
+    terms_by_symbol = {symbol: symbol_terms(symbol) for symbol in held}
+
+    raw_items = news.get("items") if isinstance(news.get("items"), list) else []
+    digest_items = {}
+    if isinstance(digest, dict) and isinstance(digest.get("items"), dict):
+        digest_items = digest["items"]
+
+    scored: list[tuple[int, int, dict[str, Any]]] = []
+    for raw in raw_items:
+        if not isinstance(raw, dict):
+            continue
+        haystack = " ".join(
+            [
+                str(raw.get("title", "")),
+                str(raw.get("summary", "")),
+                " ".join(str(tag) for tag in raw.get("tags", []) if tag),
+            ]
+        ).lower()
+        matched = [
+            symbol
+            for symbol, terms in terms_by_symbol.items()
+            if any(term in haystack for term in terms)
+        ]
+        item_id = str(raw.get("item_id", ""))
+        digest_entry = digest_items.get(item_id) if isinstance(digest_items, dict) else None
+        age_minutes = _int(raw.get("age_minutes"))
+        item = {
+            "item_id": item_id,
+            "title": str(raw.get("title", ""))[:PACKET_TITLE_CHARS],
+            "source": str(raw.get("source", "")),
+            "category": str(raw.get("category", "")),
+            "age_minutes": age_minutes,
+            "published_at": str(raw.get("published_at", "")),
+            "url": str(raw.get("url", "")),
+            "summary": str(raw.get("summary", ""))[:PACKET_SUMMARY_CHARS],
+            "matched_symbols": matched,
+            "alert": bool(raw.get("alert")),
+        }
+        if isinstance(digest_entry, dict):
+            item["digest_title"] = str(digest_entry.get("title_zh", ""))[:PACKET_TITLE_CHARS]
+            item["digest_summary"] = str(digest_entry.get("summary_zh", ""))[:PACKET_SUMMARY_CHARS]
+        # matched items first, then freshest
+        scored.append((0 if matched else 1, age_minutes if age_minutes >= 0 else 10**6, item))
+
+    scored.sort(key=lambda row: (row[0], row[1]))
+    items = [row[2] for row in scored[:bounded_limit]]
+    matched_total = sum(1 for row in scored if row[0] == 0)
+    ages = [row[1] for row in scored if row[1] < 10**6]
+
+    status = news.get("status") if isinstance(news.get("status"), dict) else {}
+    source_errors = status.get("source_errors") if isinstance(status, dict) else []
+    digest_payload = digest if isinstance(digest, dict) else {}
+    return {
+        "mode": "read_only_information_packet",
+        "requested_symbols": held,
+        "items": items,
+        "summary": {
+            "item_count": len(items),
+            "available_count": len(scored),
+            "matched_count": matched_total,
+            "newest_age_minutes": min(ages) if ages else None,
+            "oldest_age_minutes": max(ages) if ages else None,
+            "digest_entry_count": len(digest_items) if isinstance(digest_items, dict) else 0,
+        },
+        "freshness": {
+            "feed_state": str(status.get("state") or "unknown"),
+            "last_update": str(status.get("last_update") or "not started"),
+            "failed_source_count": _int(status.get("failed_source_count")),
+            "source_errors": [str(error) for error in (source_errors or [])][:3],
+            "refresh_action": "news_refresh",
+        },
+        "matching": {
+            "mode": "keyword",
+            "note": MATCH_MODE_NOTE,
+            "terms_by_symbol": terms_by_symbol,
+        },
+        "digest": {
+            "updated_at": str(digest_payload.get("updated_at") or "not started"),
+            "write_action": "news_digest_write",
+            "note": "digest text is operator-authored; empty means nobody has written one",
+        },
+        "safety": {
+            "read_only": True,
+            "external_calls": False,
+            "mutates_local_state": False,
+        },
+    }
+
+
+def _int(value: Any) -> int:
+    try:
+        return int(value)
+    except (TypeError, ValueError):
+        return -1

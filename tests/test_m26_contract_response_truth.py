@@ -194,6 +194,7 @@ def test_every_response_contract_key_resolves(tmp_path, monkeypatch) -> None:
     run("local_state_restore", {"kind": "dashboard_layout", "slot": 1, "confirm": True})
     run("news_layout_save", {})
     run("markets_watchlist_update", {"group": "us", "symbols": ["AAPL", "MSFT"]})
+    run("news_information_packet", {"symbols": ["BTCUSDT"], "limit": 3})
     run("news_digest_write", {"items": [
         {"item_id": "truth-item-1", "title_zh": "測試標題", "summary_zh": "一句話總結"}
     ]})
