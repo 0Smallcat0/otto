@@ -191,6 +191,13 @@ from otto.local_terminal.equity_paper import (
     equity_summary_payload,
     place_equity_paper_order,
 )
+from otto.local_terminal.paper_history import (
+    BENCHMARK_SYMBOLS,
+    HISTORY_DEFAULT_LIMIT,
+    RATIONALE_MAX_CHARS,
+    paper_history_payload,
+    record_paper_snapshot,
+)
 from otto.local_terminal.forum import (
     ForumError,
     add_forum_reply,
@@ -1877,6 +1884,14 @@ class EquityPaperOrderUpdate(BaseModel):
     side: str = Field(pattern="^(BUY|SELL|buy|sell)$")
     quantity: str | float | int = Field()
     order_type: str = Field(default="MARKET")
+    rationale: str | None = Field(default=None, max_length=RATIONALE_MAX_CHARS)
+
+
+class PaperSnapshotUpdate(BaseModel):
+    model_config = ConfigDict(extra="forbid")
+
+    refresh: bool = Field(default=True)
+    note: str | None = Field(default=None, max_length=300)
 
 
 class NewsPacketUpdate(BaseModel):
@@ -2028,6 +2043,7 @@ class PaperOrderUpdate(BaseModel):
     quantity: str | float | int = Field(default="0")
     limit_price: str | float | int | None = Field(default=None)
     stop_price: str | float | int | None = Field(default=None)
+    rationale: str | None = Field(default=None, max_length=RATIONALE_MAX_CHARS)
 
 
 class PaperOrderCancelUpdate(BaseModel):
@@ -2936,6 +2952,58 @@ def create_app(frontend_dist: Path | None = None) -> FastAPI:
             STORE.read_market_cache(),
             STORE.read_crypto_detail_cache(),
         )
+
+    @app.post("/api/paper/snapshot")
+    def record_paper_history_snapshot(update: PaperSnapshotUpdate) -> dict[str, Any]:
+        if update.refresh:
+            market_payload = markets_payload(
+                STORE.read_markets_layout(),
+                STORE.read_market_cache(),
+                STORE.read_crypto_detail_cache(),
+                fetcher=MARKET_FETCHER,
+                refresh=True,
+                extra_symbols=PAPER_WATCHLIST_SYMBOLS,
+            )
+            if market_payload.get("cache"):
+                STORE.write_market_cache(market_payload["cache"])
+        crypto_book = paper_summary_payload(
+            STORE.read_paper_state(),
+            STORE.read_market_cache(),
+            STORE.read_crypto_detail_cache(),
+        )
+        us_state = STORE.read_equity_paper_state()
+        tw_state = STORE.read_tw_equity_paper_state()
+        us_book = equity_summary_payload(
+            us_state, _equity_marks(us_state, refresh=update.refresh)
+        )
+        tw_book = equity_summary_payload(
+            tw_state, _equity_marks(tw_state, refresh=update.refresh), TW_BOOK
+        )
+        benchmark_rows = [
+            row
+            for row in _yahoo_quote_snapshot_payload_from_store(
+                refresh=update.refresh, symbols=list(BENCHMARK_SYMBOLS)
+            ).get("quotes", [])
+            if isinstance(row, dict)
+        ]
+        history, snapshot = record_paper_snapshot(
+            STORE.read_paper_history_state(),
+            crypto_summary=crypto_book,
+            us_summary=us_book,
+            tw_summary=tw_book,
+            benchmark_rows=benchmark_rows,
+            note=update.note,
+        )
+        STORE.write_paper_history_state(history)
+        return {
+            "snapshot": snapshot,
+            "snapshot_count_total": len(history["snapshots"]),
+            "read_action": "paper_history",
+        }
+
+    @app.get("/api/paper/history")
+    def paper_history(limit: int = HISTORY_DEFAULT_LIMIT) -> dict[str, Any]:
+        return paper_history_payload(STORE.read_paper_history_state(), limit=limit)
 
     @app.post("/api/crypto/refresh")
     def refresh_crypto(update: CryptoRefreshUpdate) -> dict[str, Any]:

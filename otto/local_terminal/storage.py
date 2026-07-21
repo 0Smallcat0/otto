@@ -37,6 +37,10 @@ from otto.local_terminal.equity_paper import (
     normalize_tw_equity_paper_state,
 )
 from otto.local_terminal.news_digest import default_news_digest_state, normalize_news_digest_state
+from otto.local_terminal.paper_history import (
+    default_paper_history_state,
+    normalize_paper_history_state,
+)
 from otto.local_terminal.watchlist import default_watchlist_state, normalize_watchlist_state
 from otto.local_terminal.forum import default_forum_state, normalize_forum_state
 from otto.local_terminal.markets import default_markets_layout, normalize_markets_layout
@@ -154,6 +158,10 @@ class LocalStateStore:
     @property
     def tw_equity_paper_state_path(self) -> Path:
         return self.root / "artifacts" / "paper" / "tw_equity_paper_state.json"
+
+    @property
+    def paper_history_path(self) -> Path:
+        return self.root / "artifacts" / "paper" / "paper_history.json"
 
     @property
     def portfolio_state_path(self) -> Path:
@@ -1041,6 +1049,17 @@ class LocalStateStore:
             keep_backups=STATE_BACKUP_COUNT,
         )
 
+    def read_paper_history_state(self) -> dict[str, Any]:
+        return _read_json(self.paper_history_path, default_paper_history_state())
+
+    def write_paper_history_state(self, payload: dict[str, Any]) -> dict[str, Any]:
+        return _write_json(
+            self.paper_history_path,
+            normalize_paper_history_state(payload),
+            self.root,
+            keep_backups=STATE_BACKUP_COUNT,
+        )
+
     def read_paper_state(self) -> dict[str, Any]:
         return _read_json(self.paper_state_path, default_paper_state())
 
@@ -1087,6 +1106,7 @@ class LocalStateStore:
             ("paper_state", self.paper_state_path),
             ("equity_paper_state", self.equity_paper_state_path),
             ("tw_equity_paper_state", self.tw_equity_paper_state_path),
+            ("paper_history", self.paper_history_path),
             ("portfolio_state", self.portfolio_state_path),
             ("watchlist_state", self.watchlist_state_path),
             ("news_digest_state", self.news_digest_state_path),
@@ -1284,6 +1304,7 @@ class LocalStateStore:
                 "eia_energy_cache": _relative(self.eia_energy_cache_path, self.root),
                 "sec_fund_tickers_cache": _relative(self.sec_fund_tickers_cache_path, self.root),
                 "paper_state": _relative(self.paper_state_path, self.root),
+                "paper_history": _relative(self.paper_history_path, self.root),
                 "portfolio_state": _relative(self.portfolio_state_path, self.root),
                 "chat_state": _relative(self.chat_state_path, self.root),
                 "algo_state": _relative(self.algo_state_path, self.root),

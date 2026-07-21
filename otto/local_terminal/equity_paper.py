@@ -30,6 +30,8 @@ from decimal import Decimal, InvalidOperation, ROUND_HALF_UP
 from typing import Any
 from uuid import uuid4
 
+from otto.local_terminal.paper_history import clean_rationale
+
 EQUITY_QUOTE_MAX_AGE_SECONDS = 900
 EQUITY_ORDER_TYPES = ("MARKET",)
 EQUITY_FEE_NOTE = "zero-commission assumption; no slippage model"
@@ -228,6 +230,7 @@ def place_equity_paper_order(
         "quantity": _amount(quantity),
         "status": "FILLED",
         "reason": f"Equity paper market fill ({config.fee_note})",
+        "rationale": clean_rationale(request.get("rationale")),
         "created_at": now,
         **quote_fields,
     }
@@ -352,6 +355,18 @@ def equity_summary_payload(
         },
         "positions": positions,
         "order_count": len(paper_state["orders"]),
+        "recent_orders": [
+            {
+                "order_id": order.get("order_id"),
+                "symbol": order.get("symbol"),
+                "side": order.get("side"),
+                "quantity": order.get("quantity"),
+                "status": order.get("status"),
+                "created_at": order.get("created_at"),
+                "rationale": order.get("rationale"),
+            }
+            for order in paper_state["orders"][-3:]
+        ],
         "scope": scope,
         "safety": {
             "paper_only": True,

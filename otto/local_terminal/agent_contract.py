@@ -170,6 +170,8 @@ ROUTE_CONTRACTS: tuple[RouteAgentContract, ...] = (
             "paper_account_summary",
             "equity_paper_summary",
             "tw_equity_paper_summary",
+            "paper_snapshot_record",
+            "paper_history",
             "crypto_submit_paper_order",
             "equity_submit_paper_order",
             "tw_equity_submit_paper_order",
@@ -2125,6 +2127,7 @@ ACTION_CONTRACTS: tuple[AgentActionContract, ...] = (
             "positions[].unrealized_pnl",
             "positions[].quote_age_seconds",
             "open_orders",
+            "recent_orders",
             "quotes",
             "quotes[].symbol",
             "quotes[].age_seconds",
@@ -2144,15 +2147,80 @@ ACTION_CONTRACTS: tuple[AgentActionContract, ...] = (
         (),
     ),
     AgentActionContract(
+        "paper_snapshot_record",
+        "paper",
+        "Record net-value snapshot of all three paper books",
+        "POST",
+        "/api/paper/snapshot",
+        (
+            '{"refresh":true|false,"note":"optional, <=300 chars"}; empty body works '
+            "(refresh defaults true: crypto tickers, held-symbol equity marks, and "
+            "benchmark quotes BTC-USD/SPY/0050.TW are fetched current before "
+            "recording); refresh=false snapshots from caches and the row records how "
+            "stale its marks were instead of hiding it"
+        ),
+        (
+            "snapshot",
+            "snapshot.snapshot_id",
+            "snapshot.recorded_at",
+            "snapshot.books",
+            "snapshot.benchmarks",
+            "snapshot_count_total",
+            "read_action",
+        ),
+        (
+            "appends one row to the local net-value history (paper_history.json, "
+            "backup-protected); the point of the series is measuring whether the "
+            "agent's decisions beat buy-and-hold over the same window"
+        ),
+        True,
+        True,
+        False,
+        False,
+        "paper_ledger_history_append_only",
+        ("provider_unavailable",),
+    ),
+    AgentActionContract(
+        "paper_history",
+        "paper",
+        "Read net-value history and window performance vs benchmarks",
+        "GET",
+        "/api/paper/history",
+        (
+            "optional ?limit=30 (1..200 snapshots, newest last); the performance "
+            "block appears once the window holds at least two snapshots"
+        ),
+        (
+            "snapshot_count_total",
+            "snapshot_count_returned",
+            "snapshots",
+            "performance",
+            "record_action",
+            "safety",
+        ),
+        (
+            "read-only; change_pct is per-currency over the same window — books and "
+            "benchmarks are never currency-converted or ranked against each other, "
+            "and a null change_pct means missing data, not zero performance"
+        ),
+        False,
+        False,
+        False,
+        False,
+        "local_paper_state_read_only",
+        (),
+    ),
+    AgentActionContract(
         "equity_submit_paper_order",
         "paper",
         "Submit US-equity paper order (fills at a live quote)",
         "POST",
         "/api/equity/orders",
         (
-            '{"symbol":"AAPL","side":"BUY"|"SELL","quantity":"1"}; MARKET only in v1; '
-            "any Yahoo US symbol; the fill price is fetched live at submit — a failed "
-            "or non-USD or stale quote refuses the order instead of guessing; "
+            '{"symbol":"AAPL","side":"BUY"|"SELL","quantity":"1","rationale":"optional '
+            '<=500 chars, stored on the order as the decision journal"}; MARKET only '
+            "in v1; any Yahoo US symbol; the fill price is fetched live at submit — a "
+            "failed or non-USD or stale quote refuses the order instead of guessing; "
             "zero-commission assumption, no slippage model (stated on every fill)"
         ),
         (
@@ -2195,6 +2263,7 @@ ACTION_CONTRACTS: tuple[AgentActionContract, ...] = (
             "account.total_pnl",
             "positions",
             "order_count",
+            "recent_orders",
             "scope",
             "safety",
         ),
@@ -2253,8 +2322,9 @@ ACTION_CONTRACTS: tuple[AgentActionContract, ...] = (
         "POST",
         "/api/equity/tw/orders",
         (
-            '{"symbol":"2330.TW","side":"BUY"|"SELL","quantity":"1000"}; MARKET only; '
-            "TWD-quoted .TW symbols only; quantities must be multiples of the "
+            '{"symbol":"2330.TW","side":"BUY"|"SELL","quantity":"1000","rationale":'
+            '"optional <=500 chars, stored on the order as the decision journal"}; '
+            "MARKET only; TWD-quoted .TW symbols only; quantities must be multiples of the "
             "1000-share board lot (odd lots refused, never rounded); fills at a live "
             "Yahoo quote with a ±10% daily-limit sanity guard; fees are real TW "
             "rules: 0.1425% brokerage per side (NT$20 min), 0.3% tax on sells"
@@ -2299,6 +2369,7 @@ ACTION_CONTRACTS: tuple[AgentActionContract, ...] = (
             "account.total_pnl",
             "positions",
             "order_count",
+            "recent_orders",
             "scope",
             "safety",
         ),
@@ -2318,7 +2389,8 @@ ACTION_CONTRACTS: tuple[AgentActionContract, ...] = (
         "/api/crypto/orders",
         (
             '{"symbol":"BTCUSDT","side":"BUY"|"SELL","order_type":"MARKET"|"LIMIT"|"STOP"|"STOP_LIMIT",'
-            '"quantity":"0.001","limit_price":"64000" when LIMIT/STOP_LIMIT,"stop_price":"..." when STOP/STOP_LIMIT}; '
+            '"quantity":"0.001","limit_price":"64000" when LIMIT/STOP_LIMIT,"stop_price":"..." when STOP/STOP_LIMIT,'
+            '"rationale":"optional <=500 chars, stored on the order as the decision journal"}; '
             "quantity/prices accept strings or numbers; unknown fields are rejected; paper ledger only, no real orders"
         ),
         ("submitted_order", "account", "positions", "orders", "ledger"),
