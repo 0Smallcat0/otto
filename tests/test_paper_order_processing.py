@@ -53,7 +53,9 @@ def test_limit_buy_fills_at_market_price_when_crossed() -> None:
     assert order["status"] == "WORKING"
     state, report = process_paper_orders(state, cache)
     assert [f["order_id"] for f in report["filled"]] == [order["order_id"]]
-    assert report["filled"][0]["fill_price"] == "100.00"  # market, not the limit
+    # crosses the spread: BUY pays the ask (100.50), never the limit price
+    assert report["filled"][0]["fill_price"] == "100.50"
+    assert report["filled"][0]["fill_basis"] == "ask"
     assert "limit 120.00 satisfied" in report["filled"][0]["trigger"]
     assert state["positions"]["BTCUSDT"]["quantity"] == "0.01"
     assert report["open_orders_remaining"] == 0
@@ -79,7 +81,71 @@ def test_stop_sell_triggers_and_closes_position() -> None:
     state, report = process_paper_orders(state, cache)
     assert [f["order_id"] for f in report["filled"]] == [stop["order_id"]]
     assert "stop 150.00 triggered" in report["filled"][0]["trigger"]
+    # SELL hits the bid, not the last print
+    assert report["filled"][0]["fill_price"] == "99.50"
+    assert report["filled"][0]["fill_basis"] == "bid"
     assert "BTCUSDT" not in state["positions"]
+
+
+def test_market_fill_without_book_uses_last_and_says_so() -> None:
+    def _no_book_tickers(symbols: list[str]) -> list[dict[str, str]]:
+        return [
+            {
+                "symbol": symbol,
+                "lastPrice": "100.00",
+                "priceChange": "1.00",
+                "priceChangePercent": "1.00",
+                "highPrice": "110.00",
+                "lowPrice": "90.00",
+                "volume": "12345",
+                "openPrice": "99.00",
+            }
+            for symbol in symbols
+        ]
+
+    cache = markets_payload(
+        default_markets_layout(), {}, fetcher=_no_book_tickers, refresh=True
+    )["cache"]
+    state, order = _order({}, cache, side="BUY", order_type="MARKET")
+    assert order["fill_basis"] == "last_price_no_book"
+    assert state["fills"][-1]["price"] == "100.00"
+
+
+def test_book_side_far_from_last_is_refused_as_mixed_vintage() -> None:
+    def _skewed_book_tickers(symbols: list[str]) -> list[dict[str, str]]:
+        return [
+            {
+                "symbol": symbol,
+                "lastPrice": "140.00",
+                "priceChange": "1.00",
+                "priceChangePercent": "1.00",
+                "highPrice": "150.00",
+                "lowPrice": "90.00",
+                "volume": "12345",
+                "bidPrice": "99.50",  # a cached ladder from another vintage
+                "askPrice": "100.50",
+                "openPrice": "139.00",
+            }
+            for symbol in symbols
+        ]
+
+    cache = markets_payload(
+        default_markets_layout(), {}, fetcher=_skewed_book_tickers, refresh=True
+    )["cache"]
+    state, order = _order({}, cache, side="BUY", order_type="MARKET")
+    # trusting the 100.50 ask against a 140 last would fill at a phantom level
+    assert order["fill_basis"] == "last_price_book_out_of_band"
+    assert state["fills"][-1]["price"] == "140.00"
+
+
+def test_market_buy_pays_the_ask() -> None:
+    cache = _fresh_cache()
+    state, order = _order({}, cache, side="BUY", order_type="MARKET")
+    assert order["fill_basis"] == "ask"
+    assert state["fills"][-1]["price"] == "100.50"
+    state, sell = _order(state, cache, side="SELL", order_type="MARKET")
+    assert sell["fill_basis"] == "bid"
+    assert state["fills"][-1]["price"] == "99.50"
 
 
 def test_stop_limit_needs_both_conditions() -> None:
