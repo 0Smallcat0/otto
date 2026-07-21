@@ -39,6 +39,10 @@ TW_FEE_NOTE = (
     "0.1425% brokerage per side (NT$20 minimum), 0.3% transaction tax on sells; "
     "no slippage model"
 )
+ODD_LOT_NOTE = (
+    "intraday odd-lot session pricing is not modeled; filled at the "
+    "regular-session live quote with the same fee rules"
+)
 
 
 class EquityOrderError(ValueError):
@@ -53,6 +57,7 @@ class BookConfig:
     initial_cash: Decimal
     fee_note: str
     lot_size: int | None = None
+    odd_lot_allowed: bool = False
     buy_fee_rate: Decimal = Decimal("0")
     sell_fee_rate: Decimal = Decimal("0")
     min_fee: Decimal = Decimal("0")
@@ -76,6 +81,7 @@ TW_BOOK = BookConfig(
     initial_cash=Decimal("3000000.00"),
     fee_note=TW_FEE_NOTE,
     lot_size=1000,
+    odd_lot_allowed=True,
     buy_fee_rate=Decimal("0.001425"),
     sell_fee_rate=Decimal("0.001425"),
     min_fee=Decimal("20"),
@@ -165,12 +171,24 @@ def place_equity_paper_order(
         raise EquityOrderError(
             "Equity paper v1 supports MARKET orders only; LIMIT/STOP are not implemented yet"
         )
-    if config.lot_size and quantity % config.lot_size != 0:
-        raise EquityOrderError(
-            f"{config.currency} shares trade in {config.lot_size}-share board lots; "
-            f"quantity must be a multiple of {config.lot_size} (odd-lot trading is "
-            "not implemented, and quantities are never silently rounded)"
-        )
+    lot_type: str | None = None
+    if config.lot_size:
+        if quantity != quantity.to_integral_value():
+            raise EquityOrderError(
+                f"{config.currency} equities trade in whole shares; fractional "
+                "quantities are refused, never rounded"
+            )
+        if quantity % config.lot_size == 0:
+            lot_type = "board_lot"
+        elif config.odd_lot_allowed:
+            lot_type = "odd_lot"
+        else:
+            raise EquityOrderError(
+                f"{config.currency} shares trade in {config.lot_size}-share board "
+                f"lots; quantity must be a multiple of {config.lot_size} (odd-lot "
+                "trading is not enabled for this book, and quantities are never "
+                "silently rounded)"
+            )
     if not isinstance(quote_row, dict) or str(quote_row.get("symbol", "")).upper() != symbol:
         hint = f" ({config.symbol_hint})" if config.symbol_hint else ""
         raise EquityOrderError(
@@ -222,6 +240,11 @@ def place_equity_paper_order(
         "quote_retrieved_at": str(quote_row.get("retrieved_at", "")),
         "quote_age_seconds": int(age),
     }
+    lot_fields: dict[str, Any] = {}
+    if lot_type is not None:
+        lot_fields["lot_type"] = lot_type
+        if lot_type == "odd_lot":
+            lot_fields["odd_lot_note"] = ODD_LOT_NOTE
     order = {
         "order_id": f"equity-{uuid4().hex[:12]}",
         "symbol": symbol,
@@ -232,6 +255,7 @@ def place_equity_paper_order(
         "reason": f"Equity paper market fill ({config.fee_note})",
         "rationale": clean_rationale(request.get("rationale")),
         "created_at": now,
+        **lot_fields,
         **quote_fields,
     }
     fill = {
@@ -245,6 +269,7 @@ def place_equity_paper_order(
         "tax": _money(tax),
         "fee_note": config.fee_note,
         "filled_at": now,
+        **lot_fields,
         **quote_fields,
     }
 
@@ -342,6 +367,9 @@ def equity_summary_payload(
     }
     if config.lot_size:
         scope["lot_size"] = config.lot_size
+        scope["odd_lot"] = (
+            f"allowed — {ODD_LOT_NOTE}" if config.odd_lot_allowed else "not enabled"
+        )
     if config.daily_limit_pct is not None:
         scope["daily_limit_pct"] = str(config.daily_limit_pct)
     return {

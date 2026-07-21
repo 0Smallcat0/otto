@@ -226,11 +226,37 @@ def test_tw_minimum_brokerage_fee_applies() -> None:
     assert state["fills"][-1]["fee"] == "20.00"
 
 
-def test_tw_odd_lot_is_refused_not_rounded() -> None:
-    with pytest.raises(EquityOrderError, match="board lots"):
+def test_tw_odd_lot_fills_with_stated_caveat() -> None:
+    # 10 shares of 2330 at 600 = NT$6,000 notional; 0.1425% = NT$8.55 -> the
+    # NT$20 minimum applies. A 3M account is no longer locked to 3 board lots.
+    state, order = place_equity_paper_order(
+        default_tw_equity_paper_state(),
+        {"symbol": "2330.TW", "side": "BUY", "quantity": "10"},
+        _tw_quote(),
+        TW_BOOK,
+    )
+    assert order["status"] == "FILLED"
+    assert order["lot_type"] == "odd_lot"
+    assert "not modeled" in order["odd_lot_note"]
+    fill = state["fills"][-1]
+    assert fill["lot_type"] == "odd_lot"
+    assert fill["fee"] == "20.00"  # minimum applies to tiny odd-lot notionals
+    assert state["positions"]["2330.TW"]["quantity"] == "10"
+
+
+def test_tw_board_lot_is_labeled_and_fractional_shares_refused() -> None:
+    state, order = place_equity_paper_order(
+        default_tw_equity_paper_state(),
+        {"symbol": "2330.TW", "side": "BUY", "quantity": "1000"},
+        _tw_quote(),
+        TW_BOOK,
+    )
+    assert order["lot_type"] == "board_lot"
+    assert "odd_lot_note" not in order
+    with pytest.raises(EquityOrderError, match="whole shares"):
         place_equity_paper_order(
-            default_tw_equity_paper_state(),
-            {"symbol": "2330.TW", "side": "BUY", "quantity": "500"},
+            state,
+            {"symbol": "2330.TW", "side": "BUY", "quantity": "10.5"},
             _tw_quote(),
             TW_BOOK,
         )
@@ -290,11 +316,13 @@ def test_tw_endpoint_fills_via_injected_lookup(tmp_path, monkeypatch) -> None:
         "/api/equity/tw/orders",
         json={"symbol": "2330.TW", "side": "BUY", "quantity": "500"},
     )
-    assert odd.status_code == 400
+    assert odd.status_code == 200
+    assert odd.json()["submitted_order"]["lot_type"] == "odd_lot"
 
     summary = client.get("/api/equity/tw/summary").json()
-    assert summary["positions"][0]["quantity"] == "1000"
+    assert summary["positions"][0]["quantity"] == "1500"
     assert summary["account"]["quote_asset"] == "TWD"
+    assert "allowed" in summary["scope"]["odd_lot"]
 
 
 def test_tw_state_is_backup_protected(tmp_path) -> None:
