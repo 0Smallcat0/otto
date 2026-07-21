@@ -2,6 +2,17 @@
 
 ## Unreleased
 
+- Crypto fills now cross the spread: MARKET and resting fills BUY at the
+  ask and SELL at the bid (the real order book, not a slippage model),
+  falling back to the last trade price when no book side is available or
+  when the book side sits more than 2% from the last price (mixed-vintage
+  data — e.g. a cached depth ladder next to a newer candle close — would
+  otherwise fill at a phantom level). Every fill records `fill_basis`
+  (`ask`/`bid`/`last_price_no_book`/`last_price_book_out_of_band`) so the
+  convention is auditable per fill. Filling at the last print
+  flattered every fill by half the spread — the same direction of optimism
+  as the stale-quote bug, just smaller. Resting orders still trigger on the
+  last price; the summary states the whole convention (`fill_convention`).
 - `POST /api/crypto/orders/process` (`crypto_process_paper_orders`, 125
   actions): resting LIMIT/STOP/STOP_LIMIT orders can now actually fill —
   until this existed a WORKING order rested forever, which made "the book

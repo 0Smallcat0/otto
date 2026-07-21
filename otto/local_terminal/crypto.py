@@ -242,6 +242,12 @@ def paper_summary_payload(
             "refresh_action": "crypto_refresh_public",
             "note": "MARKET fills are refused when the symbol quote is older than ttl_seconds",
         },
+        "fill_convention": (
+            "fills cross the spread — BUY at ask, SELL at bid, last price when no "
+            "book is available or when the book side sits more than 2% from the "
+            "last price (mixed-vintage data); fill_basis on every fill; positions "
+            "are marked at the last trade price"
+        ),
         "safety": {
             "paper_only": True,
             "live_execution": "disabled",
@@ -318,9 +324,17 @@ def place_paper_order(
     paper_state["orders"].append(order)
 
     if order_type == "MARKET":
-        fill_notional = quantity * price
+        fill_price, fill_basis = _fill_price_for_side(
+            side, price, _side_prices_from_rows(market["rows"]).get(symbol)
+        )
+        fill_notional = quantity * fill_price
         fill_fee = (fill_notional * FEE_RATE).quantize(Decimal("0.01"), rounding=ROUND_HALF_UP)
-        _apply_fill(paper_state, order, quantity, price, fill_fee, now, quote_snapshot)
+        if side == "BUY" and fill_notional + fill_fee > cash:
+            raise PaperOrderError("Insufficient paper cash")
+        _apply_fill(
+            paper_state, order, quantity, fill_price, fill_fee, now, quote_snapshot,
+            fill_basis=fill_basis,
+        )
 
     paper_state["account"]["updated_at"] = now
     paper_state["ledger"].append(
@@ -368,11 +382,59 @@ def cancel_paper_order(
 
 
 PROCESS_NOTE = (
-    "Resting orders fill at the CURRENT market price when their trigger "
-    "condition holds at processing time; price paths between processing runs "
-    "are not simulated, so a level that was crossed and abandoned between "
-    "runs does not fill. Stale quotes skip their orders instead of filling."
+    "Resting orders trigger on the last trade price and fill by crossing the "
+    "current spread (BUY at ask, SELL at bid; last price when no book is "
+    "available) at processing time; price paths between processing runs are "
+    "not simulated, so a level that was crossed and abandoned between runs "
+    "does not fill. Stale quotes skip their orders instead of filling."
 )
+
+
+def _side_prices_from_rows(rows: list[dict[str, str]]) -> dict[str, dict[str, Decimal | None]]:
+    books: dict[str, dict[str, Decimal | None]] = {}
+    for row in rows:
+        symbol = str(row.get("symbol", ""))
+        if not symbol:
+            continue
+        entry: dict[str, Decimal | None] = {}
+        for key in ("bid", "ask"):
+            try:
+                value = Decimal(str(row.get(key)))
+                entry[key] = value if value > 0 else None
+            except (InvalidOperation, TypeError, ValueError):
+                entry[key] = None
+        books[symbol] = entry
+    return books
+
+
+# A book side further than this from the last price is mixed-vintage data
+# (e.g. a cached depth ladder next to a newer candle close), not a real
+# spread; trusting it would fill at a phantom level — same family as the
+# stale-quote bug.
+BOOK_BAND_PCT = Decimal("2")
+
+
+def _fill_price_for_side(
+    side: str,
+    last_price: Decimal,
+    book: dict[str, Decimal | None] | None,
+) -> tuple[Decimal, str]:
+    """A market fill crosses the spread: BUY pays the ask, SELL hits the bid.
+
+    Filling at the last trade price flatters every fill by half the spread —
+    the same direction of optimism as the stale-quote bug, just smaller.
+    When the book side is missing the fill uses the last price and says so;
+    when the book side is more than BOOK_BAND_PCT away from the last price
+    the book is treated as inconsistent data and refused the same way.
+    """
+    if book:
+        side_price = book.get("ask") if side == "BUY" else book.get("bid")
+        if side_price is not None and last_price > 0:
+            deviation_pct = abs(side_price / last_price - 1) * 100
+            if deviation_pct <= BOOK_BAND_PCT:
+                return side_price, "ask" if side == "BUY" else "bid"
+            return last_price, "last_price_book_out_of_band"
+    return last_price, "last_price_no_book"
 
 
 def _trigger_reason(order: dict[str, Any], price: Decimal) -> str | None:
@@ -419,6 +481,7 @@ def process_paper_orders(
     market = markets_payload(default_markets_layout(), market_cache or {}, detail)
     market = _market_with_detail_fallback(market, detail)
     prices = _prices_from_rows(market["rows"])
+    side_books = _side_prices_from_rows(market["rows"])
 
     filled: list[dict[str, Any]] = []
     skipped: list[dict[str, Any]] = []
@@ -447,7 +510,10 @@ def process_paper_orders(
         if trigger is None:
             continue
         quantity = Decimal(order["quantity"])
-        notional = quantity * price
+        fill_price, fill_basis = _fill_price_for_side(
+            str(order["side"]), price, side_books.get(symbol)
+        )
+        notional = quantity * fill_price
         fee = (notional * FEE_RATE).quantize(Decimal("0.01"), rounding=ROUND_HALF_UP)
         if order["side"] == "BUY" and notional + fee > Decimal(paper_state["account"]["cash"]):
             skipped.append(
@@ -468,7 +534,10 @@ def process_paper_orders(
                 }
             )
             continue
-        _apply_fill(paper_state, order, quantity, price, fee, now, quote_snapshot)
+        _apply_fill(
+            paper_state, order, quantity, fill_price, fee, now, quote_snapshot,
+            fill_basis=fill_basis,
+        )
         order["reason"] = f"Resting order filled: {trigger}"
         paper_state["ledger"].append(
             {
@@ -486,7 +555,8 @@ def process_paper_orders(
                 "side": order["side"],
                 "type": order["type"],
                 "quantity": order["quantity"],
-                "fill_price": _money(price),
+                "fill_price": _money(fill_price),
+                "fill_basis": fill_basis,
                 "trigger": trigger,
             }
         )
@@ -515,6 +585,8 @@ def _apply_fill(
     fee: Decimal,
     filled_at: str,
     quote_snapshot: dict[str, str],
+    *,
+    fill_basis: str = "last_price_no_book",
 ) -> None:
     symbol = order["symbol"]
     cash = Decimal(state["account"]["cash"])
@@ -550,6 +622,7 @@ def _apply_fill(
 
     order["status"] = "FILLED"
     order["reason"] = "Paper market fill"
+    order["fill_basis"] = fill_basis
     fill = {
         "fill_id": f"fill-{uuid4().hex[:12]}",
         "order_id": order["order_id"],
@@ -558,6 +631,7 @@ def _apply_fill(
         "quantity": _amount(quantity),
         "price": _money(price),
         "fee": _money(fee),
+        "fill_basis": fill_basis,
         "filled_at": filled_at,
         **_quote_event_fields(quote_snapshot),
     }
