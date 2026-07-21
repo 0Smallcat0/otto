@@ -230,10 +230,7 @@ def normalize_cftc_cot_legacy_futures(
 
     if isinstance(raw, dict) and "rows" in raw and "status" in raw:
         return _coerce_cftc_cot_payload(raw, state=state)
-    if isinstance(raw, bytes):
-        parsed = json.loads(raw.decode("utf-8"))
-    else:
-        parsed = raw
+    parsed = json.loads(raw.decode("utf-8")) if isinstance(raw, bytes) else raw
     if not isinstance(parsed, list):
         raise CommodityDataError("CFTC COT payload is not a row list")
 

@@ -17,6 +17,7 @@ from otto.local_terminal.provider_refresh import (
 )
 from otto.local_terminal.providers import ENTRY_REQUIRED_FIELDS, ERROR_STATES, providers_payload
 from otto.local_terminal.storage import LocalStateStore
+from market_fixtures import fake_binance_tickers as _fake_tickers
 
 
 def _live_market_cache() -> dict[str, object]:
@@ -44,24 +45,6 @@ def _live_market_cache() -> dict[str, object]:
             }
         ],
     }
-
-
-def _fake_tickers(symbols: list[str]) -> list[dict[str, str]]:
-    return [
-        {
-            "symbol": symbol,
-            "lastPrice": "100.00",
-            "priceChange": "1.00",
-            "priceChangePercent": "1.00",
-            "highPrice": "110.00",
-            "lowPrice": "90.00",
-            "volume": "12345",
-            "bidPrice": "99.50",
-            "askPrice": "100.50",
-            "openPrice": "99.00",
-        }
-        for symbol in symbols
-    ]
 
 
 def _fake_stooq_quote(*, symbol: str = "AAPL.US") -> dict[str, str]:

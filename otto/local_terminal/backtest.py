@@ -1973,8 +1973,7 @@ def _drawdown_curve(equity_curve: list[dict[str, str]]) -> list[dict[str, str]]:
     peak = Decimal(equity_curve[0]["equity"]) if equity_curve else Decimal("0")
     for point in equity_curve:
         equity = Decimal(point["equity"])
-        if equity > peak:
-            peak = equity
+        peak = max(peak, equity)
         drawdown = (equity / peak) - Decimal("1") if peak else Decimal("0")
         rows.append(
             {
