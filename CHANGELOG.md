@@ -2,6 +2,22 @@
 
 ## Unreleased
 
+- Performance measurement layer (124 actions): the loop can run — this
+  measures whether running it is any good. `POST /api/paper/snapshot`
+  (`paper_snapshot_record`) records all three books' net value in one row
+  together with benchmark prices (BTC-USD / SPY / 0050.TW) fetched current
+  by default; every row stores how stale its marks were, and unavailable
+  benchmarks are recorded, never dropped. `GET /api/paper/history`
+  (`paper_history`) returns the series plus a window performance block:
+  per-book equity change vs per-benchmark buy-and-hold change over the same
+  window, per-currency, never converted or ranked — a null change is labeled
+  missing data, not zero. History lives in backup-protected
+  `paper_history.json` (20 protected files) capped at 2000 rows.
+- Decision journal: every paper order (crypto / US / TW) accepts an optional
+  `rationale` (≤500 chars) stored on the order record, and all three book
+  summaries return `recent_orders` with it — the agent's "why" is captured
+  at decision time so a later review can compare stated reasoning against
+  what actually happened, instead of reconstructing intent from fills.
 - Equity summaries accept `?refresh=true`, fetching current prices for held
   symbols only. Without it a book read after a restart marked positions at
   their own cost basis and reported no unrealized P&L — quiet, but the same

@@ -275,6 +275,9 @@ def test_every_response_contract_key_resolves(tmp_path, monkeypatch) -> None:
                 None,
             )
     run("crypto_cancel_paper_order", {"order_id": order_id or "paper-missing"})
+    # refresh=False keeps the snapshot hermetic: no held equity symbols, no
+    # benchmark fetch — the row records its own mark staleness instead
+    run("paper_snapshot_record", {"refresh": False, "note": "truth probe"})
 
     # algo chain
     saved = run("algo_save_strategy", _STRATEGY_BODY)

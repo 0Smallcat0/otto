@@ -119,6 +119,37 @@ One display artifact confirmed *not* a bug: replacement characters in a
 headline appeared in the terminal, but the payload bytes were clean UTF-8
 (the console codepage mangles the display, not the data).
 
+## Iteration 4 — 2026-07-21: measurement layer (the loop can run; is it any good?)
+
+Every prior iteration fixed the loop's *inputs* (fresh quotes, honest
+labels, agent-sized payloads). This one fixes its *accountability*: nothing
+recorded net value over time or the agent's reasoning at decision time, so
+"the AI can run the decision loop" was unfalsifiable as an investing claim.
+
+Two additions, both dogfooded live:
+
+- **Decision journal.** All three order endpoints accept `rationale`
+  (≤500 chars) stored on the order record; book summaries return
+  `recent_orders` with it. Live probe: ETH fill `paper-f42758b87d07`
+  carries "ETH quote fresh (age<15m); adding 0.01 ETH ~1.8% of free cash…"
+  and the crypto summary (2,272 B) returns it. Stated reasoning is now
+  comparable against outcomes, not reconstructed from fills.
+- **Net-value history vs benchmarks.** `paper_snapshot_record` writes one
+  row: three books' equity with mark staleness, plus BTC-USD / SPY /
+  0050.TW reference prices (fetched current by default; failures recorded
+  as `unavailable`, never dropped). `paper_history` returns the series and
+  a window performance block. Live probe minutes apart: crypto book 0.00%,
+  US book 0.00%, TW book +0.16% (a real 2330.TW mark move × the 1000-share
+  lot), BTC-USD +0.03% — 3,635 B for the whole readout.
+
+The honest-marking rules carry into the series: a snapshot taken on cold
+caches says so (`oldest_quote_age_seconds`, `unmarked_position_count`), a
+missing benchmark yields a null change labeled "missing data, not zero
+performance", and books/benchmarks are never currency-converted or ranked.
+What this enables next: run the loop on a schedule, snapshot after each
+step, and let the window numbers — not the agent's self-report — say
+whether the decisions beat buy-and-hold.
+
 ## Method note
 
 Chain: status → ledger → market refresh → news read → transparent mechanical

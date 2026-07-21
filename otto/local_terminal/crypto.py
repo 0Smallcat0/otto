@@ -10,6 +10,7 @@ from uuid import uuid4
 
 from otto.local_terminal.crypto_data import crypto_detail_payload
 from otto.local_terminal.markets import default_markets_layout, markets_payload
+from otto.local_terminal.paper_history import clean_rationale
 
 
 SUPPORTED_SYMBOLS = ("BTCUSDT", "ETHUSDT", "SOLUSDT")
@@ -201,6 +202,22 @@ def paper_summary_payload(
         if order["status"] == "WORKING"
     ]
 
+    # Last few decisions with their recorded rationale, so the loop's judgment
+    # step can see "what did I do last time and why" without the 74k payload.
+    recent_orders = [
+        {
+            "order_id": order["order_id"],
+            "symbol": order["symbol"],
+            "side": order["side"],
+            "type": order["type"],
+            "quantity": order["quantity"],
+            "status": order["status"],
+            "created_at": order["created_at"],
+            "rationale": order.get("rationale"),
+        }
+        for order in paper_state["orders"][-3:]
+    ]
+
     ages = [entry["age_seconds"] for entry in quotes]
     all_fresh = bool(ages) and all(
         age is not None and age <= QUOTE_FRESHNESS_TTL_SECONDS for age in ages
@@ -217,6 +234,7 @@ def paper_summary_payload(
         },
         "positions": positions,
         "open_orders": open_orders,
+        "recent_orders": recent_orders,
         "quotes": quotes,
         "freshness": {
             "ttl_seconds": QUOTE_FRESHNESS_TTL_SECONDS,
@@ -293,6 +311,7 @@ def place_paper_order(
         "stop_price": _money(stop_price) if stop_price is not None else None,
         "status": "WORKING",
         "reason": "Paper order accepted",
+        "rationale": clean_rationale(request.get("rationale")),
         "created_at": now,
         **_quote_event_fields(quote_snapshot),
     }

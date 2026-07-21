@@ -110,6 +110,7 @@ def test_all_user_state_writers_leave_backups(tmp_path) -> None:
         (store.write_quantlib_state, {}, store.quantlib_state_path),
         (store.write_forum_state, {}, store.forum_state_path),
         (store.write_paper_state, {}, store.paper_state_path),
+        (store.write_paper_history_state, {}, store.paper_history_path),
         (
             store.write_portfolio_state,
             {"active_portfolio_id": None, "portfolios": {}},
@@ -129,7 +130,8 @@ def test_backup_index_endpoint_is_metadata_only(tmp_path, monkeypatch) -> None:
     empty = client.get("/api/local-state/backups")
     assert empty.status_code == 200
     body = empty.json()
-    assert body["summary"]["protected_file_count"] == 19  # 15 + watchlist + news digest + US == 18  # 15 + watchlist + news digest + equity paper TW equity paper
+    # 15 original + watchlist + news digest + US/TW equity paper + paper history
+    assert body["summary"]["protected_file_count"] == 20
     assert body["summary"]["backup_file_count"] == 0
     assert body["summary"]["keep_backups"] == STATE_BACKUP_COUNT
     assert body["safety"]["restore_endpoint_available"] is True
