@@ -190,8 +190,10 @@ from otto.local_terminal.dashboard import apply_dashboard_template, dashboard_pa
 from otto.local_terminal.equity_paper import (
     TW_BOOK,
     EquityOrderError,
+    cancel_equity_paper_order,
     equity_summary_payload,
     place_equity_paper_order,
+    process_equity_paper_orders,
 )
 from otto.local_terminal.paper_history import (
     BENCHMARK_SYMBOLS,
@@ -1891,7 +1893,14 @@ class EquityPaperOrderUpdate(BaseModel):
     side: str = Field(pattern="^(BUY|SELL|buy|sell)$")
     quantity: str | float | int = Field()
     order_type: str = Field(default="MARKET")
+    limit_price: str | float | int | None = Field(default=None)
     rationale: str | None = Field(default=None, max_length=RATIONALE_MAX_CHARS)
+
+
+class EquityOrderCancelUpdate(BaseModel):
+    model_config = ConfigDict(extra="forbid")
+
+    order_id: str = Field(min_length=1)
 
 
 class PaperSnapshotUpdate(BaseModel):
@@ -2938,6 +2947,78 @@ def create_app(frontend_dist: Path | None = None) -> FastAPI:
         return {
             "submitted_order": order,
             **equity_summary_payload(state, marks, TW_BOOK),
+        }
+
+    def _equity_working_symbols(state: dict[str, Any]) -> list[str]:
+        return sorted(
+            {
+                str(order.get("symbol"))
+                for order in state.get("orders", [])
+                if isinstance(order, dict) and order.get("status") == "WORKING"
+            }
+        )
+
+    def _equity_working_marks(state: dict[str, Any]) -> list[dict[str, Any]]:
+        symbols = _equity_working_symbols(state)
+        if not symbols:
+            return []
+        payload = _yahoo_quote_snapshot_payload_from_store(refresh=True, symbols=symbols)
+        return [row for row in payload.get("quotes", []) if isinstance(row, dict)]
+
+    @app.post("/api/equity/orders/process")
+    def process_equity_orders() -> dict[str, Any]:
+        state = STORE.read_equity_paper_state()
+        new_state, report = process_equity_paper_orders(
+            state, _equity_working_marks(state)
+        )
+        STORE.write_equity_paper_state(new_state)
+        return {**report, "account": new_state["account"]}
+
+    @app.post("/api/equity/tw/orders/process")
+    def process_tw_equity_orders() -> dict[str, Any]:
+        state = STORE.read_tw_equity_paper_state()
+        new_state, report = process_equity_paper_orders(
+            state, _equity_working_marks(state), TW_BOOK
+        )
+        STORE.write_tw_equity_paper_state(new_state)
+        return {**report, "account": new_state["account"]}
+
+    @app.post("/api/equity/orders/cancel")
+    def cancel_equity_order(update: EquityOrderCancelUpdate) -> dict[str, Any]:
+        try:
+            state, order = cancel_equity_paper_order(
+                STORE.read_equity_paper_state(), update.order_id
+            )
+        except EquityOrderError as exc:
+            raise HTTPException(status_code=400, detail=str(exc)) from exc
+        STORE.write_equity_paper_state(state)
+        return {
+            "cancelled_order": order,
+            "account": state["account"],
+            "open_orders_remaining": sum(
+                1
+                for entry in state.get("orders", [])
+                if isinstance(entry, dict) and entry.get("status") == "WORKING"
+            ),
+        }
+
+    @app.post("/api/equity/tw/orders/cancel")
+    def cancel_tw_equity_order(update: EquityOrderCancelUpdate) -> dict[str, Any]:
+        try:
+            state, order = cancel_equity_paper_order(
+                STORE.read_tw_equity_paper_state(), update.order_id, TW_BOOK
+            )
+        except EquityOrderError as exc:
+            raise HTTPException(status_code=400, detail=str(exc)) from exc
+        STORE.write_tw_equity_paper_state(state)
+        return {
+            "cancelled_order": order,
+            "account": state["account"],
+            "open_orders_remaining": sum(
+                1
+                for entry in state.get("orders", [])
+                if isinstance(entry, dict) and entry.get("status") == "WORKING"
+            ),
         }
 
     @app.get("/api/equity/tw/summary")

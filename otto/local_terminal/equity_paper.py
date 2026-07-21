@@ -33,7 +33,7 @@ from uuid import uuid4
 from otto.local_terminal.paper_history import clean_rationale
 
 EQUITY_QUOTE_MAX_AGE_SECONDS = 900
-EQUITY_ORDER_TYPES = ("MARKET",)
+EQUITY_ORDER_TYPES = ("MARKET", "LIMIT")
 EQUITY_FEE_NOTE = "zero-commission assumption; no slippage model"
 TW_FEE_NOTE = (
     "0.1425% brokerage per side (NT$20 minimum), 0.3% transaction tax on sells; "
@@ -169,8 +169,13 @@ def place_equity_paper_order(
         raise EquityOrderError("Side must be BUY or SELL")
     if order_type not in EQUITY_ORDER_TYPES:
         raise EquityOrderError(
-            "Equity paper v1 supports MARKET orders only; LIMIT/STOP are not implemented yet"
+            "Equity paper supports MARKET and LIMIT orders; STOP is not implemented yet"
         )
+    limit_price: Decimal | None = None
+    if order_type == "LIMIT":
+        if request.get("limit_price") is None:
+            raise EquityOrderError("Limit price is required for LIMIT orders")
+        limit_price = _positive_decimal(request.get("limit_price"), label="Limit price")
     lot_type: str | None = None
     if config.lot_size:
         if quantity != quantity.to_integral_value():
@@ -225,9 +230,11 @@ def place_equity_paper_order(
     held = Decimal(position["quantity"]) if position else Decimal("0")
     if side == "SELL" and quantity > held:
         raise EquityOrderError("Cannot sell more than the long paper position")
-    notional = (quantity * price).quantize(Decimal("0.01"), rounding=ROUND_HALF_UP)
+    # A resting BUY is checked against the limit price (its worst case);
+    # cash is NOT reserved while resting — processing re-checks it.
+    exposure_price = limit_price if (order_type == "LIMIT" and side == "BUY") else price
+    notional = (quantity * exposure_price).quantize(Decimal("0.01"), rounding=ROUND_HALF_UP)
     fee = _trade_fee(notional, side, config)
-    tax = _sell_tax(notional, side, config)
     if side == "BUY" and notional + fee > cash:
         raise EquityOrderError("Insufficient paper cash")
 
@@ -245,19 +252,80 @@ def place_equity_paper_order(
         lot_fields["lot_type"] = lot_type
         if lot_type == "odd_lot":
             lot_fields["odd_lot_note"] = ODD_LOT_NOTE
+    crossed = order_type == "MARKET" or _limit_satisfied(side, price, limit_price)
+    if crossed:
+        reason = (
+            f"Equity paper market fill ({config.fee_note})"
+            if order_type == "MARKET"
+            else (
+                f"LIMIT satisfied at submit: market {_money(price)} at or better "
+                f"than limit {_money(limit_price)} ({config.fee_note})"
+            )
+        )
+    else:
+        reason = (
+            "Resting LIMIT order accepted; fills at the live quote when it is at "
+            "or better than the limit at processing time (equity_process_paper_orders)"
+        )
     order = {
         "order_id": f"equity-{uuid4().hex[:12]}",
         "symbol": symbol,
         "side": side,
         "type": order_type,
         "quantity": _amount(quantity),
-        "status": "FILLED",
-        "reason": f"Equity paper market fill ({config.fee_note})",
+        "limit_price": _money(limit_price) if limit_price is not None else None,
+        "status": "FILLED" if crossed else "WORKING",
+        "reason": reason,
         "rationale": clean_rationale(request.get("rationale")),
         "created_at": now,
         **lot_fields,
         **quote_fields,
     }
+    paper_state["orders"].append(order)
+    if crossed:
+        _apply_equity_fill(
+            paper_state, order, quantity, price, config, now, quote_fields, lot_fields
+        )
+    else:
+        paper_state["ledger"].append(
+            {
+                "event_id": f"eledger-{uuid4().hex[:12]}",
+                "order_id": order["order_id"],
+                "event": "WORKING",
+                "recorded_at": now,
+                **quote_fields,
+            }
+        )
+    paper_state["account"]["updated_at"] = now
+    return paper_state, order
+
+
+def _limit_satisfied(side: str, price: Decimal, limit_price: Decimal | None) -> bool:
+    if limit_price is None:
+        return False
+    return price <= limit_price if side == "BUY" else price >= limit_price
+
+
+def _apply_equity_fill(
+    paper_state: dict[str, Any],
+    order: dict[str, Any],
+    quantity: Decimal,
+    price: Decimal,
+    config: BookConfig,
+    now: str,
+    quote_fields: dict[str, Any],
+    lot_fields: dict[str, Any],
+) -> dict[str, Any]:
+    """Execute one fill at `price` (always the live market, never the limit)."""
+    cash = Decimal(paper_state["account"]["cash"])
+    symbol = str(order["symbol"])
+    side = str(order["side"])
+    position = paper_state["positions"].get(symbol)
+    held = Decimal(position["quantity"]) if position else Decimal("0")
+    notional = (quantity * price).quantize(Decimal("0.01"), rounding=ROUND_HALF_UP)
+    fee = _trade_fee(notional, side, config)
+    tax = _sell_tax(notional, side, config)
+
     fill = {
         "fill_id": f"efill-{uuid4().hex[:12]}",
         "order_id": order["order_id"],
@@ -303,7 +371,7 @@ def place_equity_paper_order(
             paper_state["positions"].pop(symbol, None)
         paper_state["account"]["cash"] = _money(cash + proceeds)
 
-    paper_state["orders"].append(order)
+    order["status"] = "FILLED"
     paper_state["fills"].append(fill)
     paper_state["ledger"].append(
         {
@@ -314,7 +382,184 @@ def place_equity_paper_order(
             **quote_fields,
         }
     )
+    return fill
+
+
+EQUITY_PROCESS_NOTE = (
+    "Resting LIMIT orders fill at the CURRENT live quote when it is at or "
+    "better than the limit at processing time — never at the limit price "
+    "itself; price paths between processing runs are not simulated. Quote "
+    "guards (currency, freshness, daily-limit band) apply per symbol, and an "
+    "order that cannot fill safely stays WORKING with the reason reported."
+)
+
+
+def _quote_guard_reason(
+    symbol: str,
+    quote_row: dict[str, Any] | None,
+    config: BookConfig,
+) -> tuple[Decimal | None, dict[str, Any] | None, str | None]:
+    """Same guards as submit, but returned as a skip reason instead of raised."""
+    if not isinstance(quote_row, dict) or str(quote_row.get("symbol", "")).upper() != symbol:
+        return None, None, "no live quote at processing time; the order stays WORKING"
+    currency = str(quote_row.get("currency", "")).upper()
+    if currency != config.currency:
+        return None, None, (
+            f"quote currency {currency or 'unknown'} does not match the "
+            f"{config.currency} book"
+        )
+    age = _age_seconds(str(quote_row.get("retrieved_at", "")))
+    if age is None or age > EQUITY_QUOTE_MAX_AGE_SECONDS:
+        age_text = "unknown" if age is None else f"{int(age)}s"
+        return None, None, (
+            f"quote is not fresh (age {age_text}, limit "
+            f"{EQUITY_QUOTE_MAX_AGE_SECONDS}s)"
+        )
+    try:
+        price = _positive_decimal(quote_row.get("price"), label="Quote price")
+    except EquityOrderError as exc:
+        return None, None, str(exc)
+    if config.daily_limit_pct is not None:
+        previous = _optional_decimal(quote_row.get("previous_close"))
+        if previous is not None and previous > 0:
+            move_pct = abs(price / previous - 1) * 100
+            if move_pct > config.daily_limit_pct:
+                return None, None, (
+                    f"quote is {move_pct:.1f}% from the previous close, outside "
+                    f"the ±{config.daily_limit_pct}% daily limit band"
+                )
+    quote_fields = {
+        "quote_price": str(quote_row.get("price", "")),
+        "quote_currency": currency,
+        "quote_source": str(quote_row.get("source", "")),
+        "quote_provider_id": str(quote_row.get("provider_id", "")),
+        "quote_retrieved_at": str(quote_row.get("retrieved_at", "")),
+        "quote_age_seconds": int(age),
+    }
+    return price, quote_fields, None
+
+
+def process_equity_paper_orders(
+    state: dict[str, Any],
+    quote_rows: list[dict[str, Any]] | None,
+    config: BookConfig = US_BOOK,
+) -> tuple[dict[str, Any], dict[str, Any]]:
+    """Check every WORKING LIMIT order against a just-fetched quote row."""
+    paper_state = normalize_equity_paper_state(copy.deepcopy(state), config)
+    marks = {
+        str(row["symbol"]).upper(): row
+        for row in quote_rows or []
+        if isinstance(row, dict) and row.get("symbol")
+    }
+    filled: list[dict[str, Any]] = []
+    skipped: list[dict[str, Any]] = []
+    now = datetime.now(tz=UTC).isoformat(timespec="seconds")
+    for order in paper_state["orders"]:
+        if str(order.get("status")) != "WORKING":
+            continue
+        symbol = str(order.get("symbol"))
+        price, quote_fields, guard = _quote_guard_reason(symbol, marks.get(symbol), config)
+        if guard is not None:
+            skipped.append({"order_id": order["order_id"], "reason": guard})
+            continue
+        limit = _optional_decimal(order.get("limit_price"))
+        side = str(order.get("side"))
+        if not _limit_satisfied(side, price, limit):
+            continue
+        quantity = Decimal(order["quantity"])
+        held = Decimal(paper_state["positions"].get(symbol, {}).get("quantity", "0"))
+        if side == "SELL" and quantity > held:
+            skipped.append(
+                {
+                    "order_id": order["order_id"],
+                    "reason": (
+                        "position is smaller than the resting quantity; order "
+                        "stays WORKING"
+                    ),
+                }
+            )
+            continue
+        notional = (quantity * price).quantize(Decimal("0.01"), rounding=ROUND_HALF_UP)
+        fee = _trade_fee(notional, side, config)
+        if side == "BUY" and notional + fee > Decimal(paper_state["account"]["cash"]):
+            skipped.append(
+                {
+                    "order_id": order["order_id"],
+                    "reason": (
+                        "insufficient paper cash at processing time; order stays "
+                        "WORKING"
+                    ),
+                }
+            )
+            continue
+        lot_fields = {
+            key: order[key] for key in ("lot_type", "odd_lot_note") if key in order
+        }
+        _apply_equity_fill(
+            paper_state, order, quantity, price, config, now, quote_fields, lot_fields
+        )
+        order["reason"] = (
+            f"Resting LIMIT filled: market {_money(price)} at or better than "
+            f"limit {_money(limit)} ({config.fee_note})"
+        )
+        filled.append(
+            {
+                "order_id": order["order_id"],
+                "symbol": symbol,
+                "side": side,
+                "quantity": order["quantity"],
+                "fill_price": _money(price),
+                "limit_price": order.get("limit_price"),
+            }
+        )
     paper_state["account"]["updated_at"] = now
+    still_working = sum(
+        1 for order in paper_state["orders"] if order["status"] == "WORKING"
+    )
+    report = {
+        "as_of": now,
+        "filled": filled,
+        "skipped": skipped,
+        "open_orders_remaining": still_working,
+        "note": EQUITY_PROCESS_NOTE,
+        "safety": {"paper_only": True, "live_execution": "disabled"},
+    }
+    return paper_state, report
+
+
+def cancel_equity_paper_order(
+    state: dict[str, Any],
+    order_id: str,
+    config: BookConfig = US_BOOK,
+) -> tuple[dict[str, Any], dict[str, Any]]:
+    paper_state = normalize_equity_paper_state(copy.deepcopy(state), config)
+    order_key = str(order_id or "").strip()
+    if not order_key:
+        raise EquityOrderError("Order id is required")
+    order = next(
+        (
+            entry
+            for entry in paper_state["orders"]
+            if str(entry.get("order_id")) == order_key
+        ),
+        None,
+    )
+    if order is None:
+        raise EquityOrderError("Unknown equity paper order id")
+    if str(order.get("status")) != "WORKING":
+        raise EquityOrderError("Only WORKING equity paper orders can be cancelled")
+    now = datetime.now(tz=UTC).isoformat(timespec="seconds")
+    order["status"] = "CANCELLED"
+    order["reason"] = "Cancelled locally"
+    paper_state["account"]["updated_at"] = now
+    paper_state["ledger"].append(
+        {
+            "event_id": f"eledger-{uuid4().hex[:12]}",
+            "order_id": order_key,
+            "event": "CANCELLED",
+            "recorded_at": now,
+        }
+    )
     return paper_state, order
 
 
@@ -364,6 +609,11 @@ def equity_summary_payload(
         "fees": config.fee_note,
         "quote_max_age_seconds": EQUITY_QUOTE_MAX_AGE_SECONDS,
         "unmarked_positions_use_avg_price": True,
+        "resting_limit_orders": (
+            "fill at the live quote when at or better than the limit "
+            "(equity_process_paper_orders); resting BUY cash is not reserved — "
+            "re-checked at processing"
+        ),
     }
     if config.lot_size:
         scope["lot_size"] = config.lot_size

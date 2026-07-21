@@ -60,10 +60,10 @@ def test_buy_then_sell_realizes_pnl() -> None:
 
 def test_refusals_scope_and_freshness() -> None:
     base = default_equity_paper_state()
-    with pytest.raises(EquityOrderError, match="MARKET orders only"):
+    with pytest.raises(EquityOrderError, match="STOP is not implemented"):
         place_equity_paper_order(
             base, {"symbol": "AAPL", "side": "BUY", "quantity": "1",
-                   "order_type": "LIMIT"}, _quote()
+                   "order_type": "STOP"}, _quote()
         )
     with pytest.raises(EquityOrderError, match="quoted in TWD"):
         place_equity_paper_order(
@@ -102,7 +102,7 @@ def test_summary_marks_positions_and_states_scope() -> None:
     assert position["unrealized_pnl"] == "10.00"
     assert position["quote_age_seconds"] >= 59
     assert summary["account"]["equity"] == "100010.00"
-    assert summary["scope"]["order_types"] == ["MARKET"]
+    assert summary["scope"]["order_types"] == ["MARKET", "LIMIT"]
     assert summary["safety"]["short"] is False
 
     unmarked = equity_summary_payload(state, [])
@@ -384,3 +384,182 @@ def test_tw_summary_accepts_refresh_flag(tmp_path, monkeypatch) -> None:
     empty = client.get("/api/equity/tw/summary?refresh=true")
     assert empty.status_code == 200
     assert empty.json()["positions"] == []  # no holdings, no network needed
+
+# ---- LIMIT orders: rest, process, cancel (2026-07-22) ----
+
+from otto.local_terminal.equity_paper import (  # noqa: E402
+    cancel_equity_paper_order,
+    process_equity_paper_orders,
+)
+
+
+def test_limit_below_market_rests_without_touching_cash() -> None:
+    state, order = place_equity_paper_order(
+        default_equity_paper_state(),
+        {"symbol": "AAPL", "side": "BUY", "quantity": "2", "order_type": "LIMIT",
+         "limit_price": "250.00"},
+        _quote(price="300.00"),
+    )
+    assert order["status"] == "WORKING"
+    assert order["limit_price"] == "250.00"
+    assert "Resting LIMIT" in order["reason"]
+    assert state["account"]["cash"] == "100000.00"
+    assert state["fills"] == []
+    assert state["ledger"][-1]["event"] == "WORKING"
+
+
+def test_limit_at_or_better_fills_immediately_at_market() -> None:
+    state, order = place_equity_paper_order(
+        default_equity_paper_state(),
+        {"symbol": "AAPL", "side": "BUY", "quantity": "1", "order_type": "LIMIT",
+         "limit_price": "320.00"},
+        _quote(price="300.00"),
+    )
+    assert order["status"] == "FILLED"
+    assert "at or better than limit" in order["reason"]
+    # fills at the market price, never at the limit itself
+    assert state["fills"][-1]["price"] == "300.00"
+
+
+def test_limit_requires_limit_price_and_checks_worst_case_cash() -> None:
+    with pytest.raises(EquityOrderError, match="Limit price is required"):
+        place_equity_paper_order(
+            default_equity_paper_state(),
+            {"symbol": "AAPL", "side": "BUY", "quantity": "1", "order_type": "LIMIT"},
+            _quote(),
+        )
+    # resting BUY is checked against the limit (worst case), not the market
+    with pytest.raises(EquityOrderError, match="Insufficient paper cash"):
+        place_equity_paper_order(
+            default_equity_paper_state(),
+            {"symbol": "AAPL", "side": "BUY", "quantity": "400", "order_type": "LIMIT",
+             "limit_price": "260.00"},  # 400 * 260 = 104,000 > 100,000
+            _quote(price="300.00"),
+        )
+
+
+def test_process_fills_resting_limit_when_quote_crosses() -> None:
+    state, order = place_equity_paper_order(
+        default_equity_paper_state(),
+        {"symbol": "AAPL", "side": "BUY", "quantity": "2", "order_type": "LIMIT",
+         "limit_price": "250.00"},
+        _quote(price="300.00"),
+    )
+    # not crossed yet -> untouched, not even "skipped"
+    state, report = process_equity_paper_orders(state, [_quote(price="260.00")])
+    assert report["filled"] == [] and report["skipped"] == []
+    assert report["open_orders_remaining"] == 1
+    # market drops through the limit -> fills at the live quote 245, not 250
+    state, report = process_equity_paper_orders(state, [_quote(price="245.00")])
+    assert [f["order_id"] for f in report["filled"]] == [order["order_id"]]
+    assert report["filled"][0]["fill_price"] == "245.00"
+    assert state["positions"]["AAPL"]["avg_price"] == "245.00"
+    assert state["account"]["cash"] == "99510.00"
+    assert report["open_orders_remaining"] == 0
+
+
+def test_process_skips_stale_or_missing_quotes_with_reasons() -> None:
+    state, order = place_equity_paper_order(
+        default_equity_paper_state(),
+        {"symbol": "AAPL", "side": "BUY", "quantity": "1", "order_type": "LIMIT",
+         "limit_price": "250.00"},
+        _quote(price="300.00"),
+    )
+    state, report = process_equity_paper_orders(state, [])
+    assert report["skipped"][0]["reason"].startswith("no live quote")
+    stale = _quote(price="200.00", age_seconds=EQUITY_QUOTE_MAX_AGE_SECONDS + 60)
+    state, report = process_equity_paper_orders(state, [stale])
+    assert "not fresh" in report["skipped"][0]["reason"]
+    resting = next(o for o in state["orders"] if o["order_id"] == order["order_id"])
+    assert resting["status"] == "WORKING"
+
+
+def test_cancel_only_working_orders() -> None:
+    state, order = place_equity_paper_order(
+        default_equity_paper_state(),
+        {"symbol": "AAPL", "side": "BUY", "quantity": "1", "order_type": "LIMIT",
+         "limit_price": "250.00"},
+        _quote(price="300.00"),
+    )
+    state, cancelled = cancel_equity_paper_order(state, order["order_id"])
+    assert cancelled["status"] == "CANCELLED"
+    assert state["ledger"][-1]["event"] == "CANCELLED"
+    with pytest.raises(EquityOrderError, match="Only WORKING"):
+        cancel_equity_paper_order(state, order["order_id"])
+    with pytest.raises(EquityOrderError, match="Unknown equity paper order id"):
+        cancel_equity_paper_order(state, "equity-nope")
+
+
+def test_tw_limit_odd_lot_rests_and_fills_with_tw_fees() -> None:
+    state, order = place_equity_paper_order(
+        default_tw_equity_paper_state(),
+        {"symbol": "2330.TW", "side": "BUY", "quantity": "10", "order_type": "LIMIT",
+         "limit_price": "580.00"},
+        _tw_quote(price="600.00"),
+        TW_BOOK,
+    )
+    assert order["status"] == "WORKING"
+    assert order["lot_type"] == "odd_lot"
+    state, report = process_equity_paper_orders(
+        state, [_tw_quote(price="575.00", previous_close="590.00")], TW_BOOK
+    )
+    assert len(report["filled"]) == 1
+    fill = state["fills"][-1]
+    assert fill["price"] == "575.00"
+    assert fill["fee"] == "20.00"  # NT$20 minimum on the tiny odd-lot notional
+    assert fill["lot_type"] == "odd_lot"
+
+
+def test_equity_process_and_cancel_endpoints(tmp_path, monkeypatch) -> None:
+    monkeypatch.setattr(server, "STORE", LocalStateStore(root=tmp_path))
+    live_price = {"value": 300.0}
+
+    def _fake_yahoo(*, symbol: str) -> dict:
+        return {
+            "symbol": symbol,
+            "currency": "USD",
+            "exchangeName": "NMS",
+            "fullExchangeName": "NasdaqGS",
+            "regularMarketPrice": live_price["value"],
+            "chartPreviousClose": live_price["value"],
+            "regularMarketDayHigh": live_price["value"] + 5,
+            "regularMarketDayLow": live_price["value"] - 5,
+            "regularMarketVolume": 1000,
+            "regularMarketTime": int(datetime.now(tz=UTC).timestamp()),
+        }
+
+    monkeypatch.setattr(server, "YAHOO_FETCHER", _fake_yahoo)
+    client = TestClient(server.create_app())
+
+    submitted = client.post(
+        "/api/equity/orders",
+        json={"symbol": "AAPL", "side": "BUY", "quantity": "1",
+              "order_type": "LIMIT", "limit_price": "250.00"},
+    )
+    assert submitted.status_code == 200
+    order_id = submitted.json()["submitted_order"]["order_id"]
+    assert submitted.json()["submitted_order"]["status"] == "WORKING"
+
+    untouched = client.post("/api/equity/orders/process")
+    assert untouched.status_code == 200
+    assert untouched.json()["filled"] == []
+
+    live_price["value"] = 240.0
+    processed = client.post("/api/equity/orders/process")
+    assert processed.status_code == 200
+    assert [f["order_id"] for f in processed.json()["filled"]] == [order_id]
+    assert processed.json()["filled"][0]["fill_price"] == "240.00"
+
+    refused = client.post("/api/equity/orders/cancel", json={"order_id": order_id})
+    assert refused.status_code == 400  # already FILLED
+
+    resting = client.post(
+        "/api/equity/orders",
+        json={"symbol": "AAPL", "side": "BUY", "quantity": "1",
+              "order_type": "LIMIT", "limit_price": "100.00"},
+    )
+    resting_id = resting.json()["submitted_order"]["order_id"]
+    cancelled = client.post("/api/equity/orders/cancel", json={"order_id": resting_id})
+    assert cancelled.status_code == 200
+    assert cancelled.json()["cancelled_order"]["status"] == "CANCELLED"
+    assert cancelled.json()["open_orders_remaining"] == 0

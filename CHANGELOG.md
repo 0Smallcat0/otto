@@ -2,6 +2,18 @@
 
 ## Unreleased
 
+- Equity LIMIT orders on both books (129 actions): a LIMIT already at or
+  better than the live quote fills immediately at the market price; anything
+  else rests WORKING until `equity_process_paper_orders` /
+  `tw_equity_process_paper_orders` re-fetches live quotes for the resting
+  symbols and fills the crossed ones — at the live quote, never at the limit
+  price itself, with the same guards as submit (currency, freshness,
+  daily-limit band; TW fee/tax and lot labeling carry through). Resting BUY
+  cash is checked against the limit (worst case) at submit and re-checked at
+  processing, not reserved — stated in the summary scope. WORKING orders can
+  be cancelled (`equity_cancel_paper_order` / `tw_equity_cancel_paper_order`).
+  The agent can finally express "buy on a pullback to X" and "sell into
+  strength at Y" on stocks instead of polling.
 - Crypto fills now cross the spread: MARKET and resting fills BUY at the
   ask and SELL at the bid (the real order book, not a slippage model),
   falling back to the last trade price when no book side is available or
