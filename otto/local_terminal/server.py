@@ -184,6 +184,7 @@ from otto.local_terminal.crypto import (
     crypto_payload,
     paper_summary_payload,
     place_paper_order,
+    process_paper_orders,
 )
 from otto.local_terminal.dashboard import apply_dashboard_template, dashboard_payload
 from otto.local_terminal.equity_paper import (
@@ -4615,6 +4616,16 @@ def create_app(frontend_dist: Path | None = None) -> FastAPI:
             status_code=403,
             detail=disabled_live_action_response("execute_derivatives"),
         )
+
+    @app.post("/api/crypto/orders/process")
+    def process_crypto_paper_orders() -> dict[str, Any]:
+        state, report = process_paper_orders(
+            STORE.read_paper_state(),
+            STORE.read_market_cache(),
+            STORE.read_crypto_detail_cache(),
+        )
+        STORE.write_paper_state(state)
+        return {**report, "account": state["account"]}
 
     @app.post("/api/crypto/orders")
     def submit_paper_order(update: PaperOrderUpdate) -> dict[str, Any]:

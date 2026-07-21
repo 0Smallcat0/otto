@@ -2,6 +2,17 @@
 
 ## Unreleased
 
+- `POST /api/crypto/orders/process` (`crypto_process_paper_orders`, 125
+  actions): resting LIMIT/STOP/STOP_LIMIT orders can now actually fill —
+  until this existed a WORKING order rested forever, which made "the book
+  supports LIMIT orders" quietly false. Each processing run checks every
+  WORKING order against the current quote: fills happen at the current
+  market price when the trigger condition holds (never at the limit price
+  itself, price paths between runs are not simulated — stated in the
+  response), the 900s freshness gate applies per symbol (a stale quote
+  skips its orders instead of filling them), and an order that cannot fill
+  safely (insufficient cash, shrunken position) stays WORKING with the
+  reason reported. Stop-losses on the paper book are now real.
 - TW odd-lot trading: any whole-share quantity now fills — multiples of the
   1000-share board lot are labeled `board_lot`, everything else `odd_lot`
   with the caveat stamped on the fill that odd-lot session pricing is not

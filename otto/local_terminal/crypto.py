@@ -367,6 +367,146 @@ def cancel_paper_order(
     return paper_state, order
 
 
+PROCESS_NOTE = (
+    "Resting orders fill at the CURRENT market price when their trigger "
+    "condition holds at processing time; price paths between processing runs "
+    "are not simulated, so a level that was crossed and abandoned between "
+    "runs does not fill. Stale quotes skip their orders instead of filling."
+)
+
+
+def _trigger_reason(order: dict[str, Any], price: Decimal) -> str | None:
+    """Why this WORKING order fills at `price` now — None means keep resting."""
+    side = str(order.get("side"))
+    order_type = str(order.get("type"))
+    limit = order.get("limit_price")
+    stop = order.get("stop_price")
+    limit_ok = (
+        limit is not None
+        and (price <= Decimal(limit) if side == "BUY" else price >= Decimal(limit))
+    )
+    stop_ok = (
+        stop is not None
+        and (price >= Decimal(stop) if side == "BUY" else price <= Decimal(stop))
+    )
+    if order_type == "LIMIT" and limit_ok:
+        return f"limit {limit} satisfied at market {_money(price)}"
+    if order_type == "STOP" and stop_ok:
+        return f"stop {stop} triggered at market {_money(price)}"
+    if order_type == "STOP_LIMIT" and stop_ok and limit_ok:
+        return f"stop {stop} triggered and limit {limit} satisfied at market {_money(price)}"
+    return None
+
+
+def process_paper_orders(
+    state: dict[str, Any],
+    market_cache: dict[str, Any] | None = None,
+    detail_cache: dict[str, Any] | None = None,
+) -> tuple[dict[str, Any], dict[str, Any]]:
+    """Check every WORKING order against the current fresh quote and fill
+    the ones whose trigger condition holds.
+
+    Until this existed a resting LIMIT/STOP order could never fill at all —
+    it rested forever, which made "the book supports LIMIT orders" quietly
+    false. Same honesty rules as MARKET submits: the freshness gate applies
+    per symbol (stale quote -> the order is skipped, not filled), fills use
+    the current market price (never the limit price itself), and an order
+    that cannot fill safely (cash, position) stays WORKING with the reason
+    reported instead of being silently dropped.
+    """
+    paper_state = normalize_paper_state(copy.deepcopy(state))
+    detail = crypto_detail_payload(detail_cache or {})
+    market = markets_payload(default_markets_layout(), market_cache or {}, detail)
+    market = _market_with_detail_fallback(market, detail)
+    prices = _prices_from_rows(market["rows"])
+
+    filled: list[dict[str, Any]] = []
+    skipped: list[dict[str, Any]] = []
+    now = _utc_now()
+    for order in paper_state["orders"]:
+        if str(order.get("status")) != "WORKING":
+            continue
+        symbol = str(order.get("symbol"))
+        price = prices.get(symbol)
+        quote_snapshot = _quote_snapshot(symbol, market, detail)
+        age = _quote_age_seconds(quote_snapshot["retrieved_at"])
+        if price is None or age is None or age > QUOTE_FRESHNESS_TTL_SECONDS:
+            age_text = "unknown" if age is None else f"{int(age)}s"
+            skipped.append(
+                {
+                    "order_id": order["order_id"],
+                    "reason": (
+                        f"quote for {symbol} is stale (age {age_text}, limit "
+                        f"{QUOTE_FRESHNESS_TTL_SECONDS}s); refresh first "
+                        "(crypto_refresh_public)"
+                    ),
+                }
+            )
+            continue
+        trigger = _trigger_reason(order, price)
+        if trigger is None:
+            continue
+        quantity = Decimal(order["quantity"])
+        notional = quantity * price
+        fee = (notional * FEE_RATE).quantize(Decimal("0.01"), rounding=ROUND_HALF_UP)
+        if order["side"] == "BUY" and notional + fee > Decimal(paper_state["account"]["cash"]):
+            skipped.append(
+                {
+                    "order_id": order["order_id"],
+                    "reason": "insufficient paper cash at processing time; order stays WORKING",
+                }
+            )
+            continue
+        held = Decimal(
+            paper_state["positions"].get(symbol, {}).get("quantity", "0")
+        )
+        if order["side"] == "SELL" and quantity > held:
+            skipped.append(
+                {
+                    "order_id": order["order_id"],
+                    "reason": "position is smaller than the resting quantity; order stays WORKING",
+                }
+            )
+            continue
+        _apply_fill(paper_state, order, quantity, price, fee, now, quote_snapshot)
+        order["reason"] = f"Resting order filled: {trigger}"
+        paper_state["ledger"].append(
+            {
+                "event_id": f"ledger-{uuid4().hex[:12]}",
+                "order_id": order["order_id"],
+                "event": "FILLED",
+                "recorded_at": now,
+                **_quote_event_fields(quote_snapshot),
+            }
+        )
+        filled.append(
+            {
+                "order_id": order["order_id"],
+                "symbol": symbol,
+                "side": order["side"],
+                "type": order["type"],
+                "quantity": order["quantity"],
+                "fill_price": _money(price),
+                "trigger": trigger,
+            }
+        )
+
+    paper_state["account"]["updated_at"] = now
+    paper_state["account"] = _account_with_equity(paper_state, prices)
+    still_working = sum(
+        1 for order in paper_state["orders"] if order["status"] == "WORKING"
+    )
+    report = {
+        "as_of": now,
+        "filled": filled,
+        "skipped": skipped,
+        "open_orders_remaining": still_working,
+        "note": PROCESS_NOTE,
+        "safety": {"paper_only": True, "live_execution": "disabled"},
+    }
+    return paper_state, report
+
+
 def _apply_fill(
     state: dict[str, Any],
     order: dict[str, Any],
