@@ -173,6 +173,7 @@ ROUTE_CONTRACTS: tuple[RouteAgentContract, ...] = (
             "paper_snapshot_record",
             "paper_history",
             "crypto_submit_paper_order",
+            "crypto_process_paper_orders",
             "equity_submit_paper_order",
             "tw_equity_submit_paper_order",
             "crypto_cancel_paper_order",
@@ -2403,6 +2404,38 @@ ACTION_CONTRACTS: tuple[AgentActionContract, ...] = (
         False,
         "paper_ledger_order_no_live_execution",
         ("400 validation", "422 unknown_field"),
+    ),
+    AgentActionContract(
+        "crypto_process_paper_orders",
+        "paper",
+        "Process resting paper orders against current quotes",
+        "POST",
+        "/api/crypto/orders/process",
+        (
+            "empty JSON object; checks every WORKING LIMIT/STOP/STOP_LIMIT order "
+            "against the current quote — refresh first (crypto_refresh_public), "
+            "because a stale quote skips its orders instead of filling them"
+        ),
+        (
+            "filled",
+            "skipped",
+            "open_orders_remaining",
+            "note",
+            "account",
+            "safety",
+        ),
+        (
+            "fills use the current market price when the trigger condition holds "
+            "at processing time; price paths between runs are not simulated, and "
+            "an order that cannot fill safely (stale quote, cash, position) stays "
+            "WORKING with the reason reported"
+        ),
+        True,
+        True,
+        False,
+        False,
+        "paper_ledger_order_no_live_execution",
+        (),
     ),
     AgentActionContract(
         "crypto_cancel_paper_order",
