@@ -2,6 +2,14 @@
 
 ## Unreleased
 
+- Eval task #21 `decision_loop_full` (otto-core-v1 is now 21 tasks): one
+  complete paper investing cycle — refresh, read the account summary and
+  news packet, place a MARKET order whose `rationale` must be grounded in
+  what was read, record a net-value snapshot, read the history back. Graded
+  programmatically like every other task: the rationale tag must persist on
+  the ledger, a real position must exist, and the snapshot note must appear
+  in the history; red-baseline verified (all checks start red on a fresh
+  sandbox) and the full chain replay-verified against a sandbox instance.
 - `POST /api/dashboard/reset` now requires `"confirm": true` (the last M26
   Phase 2 residual): it overwrites the whole dashboard layout, so like every
   other overwrite of user state it must be asked for twice. The refusal

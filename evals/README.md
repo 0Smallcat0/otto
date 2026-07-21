@@ -59,6 +59,8 @@ regenerates [EVAL.md](EVAL.md).
 ## Files
 
 - `run_eval.py` — stdlib-only harness (sandbox lifecycle, agent invocation, grading, report)
-- `tasks/core_tasks.json` — the `otto-core-v1` suite (20 tasks)
+- `tasks/core_tasks.json` — the `otto-core-v1` suite (21 tasks; #21
+  `decision_loop_full` drives one complete paper investing cycle — refresh,
+  read, judge, order with a stored rationale, snapshot, history readback)
 - `EVAL.md` — latest committed results snapshot
 - `tests/test_m28_agent_eval.py` (repo tests) — suite/schema/grader contract tests
