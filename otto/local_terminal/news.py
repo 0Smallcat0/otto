@@ -1003,8 +1003,7 @@ def _news_entity_rows(items: list[dict[str, Any]], watch_terms: Any) -> list[dic
             if source:
                 row["sources"].add(source)
             published_at = str(item.get("published_at") or "")
-            if published_at > row["latest_published_at"]:
-                row["latest_published_at"] = published_at
+            row["latest_published_at"] = max(row["latest_published_at"], published_at)
             item_id = str(item.get("item_id") or "")
             if item_id and item_id not in row["sample_item_ids"] and len(row["sample_item_ids"]) < 5:
                 row["sample_item_ids"].append(item_id)
@@ -1059,8 +1058,7 @@ def _news_topic_rows(
             if label:
                 row["top_entities"][label] = row["top_entities"].get(label, 0) + 1
         published_at = str(item.get("published_at") or "")
-        if published_at > row["latest_published_at"]:
-            row["latest_published_at"] = published_at
+        row["latest_published_at"] = max(row["latest_published_at"], published_at)
         item_id = str(item.get("item_id") or "")
         if item_id and item_id not in row["sample_item_ids"] and len(row["sample_item_ids"]) < 5:
             row["sample_item_ids"].append(item_id)

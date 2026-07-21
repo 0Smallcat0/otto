@@ -90,9 +90,6 @@ TW_BOOK = BookConfig(
     symbol_hint="use the .TW suffix, e.g. 2330.TW",
 )
 
-EQUITY_INITIAL_CASH = US_BOOK.initial_cash  # kept for existing imports/tests
-
-
 def default_equity_paper_state(config: BookConfig = US_BOOK) -> dict[str, Any]:
     return {
         "account": {
