@@ -175,7 +175,11 @@ ROUTE_CONTRACTS: tuple[RouteAgentContract, ...] = (
             "crypto_submit_paper_order",
             "crypto_process_paper_orders",
             "equity_submit_paper_order",
+            "equity_process_paper_orders",
+            "equity_cancel_paper_order",
             "tw_equity_submit_paper_order",
+            "tw_equity_process_paper_orders",
+            "tw_equity_cancel_paper_order",
             "crypto_cancel_paper_order",
             "crypto_reset_paper",
         ),
@@ -2218,11 +2222,14 @@ ACTION_CONTRACTS: tuple[AgentActionContract, ...] = (
         "POST",
         "/api/equity/orders",
         (
-            '{"symbol":"AAPL","side":"BUY"|"SELL","quantity":"1","rationale":"optional '
-            '<=500 chars, stored on the order as the decision journal"}; MARKET only '
-            "in v1; any Yahoo US symbol; the fill price is fetched live at submit — a "
-            "failed or non-USD or stale quote refuses the order instead of guessing; "
-            "zero-commission assumption, no slippage model (stated on every fill)"
+            '{"symbol":"AAPL","side":"BUY"|"SELL","quantity":"1","order_type":'
+            '"MARKET"|"LIMIT","limit_price":"180" when LIMIT,"rationale":"optional '
+            '<=500 chars, stored on the order as the decision journal"}; any Yahoo '
+            "US symbol; the quote is fetched live at submit — a failed or non-USD "
+            "or stale quote refuses the order; a LIMIT already at-or-better fills "
+            "immediately at the market price, otherwise it rests WORKING until "
+            "equity_process_paper_orders; zero-commission assumption, no slippage "
+            "model (stated on every fill)"
         ),
         (
             "submitted_order",
@@ -2244,6 +2251,53 @@ ACTION_CONTRACTS: tuple[AgentActionContract, ...] = (
         False,
         "paper_ledger_order_no_live_execution",
         ("400 validation", "provider_unavailable"),
+    ),
+    AgentActionContract(
+        "equity_process_paper_orders",
+        "paper",
+        "Process resting US-equity LIMIT orders at live quotes",
+        "POST",
+        "/api/equity/orders/process",
+        (
+            "empty JSON object; fetches live quotes for the symbols with WORKING "
+            "orders and fills the LIMIT orders whose live quote is at or better "
+            "than the limit"
+        ),
+        (
+            "filled",
+            "skipped",
+            "open_orders_remaining",
+            "note",
+            "account",
+            "safety",
+        ),
+        (
+            "fills use the live quote, never the limit price itself; quote guards "
+            "(currency, freshness, band) apply per symbol and an order that cannot "
+            "fill safely stays WORKING with the reason reported"
+        ),
+        True,
+        False,
+        False,
+        False,
+        "paper_ledger_order_no_live_execution",
+        ("provider_unavailable",),
+    ),
+    AgentActionContract(
+        "equity_cancel_paper_order",
+        "paper",
+        "Cancel a WORKING US-equity paper order",
+        "POST",
+        "/api/equity/orders/cancel",
+        '{"order_id":"equity-..."}; only WORKING orders can be cancelled',
+        ("cancelled_order", "account", "open_orders_remaining"),
+        "mutates the local US-equity paper ledger only",
+        True,
+        False,
+        False,
+        False,
+        "paper_ledger_order_no_live_execution",
+        ("400 unknown_order", "400 not_working"),
     ),
     AgentActionContract(
         "equity_paper_summary",
@@ -2325,12 +2379,14 @@ ACTION_CONTRACTS: tuple[AgentActionContract, ...] = (
         (
             '{"symbol":"2330.TW","side":"BUY"|"SELL","quantity":"1000","rationale":'
             '"optional <=500 chars, stored on the order as the decision journal"}; '
-            "MARKET only; TWD-quoted .TW symbols only; whole shares only — "
-            "multiples of the 1000-share board lot fill as board_lot, any other "
-            "whole quantity fills as odd_lot at the regular-session quote (odd-lot "
-            "session pricing not modeled, caveat stamped on the fill); fills at a "
-            "live Yahoo quote with a ±10% daily-limit sanity guard; fees are real "
-            "TW rules: 0.1425% brokerage per side (NT$20 min), 0.3% tax on sells"
+            'MARKET or LIMIT ("limit_price" required for LIMIT; at-or-better fills '
+            "immediately, otherwise rests until tw_equity_process_paper_orders); "
+            "TWD-quoted .TW symbols only; whole shares only — multiples of the "
+            "1000-share board lot fill as board_lot, any other whole quantity "
+            "fills as odd_lot at the regular-session quote (odd-lot session "
+            "pricing not modeled, caveat stamped on the fill); fills at a live "
+            "Yahoo quote with a ±10% daily-limit sanity guard; fees are real TW "
+            "rules: 0.1425% brokerage per side (NT$20 min), 0.3% tax on sells"
         ),
         (
             "submitted_order",
@@ -2352,6 +2408,53 @@ ACTION_CONTRACTS: tuple[AgentActionContract, ...] = (
         False,
         "paper_ledger_order_no_live_execution",
         ("400 validation", "provider_unavailable"),
+    ),
+    AgentActionContract(
+        "tw_equity_process_paper_orders",
+        "paper",
+        "Process resting TW-equity LIMIT orders at live quotes",
+        "POST",
+        "/api/equity/tw/orders/process",
+        (
+            "empty JSON object; fetches live quotes for the symbols with WORKING "
+            "orders and fills the LIMIT orders whose live quote is at or better "
+            "than the limit (TW fee/tax rules on every fill)"
+        ),
+        (
+            "filled",
+            "skipped",
+            "open_orders_remaining",
+            "note",
+            "account",
+            "safety",
+        ),
+        (
+            "fills use the live quote, never the limit price itself; quote guards "
+            "(TWD currency, freshness, ±10% band) apply per symbol and an order "
+            "that cannot fill safely stays WORKING with the reason reported"
+        ),
+        True,
+        False,
+        False,
+        False,
+        "paper_ledger_order_no_live_execution",
+        ("provider_unavailable",),
+    ),
+    AgentActionContract(
+        "tw_equity_cancel_paper_order",
+        "paper",
+        "Cancel a WORKING TW-equity paper order",
+        "POST",
+        "/api/equity/tw/orders/cancel",
+        '{"order_id":"equity-..."}; only WORKING orders can be cancelled',
+        ("cancelled_order", "account", "open_orders_remaining"),
+        "mutates the local TWD equity paper ledger only",
+        True,
+        False,
+        False,
+        False,
+        "paper_ledger_order_no_live_execution",
+        ("400 unknown_order", "400 not_working"),
     ),
     AgentActionContract(
         "tw_equity_paper_summary",
