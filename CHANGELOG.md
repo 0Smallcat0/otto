@@ -2,6 +2,14 @@
 
 ## Unreleased
 
+- `POST /api/dashboard/reset` now requires `"confirm": true` (the last M26
+  Phase 2 residual): it overwrites the whole dashboard layout, so like every
+  other overwrite of user state it must be asked for twice. The refusal
+  message points at the undo path (backup slot 1 + `local_state_restore`).
+- Backtest optimization artifacts now record data `provenance` like run
+  artifacts always did — `write_optimize_artifacts` accepted the field and
+  silently dropped it, so an optimize.json could not say where its candles
+  came from.
 - Performance measurement layer (124 actions): the loop can run — this
   measures whether running it is any good. `POST /api/paper/snapshot`
   (`paper_snapshot_record`) records all three books' net value in one row

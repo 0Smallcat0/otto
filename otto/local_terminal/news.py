@@ -260,7 +260,7 @@ def news_payload(
     if normalized_layout["feed_type"] == "CLST":
         visible = _clustered_wire(visible)
     clusters = _clusters(visible)
-    intel = _news_intel(items, visible, clusters, provider_states)
+    intel = _news_intel(visible, clusters, provider_states)
     return {
         "layout": normalized_layout,
         "status": status,
@@ -884,7 +884,6 @@ def _cluster_key(item: dict[str, Any]) -> str:
 
 
 def _news_intel(
-    items: list[dict[str, Any]],
     visible: list[dict[str, Any]],
     clusters: list[dict[str, Any]],
     provider_states: list[dict[str, Any]],

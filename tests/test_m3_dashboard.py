@@ -238,7 +238,13 @@ def test_dashboard_api_saves_layout_and_applies_template(tmp_path: Path, monkeyp
     saved_layout = json.loads(layout_path.read_text(encoding="utf-8"))
     assert saved_layout["widgets"] == ["crypto_markets", "watchlist"]
 
-    reset = client.post("/api/dashboard/reset", json={"template": "Crypto Trader"})
+    refused = client.post("/api/dashboard/reset", json={"template": "Crypto Trader"})
+    assert refused.status_code == 400
+    assert "confirm" in refused.json()["detail"]
+
+    reset = client.post(
+        "/api/dashboard/reset", json={"template": "Crypto Trader", "confirm": True}
+    )
 
     assert reset.status_code == 200
     assert reset.json()["template"] == "Crypto Trader"

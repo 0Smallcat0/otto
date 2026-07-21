@@ -35,9 +35,10 @@ import time
 import urllib.error
 import urllib.parse
 import urllib.request
+from collections.abc import Callable
 from importlib.metadata import PackageNotFoundError, version as _dist_version
 from pathlib import Path
-from typing import Any, Callable
+from typing import Any
 
 
 def _package_version() -> str:
@@ -141,9 +142,7 @@ def is_mcp_safe(action: dict[str, Any]) -> bool:
         return False
     safety_class = str(action.get("safety_class", ""))
     endpoint = str(action.get("endpoint", ""))
-    if "secret" in safety_class or "/local-secrets" in endpoint:
-        return False
-    return True
+    return not ("secret" in safety_class or "/local-secrets" in endpoint)
 
 
 # --- Tool definitions -------------------------------------------------------
@@ -501,8 +500,8 @@ def serve(client: TerminalClient, stdin: Any = None, stdout: Any = None) -> None
 
     stdin = stdin if stdin is not None else sys.stdin
     stdout = stdout if stdout is not None else sys.stdout
-    for line in stdin:
-        line = line.strip()
+    for raw_line in stdin:
+        line = raw_line.strip()
         if not line:
             continue
         try:

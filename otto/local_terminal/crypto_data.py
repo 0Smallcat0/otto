@@ -323,16 +323,7 @@ def fetch_kraken_tickers(
         entry = _first_result(data)
         if not isinstance(entry, dict):
             continue
-
-        def pick(key: str, index: int = 0) -> str:
-            value = entry.get(key)
-            if isinstance(value, list) and len(value) > index:
-                return str(value[index])
-            if isinstance(value, (str, int, float)):
-                return str(value)
-            return ""
-
-        last, opened = pick("c"), pick("o")
+        last, opened = _kraken_field(entry, "c"), _kraken_field(entry, "o")
         try:
             change = float(last) - float(opened)
             change_pct = (change / float(opened) * 100) if float(opened) else 0.0
@@ -345,17 +336,27 @@ def fetch_kraken_tickers(
                 "lastPrice": last,
                 "priceChange": change_text,
                 "priceChangePercent": change_pct_text,
-                "highPrice": pick("h", 1),
-                "lowPrice": pick("l", 1),
-                "volume": pick("v", 1),
-                "bidPrice": pick("b"),
-                "askPrice": pick("a"),
+                "highPrice": _kraken_field(entry, "h", 1),
+                "lowPrice": _kraken_field(entry, "l", 1),
+                "volume": _kraken_field(entry, "v", 1),
+                "bidPrice": _kraken_field(entry, "b"),
+                "askPrice": _kraken_field(entry, "a"),
                 "openPrice": opened,
             }
         )
     if not rows:
         raise ValueError("Kraken ticker fallback returned no rows")
     return rows
+
+
+def _kraken_field(entry: dict[str, Any], key: str, index: int = 0) -> str:
+    """Kraken ticker values are lists (["price", ...]) or scalars; index 1 = 24h."""
+    value = entry.get(key)
+    if isinstance(value, list) and len(value) > index:
+        return str(value[index])
+    if isinstance(value, (str, int, float)):
+        return str(value)
+    return ""
 
 
 def fetch_public_crypto_tickers(

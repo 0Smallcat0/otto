@@ -2632,15 +2632,19 @@ ACTION_CONTRACTS: tuple[AgentActionContract, ...] = (
         "Reset Dashboard to default widgets",
         "POST",
         "/api/dashboard/reset",
-        "empty JSON object; restores the default widget list",
+        (
+            '{"confirm":true,"template" optional}; confirm: true is required — '
+            "reset overwrites the current layout (the pre-reset version rotates "
+            "into backup slot 1, undoable via local_state_restore)"
+        ),
         ("widgets", "active_widgets"),
         "resets local dashboard layout to defaults",
         True,
         False,
-        False,
+        True,
         False,
         "local_layout_state_only",
-        (),
+        ("400 confirm_required",),
     ),
     AgentActionContract(
         "algo_save_strategy",

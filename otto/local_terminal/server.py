@@ -2,6 +2,7 @@
 
 from __future__ import annotations
 
+import contextlib
 import json
 import os
 import urllib.error
@@ -1262,16 +1263,14 @@ def _overlay_book_position_prices(book: Any) -> None:
             continue
         closed_at = str(last.get("closed_at") or "")[:10]
         stale = False
-        try:
+        with contextlib.suppress(ValueError):
             stale = (today - datetime.fromisoformat(closed_at).date()).days > 7
-        except ValueError:
-            pass
         position["last_price"] = close
         position["price_date"] = closed_at
-        try:
-            position["market_value"] = f"{float(str(position.get('quantity') or '0')) * float(close):.2f}"
-        except ValueError:
-            pass
+        with contextlib.suppress(ValueError):
+            position["market_value"] = (
+                f"{float(str(position.get('quantity') or '0')) * float(close):.2f}"
+            )
         # Daily close lags a session by design; only flag it once it's genuinely
         # stale (refresh stopped), so a normal yesterday's-close isn't cried wolf.
         position["price_basis"] = "stale_history_close" if stale else "history_close_overlay"
@@ -1811,6 +1810,13 @@ class DashboardLayoutUpdate(BaseModel):
 
 class DashboardTemplateUpdate(BaseModel):
     template: str = Field(default="Local Default")
+
+
+class DashboardResetUpdate(BaseModel):
+    # Reset overwrites the user's dashboard layout wholesale; like every other
+    # overwrite of user state it must be asked for twice (M26 Phase 2 residual).
+    template: str = Field(default="Local Default")
+    confirm: bool = Field(default=False)
 
 
 class MarketsLayoutUpdate(BaseModel):
@@ -3180,7 +3186,17 @@ def create_app(frontend_dist: Path | None = None) -> FastAPI:
         return _dashboard_payload_from_store(layout)
 
     @app.post("/api/dashboard/reset")
-    def reset_dashboard(update: DashboardTemplateUpdate) -> dict[str, Any]:
+    def reset_dashboard(update: DashboardResetUpdate) -> dict[str, Any]:
+        if not update.confirm:
+            raise HTTPException(
+                status_code=400,
+                detail=(
+                    "Dashboard reset overwrites the current layout; pass "
+                    '"confirm": true to proceed. The pre-reset layout rotates '
+                    "into backup slot 1 and can be undone with "
+                    "local_state_restore (kind dashboard_layout)."
+                ),
+            )
         layout = STORE.write_dashboard_layout(apply_dashboard_template(update.template))
         return _dashboard_payload_from_store(layout)
 
