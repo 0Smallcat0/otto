@@ -486,7 +486,7 @@ def _search_rows(
         if symbol == query:
             score = 0
             reason = "symbol_exact"
-        elif cqs_symbol == query or nasdaq_symbol == query:
+        elif query in (cqs_symbol, nasdaq_symbol):
             score = 1
             reason = "alternate_symbol_exact"
         elif symbol.startswith(query):

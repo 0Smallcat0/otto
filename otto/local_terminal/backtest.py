@@ -410,7 +410,7 @@ def _optimize_combinations(
     value_lists = [grid[key] for key in keys]
     combinations: list[dict[str, int]] = []
     for values in itertools.product(*value_lists):
-        candidate = dict(zip(keys, values))
+        candidate = dict(zip(keys, values, strict=True))
         try:
             resolved = normalize_strategy_parameters(str(entry["strategy_id"]), candidate)
         except BacktestError:
@@ -469,6 +469,9 @@ def write_optimize_artifacts(
         "parameter_grid": grid,
         "ranked": ranked,
         "best": ranked[0],
+        # run artifacts always record where their candles came from; the
+        # optimization artifact accepted provenance but silently dropped it
+        "provenance": provenance,
         "safety": safety,
     }
     manifest = {

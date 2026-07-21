@@ -188,7 +188,7 @@ def test_every_response_contract_key_resolves(tmp_path, monkeypatch) -> None:
         "default_route": "dashboard",
     })
     run("dashboard_save_layout", {})
-    run("dashboard_reset", {})
+    run("dashboard_reset", {"confirm": True})
     # dashboard layout now has a slot-1 backup (save above), so the restore
     # endpoint can run against a real backup chain
     run("local_state_restore", {"kind": "dashboard_layout", "slot": 1, "confirm": True})

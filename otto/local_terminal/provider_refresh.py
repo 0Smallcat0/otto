@@ -5,11 +5,12 @@ from __future__ import annotations
 import json
 import re
 import urllib.error
+from collections.abc import Callable
 from dataclasses import dataclass
 from datetime import UTC, datetime
 from pathlib import Path
 from threading import Lock
-from typing import Any, Callable
+from typing import Any
 from uuid import uuid4
 
 from otto.local_terminal.storage import LocalStateStore

@@ -273,9 +273,9 @@ def _read_store(path: Path, *, strict: bool = False) -> dict[str, Any]:
         return {"version": LOCAL_SECRET_STORE_VERSION, "providers": {}}
     try:
         payload = json.loads(path.read_text(encoding="utf-8"))
-    except (OSError, json.JSONDecodeError):
+    except (OSError, json.JSONDecodeError) as exc:
         if strict:
-            raise LocalSecretError("Local secret store could not be read")
+            raise LocalSecretError("Local secret store could not be read") from exc
         return {"version": LOCAL_SECRET_STORE_VERSION, "providers": {}}
     if isinstance(payload, dict):
         return payload
