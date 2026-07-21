@@ -2,6 +2,13 @@
 
 ## Unreleased
 
+- TW odd-lot trading: any whole-share quantity now fills — multiples of the
+  1000-share board lot are labeled `board_lot`, everything else `odd_lot`
+  with the caveat stamped on the fill that odd-lot session pricing is not
+  modeled (regular-session live quote, same fee rules, NT$20 minimum bites
+  hard on small notionals — stated, not hidden). Fractional shares are
+  refused, never rounded. A NT$3M paper account is no longer locked to
+  three board-lot positions.
 - Eval task #21 `decision_loop_full` (otto-core-v1 is now 21 tasks): one
   complete paper investing cycle — refresh, read the account summary and
   news packet, place a MARKET order whose `rationale` must be grounded in

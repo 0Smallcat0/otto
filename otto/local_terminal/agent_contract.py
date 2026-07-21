@@ -2324,10 +2324,12 @@ ACTION_CONTRACTS: tuple[AgentActionContract, ...] = (
         (
             '{"symbol":"2330.TW","side":"BUY"|"SELL","quantity":"1000","rationale":'
             '"optional <=500 chars, stored on the order as the decision journal"}; '
-            "MARKET only; TWD-quoted .TW symbols only; quantities must be multiples of the "
-            "1000-share board lot (odd lots refused, never rounded); fills at a live "
-            "Yahoo quote with a ±10% daily-limit sanity guard; fees are real TW "
-            "rules: 0.1425% brokerage per side (NT$20 min), 0.3% tax on sells"
+            "MARKET only; TWD-quoted .TW symbols only; whole shares only — "
+            "multiples of the 1000-share board lot fill as board_lot, any other "
+            "whole quantity fills as odd_lot at the regular-session quote (odd-lot "
+            "session pricing not modeled, caveat stamped on the fill); fills at a "
+            "live Yahoo quote with a ±10% daily-limit sanity guard; fees are real "
+            "TW rules: 0.1425% brokerage per side (NT$20 min), 0.3% tax on sells"
         ),
         (
             "submitted_order",

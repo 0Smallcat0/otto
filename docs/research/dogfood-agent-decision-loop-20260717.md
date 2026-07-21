@@ -150,6 +150,15 @@ What this enables next: run the loop on a schedule, snapshot after each
 step, and let the window numbers — not the agent's self-report — say
 whether the decisions beat buy-and-hold.
 
+**Same day, the loop became a measured benchmark task.** otto-core-v1
+task #21 (`decision_loop_full`) drives the entire cycle through the MCP
+surface and grades it programmatically: the rationale tag must persist on
+the ledger, a real position must exist, the snapshot note must appear in
+the history. Red baseline verified, then run against real headless
+agents: **claude-haiku-4-5 PASS (11 turns), claude-sonnet-5 PASS (25
+turns)** — the four days of engineering turned "can an AI imitate a full
+human decision cycle" from a claim into a repeatable measurement.
+
 ## Method note
 
 Chain: status → ledger → market refresh → news read → transparent mechanical
