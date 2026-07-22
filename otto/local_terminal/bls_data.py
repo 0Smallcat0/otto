@@ -56,6 +56,11 @@ BLS_DEFAULT_SERIES: tuple[dict[str, str], ...] = (
 )
 
 
+# BLS series are monthly; a cache younger than this reads as live-with-age
+# instead of being blanket-labeled stale.
+BLS_CACHE_FRESH_SECONDS = 6 * 3600
+
+
 class BlsDataError(ValueError):
     """Raised when BLS public macro data is invalid or unavailable."""
 
@@ -98,6 +103,20 @@ def bls_data_payload(
         return {**payload, "cache": {"bls": _cache_payload(payload)}}
 
     if cache:
+        # A cache written seconds ago is not stale. Blanket-labeling every
+        # non-refresh read stale_cache made a healthy provider look broken
+        # (2026-07-22 owner fix-it round); BLS series are monthly, so a
+        # same-session cache is served as live with its age stated.
+        age = _cache_age_seconds(cache)
+        if age is not None and age <= BLS_CACHE_FRESH_SECONDS:
+            return _coerce_bls_payload(
+                cache,
+                state="live",
+                message=(
+                    "BLS latest macro/labor series from local cache "
+                    f"(age {int(age)}s; monthly series)."
+                ),
+            )
         return _coerce_bls_payload(cache, state="stale_cache")
     return _empty_bls_payload(
         state="unavailable",
@@ -105,34 +124,67 @@ def bls_data_payload(
     )
 
 
+def _cache_age_seconds(cache: dict[str, Any]) -> float | None:
+    status = cache.get("status") if isinstance(cache.get("status"), dict) else {}
+    stamp = str(status.get("last_update") or "").replace("Z", "+00:00")
+    try:
+        parsed = datetime.fromisoformat(stamp)
+    except ValueError:
+        return None
+    if parsed.tzinfo is None:
+        parsed = parsed.replace(tzinfo=UTC)
+    return (datetime.now(tz=UTC) - parsed).total_seconds()
+
+
 def fetch_bls_latest_series(
     *,
     series_ids: list[str] | tuple[str, ...] | None = None,
     timeout: float = 8.0,
 ) -> dict[str, Any]:
-    """Fetch latest BLS observations for a bounded no-key series list."""
+    """Fetch latest BLS observations for a bounded no-key series list.
 
-    payloads: list[dict[str, Any]] = []
-    for series_id in list(series_ids or [series["series_id"] for series in BLS_DEFAULT_SERIES])[:6]:
-        safe_series_id = _safe_series_id(series_id)
-        params = urllib.parse.urlencode({"latest": "true"})
-        request = urllib.request.Request(
-            f"{BLS_API_ROOT}/{urllib.parse.quote(safe_series_id, safe='')}?{params}",
-            headers={"User-Agent": "LocalTerminal/0.1 clean-room local macro research"},
-        )
-        try:
-            with urllib.request.urlopen(request, timeout=timeout) as response:
-                raw_payload = json.loads(response.read().decode("utf-8-sig"))
-        except urllib.error.HTTPError as exc:
-            if exc.code == 429:
-                raise BlsRateLimitError("HTTP 429") from exc
-            if exc.code in {400, 403}:
-                raise BlsDataError("BLS request rejected; verify the public series id") from exc
-            raise BlsDataError(f"BLS request failed with HTTP {exc.code}") from exc
-        if not isinstance(raw_payload, dict):
-            raise BlsDataError("BLS response must be a JSON object")
-        payloads.append({"series_id": safe_series_id, "payload": raw_payload})
-    return {"series": payloads}
+    One multi-series POST instead of one GET per series: the unregistered
+    public quota is 25 requests/day, so the per-series loop burned the whole
+    day's budget in eight refreshes and the sweep surfaced stale_cache
+    (2026-07-22 owner fix-it round — the API itself was healthy).
+    """
+
+    safe_ids = [
+        _safe_series_id(series_id)
+        for series_id in list(
+            series_ids or [series["series_id"] for series in BLS_DEFAULT_SERIES]
+        )[:6]
+    ]
+    request = urllib.request.Request(
+        f"{BLS_API_ROOT}/",
+        data=json.dumps({"seriesid": safe_ids, "latest": True}).encode("utf-8"),
+        headers={
+            "User-Agent": "LocalTerminal/0.1 clean-room local macro research",
+            "Content-Type": "application/json",
+        },
+        method="POST",
+    )
+    try:
+        with urllib.request.urlopen(request, timeout=timeout) as response:
+            raw_payload = json.loads(response.read().decode("utf-8-sig"))
+    except urllib.error.HTTPError as exc:
+        if exc.code == 429:
+            raise BlsRateLimitError("HTTP 429") from exc
+        if exc.code in {400, 403}:
+            raise BlsDataError("BLS request rejected; verify the public series id") from exc
+        raise BlsDataError(f"BLS request failed with HTTP {exc.code}") from exc
+    if not isinstance(raw_payload, dict):
+        raise BlsDataError("BLS response must be a JSON object")
+    if str(raw_payload.get("status", "")).upper() != "REQUEST_SUCCEEDED":
+        messages = "; ".join(str(m) for m in raw_payload.get("message", []) if str(m))
+        if "threshold" in messages.lower() or "daily" in messages.lower():
+            raise BlsRateLimitError(messages or "BLS daily quota reached")
+        raise BlsDataError(messages or "BLS request did not succeed")
+    results = raw_payload.get("Results")
+    series = results.get("series") if isinstance(results, dict) else None
+    if not isinstance(series, list):
+        raise BlsDataError("BLS response did not include series results")
+    return {"series": series}
 
 
 def normalize_bls_latest_series(

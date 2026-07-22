@@ -158,3 +158,35 @@ def test_endpoint_and_contract(tmp_path, monkeypatch) -> None:
     assert entry["local_mutation"] is False
     news_route = next(r for r in contract["routes"] if r["route_id"] == "news")
     assert news_route["recommended_actions"][0] == "news_information_packet"
+
+
+# ---- official-name matching (2026-07-22): caches beat a hand alias table ----
+
+
+def test_symbol_terms_include_cleaned_official_names() -> None:
+    terms = symbol_terms("AVGO", ("Broadcom Inc. - Common Stock",))
+    assert "avgo" in terms
+    assert "broadcom" in terms  # suffix noise stripped
+    tw = symbol_terms("2317.TW", ("鴻海",))
+    assert "鴻海" in tw  # CJK names pass through even under 3 latin chars
+
+
+def test_packet_matches_via_official_name_not_just_ticker() -> None:
+    news = _news(
+        [
+            _item("n1", "Broadcom raises AI networking guidance", 10),
+            _item("n2", "鴻海進軍AI伺服器市場", 20),
+        ]
+    )
+    payload = news_packet_payload(
+        news,
+        symbols=["AVGO", "2317.TW"],
+        symbol_names={
+            "AVGO": ["Broadcom Inc. - Common Stock"],
+            "2317.TW": ["鴻海"],
+        },
+    )
+    matched = {item["item_id"]: item.get("matched_symbols", []) for item in payload["items"]}
+    assert matched["n1"] == ["AVGO"]
+    assert matched["n2"] == ["2317.TW"]
+    assert "official security name" in payload["matching"]["note"]

@@ -40,9 +40,45 @@ TW_FEE_NOTE = (
     "no slippage model"
 )
 ODD_LOT_NOTE = (
-    "intraday odd-lot session pricing is not modeled; filled at the "
+    "odd-lot session data was unavailable for this fill; filled at the "
     "regular-session live quote with the same fee rules"
 )
+ODD_LOT_SESSION_NOTE = (
+    "filled against the TWSE odd-lot session data (TWT53U): BUY pays the "
+    "odd-lot ask, SELL hits the odd-lot bid, trade price when no book side "
+    "is published; same fee rules as board lots"
+)
+# An odd-lot session price further than this from the regular-session quote is
+# treated as mixed-vintage data and refused, same as the crypto book guard.
+ODD_LOT_BAND_PCT = Decimal("5")
+
+
+def _odd_lot_fill_price(
+    side: str,
+    regular_price: Decimal,
+    odd_lot_row: dict[str, Any] | None,
+) -> tuple[Decimal | None, str | None]:
+    """Odd-lot session fill price (ask for BUY, bid for SELL) with a band guard."""
+    if not isinstance(odd_lot_row, dict):
+        return None, None
+    candidates = (
+        ("ask", "odd_lot_ask") if side == "BUY" else ("bid", "odd_lot_bid"),
+        ("price", "odd_lot_trade_price"),
+    )
+    for key, basis in candidates:
+        raw = odd_lot_row.get(key)
+        if raw is None:
+            continue
+        try:
+            value = Decimal(str(raw))
+        except (InvalidOperation, ValueError):
+            continue
+        if value <= 0:
+            continue
+        if regular_price > 0 and abs(value / regular_price - 1) * 100 > ODD_LOT_BAND_PCT:
+            return None, None
+        return value, basis
+    return None, None
 
 
 class EquityOrderError(ValueError):
@@ -148,6 +184,7 @@ def place_equity_paper_order(
     request: dict[str, Any],
     quote_row: dict[str, Any] | None,
     config: BookConfig = US_BOOK,
+    odd_lot_row: dict[str, Any] | None = None,
 ) -> tuple[dict[str, Any], dict[str, Any]]:
     """Fill a MARKET order against a just-fetched Yahoo quote row.
 
@@ -278,10 +315,29 @@ def place_equity_paper_order(
         **lot_fields,
         **quote_fields,
     }
+    fill_price = price
+    if crossed and lot_type == "odd_lot":
+        odd_price, odd_basis = _odd_lot_fill_price(side, price, odd_lot_row)
+        if odd_price is not None:
+            fill_price = odd_price
+            lot_fields["odd_lot_note"] = ODD_LOT_SESSION_NOTE
+            lot_fields["odd_lot_fill_basis"] = odd_basis
+            order["odd_lot_note"] = ODD_LOT_SESSION_NOTE
+            order["odd_lot_fill_basis"] = odd_basis
+    if crossed and side == "BUY" and fill_price != price:
+        # the odd-lot session ask can sit above the regular quote the cash
+        # check ran against; money code re-checks at the actual fill price
+        fill_notional = (quantity * fill_price).quantize(
+            Decimal("0.01"), rounding=ROUND_HALF_UP
+        )
+        if fill_notional + _trade_fee(fill_notional, side, config) > cash:
+            raise EquityOrderError(
+                "Insufficient paper cash at the odd-lot session price"
+            )
     paper_state["orders"].append(order)
     if crossed:
         _apply_equity_fill(
-            paper_state, order, quantity, price, config, now, quote_fields, lot_fields
+            paper_state, order, quantity, fill_price, config, now, quote_fields, lot_fields
         )
     else:
         paper_state["ledger"].append(
@@ -440,6 +496,7 @@ def process_equity_paper_orders(
     state: dict[str, Any],
     quote_rows: list[dict[str, Any]] | None,
     config: BookConfig = US_BOOK,
+    odd_lot_rows: dict[str, dict[str, Any]] | None = None,
 ) -> tuple[dict[str, Any], dict[str, Any]]:
     """Check every WORKING LIMIT order against a just-fetched quote row."""
     paper_state = normalize_equity_paper_state(copy.deepcopy(state), config)
@@ -476,7 +533,21 @@ def process_equity_paper_orders(
                 }
             )
             continue
-        notional = (quantity * price).quantize(Decimal("0.01"), rounding=ROUND_HALF_UP)
+        lot_fields = {
+            key: order[key] for key in ("lot_type", "odd_lot_note") if key in order
+        }
+        fill_price = price
+        if order.get("lot_type") == "odd_lot":
+            odd_price, odd_basis = _odd_lot_fill_price(
+                side, price, (odd_lot_rows or {}).get(symbol.split(".")[0])
+            )
+            if odd_price is not None:
+                fill_price = odd_price
+                lot_fields["odd_lot_note"] = ODD_LOT_SESSION_NOTE
+                lot_fields["odd_lot_fill_basis"] = odd_basis
+                order["odd_lot_note"] = ODD_LOT_SESSION_NOTE
+                order["odd_lot_fill_basis"] = odd_basis
+        notional = (quantity * fill_price).quantize(Decimal("0.01"), rounding=ROUND_HALF_UP)
         fee = _trade_fee(notional, side, config)
         if side == "BUY" and notional + fee > Decimal(paper_state["account"]["cash"]):
             skipped.append(
@@ -489,11 +560,8 @@ def process_equity_paper_orders(
                 }
             )
             continue
-        lot_fields = {
-            key: order[key] for key in ("lot_type", "odd_lot_note") if key in order
-        }
         _apply_equity_fill(
-            paper_state, order, quantity, price, config, now, quote_fields, lot_fields
+            paper_state, order, quantity, fill_price, config, now, quote_fields, lot_fields
         )
         order["reason"] = (
             f"Resting LIMIT filled: market {_money(price)} at or better than "
@@ -615,7 +683,14 @@ def equity_summary_payload(
     if config.lot_size:
         scope["lot_size"] = config.lot_size
         scope["odd_lot"] = (
-            f"allowed — {ODD_LOT_NOTE}" if config.odd_lot_allowed else "not enabled"
+            (
+                "allowed — fills use the TWSE odd-lot session data (TWT53U: BUY at "
+                "the odd-lot ask, SELL at the odd-lot bid) when available and "
+                "within ±5% of the regular quote; otherwise the regular-session "
+                "quote, with the basis stated on every fill"
+            )
+            if config.odd_lot_allowed
+            else "not enabled"
         )
     if config.daily_limit_pct is not None:
         scope["daily_limit_pct"] = str(config.daily_limit_pct)

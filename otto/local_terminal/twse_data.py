@@ -151,6 +151,69 @@ def fetch_twse_quote_snapshot(*, timeout: float = 5.0) -> list[dict[str, Any]]:
     return [row for row in payload if isinstance(row, dict)]
 
 
+TWSE_ODD_LOT_URL = "https://openapi.twse.com.tw/v1/exchangeReport/TWT53U"
+TWSE_ODD_LOT_SOURCE = "twse_odd_lot_twt53u"
+
+
+def fetch_twse_odd_lot_row(
+    code: str,
+    *,
+    timeout: float = 6.0,
+    reader: Any | None = None,
+) -> dict[str, Any] | None:
+    """Latest odd-lot session data for one code (TWT53U daily file).
+
+    Returns {price, bid, ask, roc_date, name, source, retrieved_at} with
+    Decimal-safe strings, or None when the code is absent or the fetch fails —
+    the caller falls back to the regular-session quote and says so on the
+    fill (2026-07-22 owner fix-it round: the odd-lot session is now real
+    market data, not a disclosed approximation).
+    """
+    safe_code = _text(code).upper().split(".")[0]
+    if not safe_code:
+        return None
+    try:
+        if reader is not None:
+            payload = reader()
+        else:
+            request = Request(
+                TWSE_ODD_LOT_URL, headers={"User-Agent": "LocalFinancialTerminal/1.0"}
+            )
+            with urlopen(request, timeout=timeout) as response:
+                payload = json.loads(response.read().decode("utf-8"))
+    except (OSError, TimeoutError, URLError, HTTPError, json.JSONDecodeError, ValueError):
+        return None
+    if not isinstance(payload, list):
+        return None
+    for row in payload:
+        if not isinstance(row, dict) or _text(row.get("Code")).upper() != safe_code:
+            continue
+
+        def _positive(value: Any) -> str | None:
+            try:
+                parsed = Decimal(str(value))
+            except (InvalidOperation, TypeError, ValueError):
+                return None
+            return str(parsed) if parsed > 0 else None
+
+        price = _positive(row.get("TradePrice"))
+        bid = _positive(row.get("BestBidPrice"))
+        ask = _positive(row.get("BestAskPrice"))
+        if price is None and bid is None and ask is None:
+            return None
+        return {
+            "code": safe_code,
+            "name": _text(row.get("Name")),
+            "price": price,
+            "bid": bid,
+            "ask": ask,
+            "roc_date": _text(row.get("Date")),
+            "source": TWSE_ODD_LOT_SOURCE,
+            "retrieved_at": _utc_now(),
+        }
+    return None
+
+
 def normalize_twse_quote_snapshot(
     raw: list[dict[str, Any]] | dict[str, Any],
     *,

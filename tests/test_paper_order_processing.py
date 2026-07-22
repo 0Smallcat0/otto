@@ -209,10 +209,83 @@ def test_process_endpoint_and_contract(tmp_path, monkeypatch) -> None:
     body = processed.json()
     assert len(body["filled"]) == 1
     assert body["open_orders_remaining"] == 0
-    assert "not simulated" in body["note"]
+    assert "price PATH is also checked" in body["note"]
     assert body["account"]["cash"] != "100000.00"
 
     actions = {action.action_id: action for action in ACTION_CONTRACTS}
     entry = actions["crypto_process_paper_orders"]
     assert entry.endpoint == "/api/crypto/orders/process"
     assert entry.local_mutation is True
+
+
+# ---- candle-path fills (2026-07-22): the gap between runs is now simulated --
+
+
+from datetime import UTC, datetime, timedelta  # noqa: E402  (section-local import)
+
+
+def _candle(low: str, high: str, close: str, *, offset_s: int = 60) -> dict:
+    closed = (datetime.now(tz=UTC) + timedelta(seconds=offset_s)).isoformat(
+        timespec="seconds"
+    )
+    return {
+        "closed_at": closed,
+        "low": low,
+        "high": high,
+        "close": close,
+        "open": low,
+        "closed": True,
+    }
+
+
+def test_path_touched_limit_fills_at_the_limit_price() -> None:
+    cache = _fresh_cache()
+    state, order = _order({}, cache, side="BUY", order_type="LIMIT", limit_price="95")
+    # current price 100 never triggers; the candle range dipped to 94
+    state, report = process_paper_orders(
+        state, cache, candles_by_symbol={"BTCUSDT": [_candle("94", "101", "99")]}
+    )
+    assert [f["order_id"] for f in report["filled"]] == [order["order_id"]]
+    assert report["filled"][0]["fill_price"] == "95.00"  # the limit, never better
+    assert report["filled"][0]["fill_basis"] == "path_limit_price"
+    assert "candle path" in report["filled"][0]["trigger"]
+
+
+def test_path_triggered_stop_fills_at_candle_close_not_stop() -> None:
+    cache = _fresh_cache()
+    state, _ = _order({}, cache, side="BUY", order_type="MARKET", quantity="0.5")
+    state, stop = _order(
+        state, cache, side="SELL", order_type="STOP", quantity="0.5", stop_price="96"
+    )
+    state, report = process_paper_orders(
+        state, cache, candles_by_symbol={"BTCUSDT": [_candle("95", "99", "95.50")]}
+    )
+    assert [f["order_id"] for f in report["filled"]] == [stop["order_id"]]
+    assert report["filled"][0]["fill_price"] == "95.50"  # close, not the 96 stop
+    assert report["filled"][0]["fill_basis"] == "path_candle_close"
+
+
+def test_candles_before_order_creation_do_not_fill() -> None:
+    cache = _fresh_cache()
+    state, order = _order({}, cache, side="BUY", order_type="LIMIT", limit_price="95")
+    stale_candle = _candle("90", "101", "99", offset_s=-3600)  # closed before order
+    state, report = process_paper_orders(
+        state, cache, candles_by_symbol={"BTCUSDT": [stale_candle]}
+    )
+    assert report["filled"] == []
+    resting = next(o for o in state["orders"] if o["order_id"] == order["order_id"])
+    assert resting["status"] == "WORKING"
+
+
+def test_stop_limit_is_excluded_from_path_fills() -> None:
+    cache = _fresh_cache()
+    state, _ = _order(
+        {}, cache, side="BUY", order_type="STOP_LIMIT", stop_price="150",
+        limit_price="160",
+    )
+    state, report = process_paper_orders(
+        state, cache, candles_by_symbol={"BTCUSDT": [_candle("94", "155", "154")]}
+    )
+    assert report["filled"] == []
+    assert report["open_orders_remaining"] == 1
+    assert "STOP_LIMIT stays trigger-at-processing only" in report["note"]

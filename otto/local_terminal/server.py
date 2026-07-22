@@ -8,6 +8,7 @@ import os
 import urllib.error
 from dataclasses import asdict
 from datetime import UTC, datetime
+from decimal import Decimal
 from importlib.metadata import PackageNotFoundError, version
 from pathlib import Path
 from typing import Any
@@ -195,6 +196,7 @@ from otto.local_terminal.equity_paper import (
     place_equity_paper_order,
     process_equity_paper_orders,
 )
+from otto.local_terminal.twse_data import fetch_twse_odd_lot_row
 from otto.local_terminal.paper_history import (
     BENCHMARK_SYMBOLS,
     HISTORY_DEFAULT_LIMIT,
@@ -2920,6 +2922,15 @@ def create_app(frontend_dist: Path | None = None) -> FastAPI:
             **equity_summary_payload(state, marks),
         }
 
+    def _tw_odd_lot_row_for(symbol: str, quantity: Any) -> dict[str, Any] | None:
+        """Odd-lot session data when the quantity is not a full board lot."""
+        try:
+            if Decimal(str(quantity)) % TW_BOOK.lot_size == 0:
+                return None
+        except (ArithmeticError, TypeError, ValueError):
+            return None
+        return fetch_twse_odd_lot_row(symbol.split(".")[0])
+
     @app.post("/api/equity/tw/orders")
     def submit_tw_equity_paper_order(update: EquityPaperOrderUpdate) -> dict[str, Any]:
         symbol = update.symbol.strip().upper()
@@ -2932,6 +2943,7 @@ def create_app(frontend_dist: Path | None = None) -> FastAPI:
                 {**update.model_dump(), "symbol": symbol},
                 quote_row,
                 TW_BOOK,
+                odd_lot_row=_tw_odd_lot_row_for(symbol, update.quantity),
             )
         except EquityOrderError as exc:
             raise HTTPException(status_code=400, detail=str(exc)) from exc
@@ -2977,8 +2989,20 @@ def create_app(frontend_dist: Path | None = None) -> FastAPI:
     @app.post("/api/equity/tw/orders/process")
     def process_tw_equity_orders() -> dict[str, Any]:
         state = STORE.read_tw_equity_paper_state()
+        odd_lot_rows: dict[str, dict[str, Any]] = {}
+        for order in state.get("orders", []):
+            if (
+                isinstance(order, dict)
+                and order.get("status") == "WORKING"
+                and order.get("lot_type") == "odd_lot"
+            ):
+                root = str(order.get("symbol", "")).split(".")[0]
+                if root and root not in odd_lot_rows:
+                    row = fetch_twse_odd_lot_row(root)
+                    if row:
+                        odd_lot_rows[root] = row
         new_state, report = process_equity_paper_orders(
-            state, _equity_working_marks(state), TW_BOOK
+            state, _equity_working_marks(state), TW_BOOK, odd_lot_rows=odd_lot_rows
         )
         STORE.write_tw_equity_paper_state(new_state)
         return {**report, "account": new_state["account"]}
@@ -4073,6 +4097,46 @@ def create_app(frontend_dist: Path | None = None) -> FastAPI:
         payload = _news_payload_from_store(refresh=False)
         return _public_news_payload(_attach_news_research_brief_index(payload))
 
+    def _news_symbol_names(symbols: list[str]) -> dict[str, list[str]]:
+        """Official security names for matching, from local reference caches.
+
+        Nasdaq Trader directory covers US listings, the TWSE daily quote cache
+        carries Chinese names for .TW codes — both already on disk, so the
+        matcher improves without a hand-curated alias table (2026-07-22 owner
+        fix-it round: disclosing 'keyword-only' was not a substitute for
+        matching better).
+        """
+        wanted = [str(symbol).strip().upper() for symbol in symbols if str(symbol).strip()]
+        if not wanted:
+            return {}
+        names: dict[str, list[str]] = {}
+        directory = STORE.read_nasdaq_trader_symbol_directory_cache()
+        rows = directory.get("symbols") if isinstance(directory, dict) else []
+        by_symbol = {
+            str(row.get("symbol", "")).upper(): str(row.get("name", ""))
+            for row in rows or []
+            if isinstance(row, dict) and row.get("symbol") and row.get("name")
+        }
+        for symbol in wanted:
+            found: list[str] = []
+            root = symbol.split(".")[0]
+            if symbol.endswith(".TW"):
+                quote_cache = STORE.read_twse_quote_cache(root)
+                quotes = quote_cache.get("quotes") if isinstance(quote_cache, dict) else []
+                for row in quotes or []:
+                    if isinstance(row, dict) and str(row.get("symbol", "")) == root:
+                        name = str(row.get("name", "")).strip()
+                        if name:
+                            found.append(name)
+                        break
+            else:
+                name = by_symbol.get(root, "")
+                if name:
+                    found.append(name)
+            if found:
+                names[symbol] = found
+        return names
+
     @app.post("/api/news/packet")
     def news_packet(update: NewsPacketUpdate) -> dict[str, Any]:
         payload = _news_payload_from_store(refresh=update.refresh)
@@ -4081,6 +4145,7 @@ def create_app(frontend_dist: Path | None = None) -> FastAPI:
             news_digest_payload(STORE.read_news_digest_state()),
             symbols=update.symbols,
             limit=update.limit,
+            symbol_names=_news_symbol_names(update.symbols),
         )
 
     @app.post("/api/news/refresh")
@@ -4700,10 +4765,25 @@ def create_app(frontend_dist: Path | None = None) -> FastAPI:
 
     @app.post("/api/crypto/orders/process")
     def process_crypto_paper_orders() -> dict[str, Any]:
+        paper_state = STORE.read_paper_state()
+        candles_by_symbol: dict[str, list[dict[str, Any]]] = {}
+        for order in paper_state.get("orders", []):
+            if not isinstance(order, dict) or order.get("status") != "WORKING":
+                continue
+            working_symbol = str(order.get("symbol", ""))
+            if not working_symbol or working_symbol in candles_by_symbol:
+                continue
+            detail = STORE.read_crypto_detail_cache(working_symbol, "15m")
+            candles = detail.get("candles") if isinstance(detail, dict) else []
+            if isinstance(candles, list) and candles:
+                candles_by_symbol[working_symbol] = [
+                    candle for candle in candles if isinstance(candle, dict)
+                ]
         state, report = process_paper_orders(
-            STORE.read_paper_state(),
+            paper_state,
             STORE.read_market_cache(),
             STORE.read_crypto_detail_cache(),
+            candles_by_symbol=candles_by_symbol,
         )
         STORE.write_paper_state(state)
         return {**report, "account": state["account"]}

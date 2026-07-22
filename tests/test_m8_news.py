@@ -393,7 +393,7 @@ def test_gdelt_doc_articles_are_metadata_only() -> None:
             )
 
     def opener(request: object, timeout: int) -> Response:
-        assert timeout == 8
+        assert timeout == 20  # throttled GDELT stalls the handshake; 8s misread slow as down
         assert "mode=artlist" in request.full_url.lower()
         assert "format=json" in request.full_url.lower()
         return Response()

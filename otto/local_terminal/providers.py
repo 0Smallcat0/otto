@@ -17,6 +17,7 @@ ERROR_STATES = (
     "plan_required",
     "stale_cache",
     "disabled_by_safety",
+    "retired",
 )
 ENTRY_REQUIRED_FIELDS = (
     "provider_id",
@@ -79,6 +80,11 @@ ERROR_STATE_CATALOG: dict[str, dict[str, str]] = {
         "label": "Disabled by safety",
         "meaning": "Capability is blocked by clean-room, credential, or live-trading safety gates.",
         "ui_action": "Render disabled controls and explain the missing safety contract.",
+    },
+    "retired": {
+        "label": "Retired",
+        "meaning": "The upstream endpoint was permanently closed by the provider; a successor source covers the capability.",
+        "ui_action": "Point at the successor action instead of retrying a dead endpoint.",
     },
 }
 
@@ -1081,7 +1087,10 @@ PROVIDER_REGISTRY: tuple[dict[str, Any], ...] = (
         "provider_id": "stooq_public_quote_snapshot",
         "label": "Stooq Public Quote Snapshot",
         "adapter_id": "stooq_public_quote_snapshot",
-        "implementation_status": "implemented",
+        # Stooq closed the no-key CSV quote endpoint in 2026-07 (404 on both
+        # domains, JS wall on history). markets_quote_lookup (Yahoo) covers
+        # every symbol this served; kept in the registry as history.
+        "implementation_status": "retired_upstream_endpoint",
         "coverage": ["stocks", "ETF", "indexes", "FX", "bounded delayed quote snapshot"],
         "official_docs": [
             "https://stooq.com/q/?s=^spx",
@@ -1949,6 +1958,19 @@ def _provider_with_health(
     cache_states: dict[str, dict[str, Any]],
 ) -> dict[str, Any]:
     provider = {**entry}
+    if str(provider.get("implementation_status", "")).startswith("retired"):
+        provider["health"] = {
+            "state": "retired",
+            "runtime_source": provider["provider_id"],
+            "retrieved_at": "",
+            "age_seconds": None,
+            "cache_path": "",
+            "message": (
+                "Upstream endpoint was closed by the provider; "
+                "markets_quote_lookup (Yahoo) supersedes it."
+            ),
+        }
+        return provider
     cache_policy = provider.get("cache_policy", {})
     cache_id = cache_policy.get("cache_id")
     cache_candidates = [cache_states.get(str(cache_id))]

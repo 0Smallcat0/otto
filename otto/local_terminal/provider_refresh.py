@@ -120,14 +120,23 @@ def run_public_provider_refresh(
         )
     )
 
-    stooq_payload = callbacks.stooq_quote_payload()
-    stooq_status = stooq_payload.get("status") if isinstance(stooq_payload, dict) else {}
+    # Stooq closed its no-key CSV quote endpoint in 2026-07 (HTTP 404 on
+    # stooq.com and stooq.pl, JS wall on the historical path). A retired
+    # upstream is not a daily failure: the sweep records it as retired with
+    # its successor instead of burning two timeouts to rediscover the 404.
     results.append(
         provider_refresh_result(
             "stooq_public_quote_snapshot",
             "Stooq public quote snapshots",
-            stooq_status,
-            cache_written=status_has_fresh_runtime_cache(stooq_status),
+            {
+                "state": "retired",
+                "source": "stooq_public",
+                "message": (
+                    "Stooq closed its public no-key CSV quote endpoint; "
+                    "markets_quote_lookup (Yahoo) supersedes it for any symbol."
+                ),
+            },
+            cache_written=False,
             cache_path="market_data/quotes/stooq/AAPLUS.json",
         )
     )
@@ -848,7 +857,12 @@ def provider_refresh_summary(results: list[dict[str, Any]]) -> dict[str, int]:
         "provider_count": len({result["provider_id"] for result in results}),
         "refreshed": sum(1 for result in results if result["state"] in {"live", "partial"}),
         "stale_or_cached": sum(1 for result in results if result["state"] in {"stale", "stale_cache"}),
-        "unavailable": sum(1 for result in results if result["usable_runtime"] is False),
+        "unavailable": sum(
+            1
+            for result in results
+            if result["usable_runtime"] is False and result["state"] != "retired"
+        ),
+        "retired": sum(1 for result in results if result["state"] == "retired"),
         "cache_written": sum(1 for result in results if result["cache_written"]),
         "cache_written_this_run": sum(
             1 for result in results if result.get("cache_written_this_run") is True

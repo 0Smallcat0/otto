@@ -21,9 +21,20 @@ PACKET_MAX_ITEMS = 12
 PACKET_TITLE_CHARS = 160
 PACKET_SUMMARY_CHARS = 240
 MATCH_MODE_NOTE = (
-    "keyword match over title/summary/tags; an item without a matched symbol "
-    "is not evidence that it is irrelevant"
+    "keyword match over title/summary/tags using each ticker plus its official "
+    "security name from local reference caches (Nasdaq Trader directory, TWSE "
+    "daily quotes); an item without a matched symbol is not evidence that it "
+    "is irrelevant"
 )
+
+# Corporate-suffix noise stripped from official security names before they are
+# used as search terms ("Apple Inc. - Common Stock" should match "Apple").
+_NAME_SUFFIX_NOISE = (
+    "inc.", "inc", "corp.", "corp", "corporation", "ltd.", "ltd", "plc",
+    "co.", "co", "company", "holdings", "holding", "group", "trust", "etf",
+    "fund", "sa", "n.v.", "nv", "ag",
+)
+_NAME_MIN_CHARS = 3
 
 # Aliases only where the ticker alone would miss obvious coverage. Kept small
 # on purpose: a long guessed table would produce confident wrong matches.
@@ -45,8 +56,31 @@ SYMBOL_ALIASES: dict[str, tuple[str, ...]] = {
 _QUOTE_SUFFIXES = ("USDT", "USDC", "USD", "TWD")
 
 
-def symbol_terms(symbol: str) -> list[str]:
-    """Search terms for one holding: its root plus curated aliases."""
+def _terms_from_name(name: str) -> list[str]:
+    """Usable search terms from an official security name.
+
+    Keeps the full lowered name plus a cleaned head form with corporate
+    suffixes stripped, so "Apple Inc. - Common Stock" also matches "Apple"
+    and a Chinese name like 台積電 passes through unchanged.
+    """
+    cleaned = str(name or "").strip().lower()
+    if not cleaned:
+        return []
+    head = cleaned.split(" - ")[0].strip()
+    words = [word for word in head.replace(",", " ").split() if word]
+    while words and words[-1] in _NAME_SUFFIX_NOISE:
+        words.pop()
+    short = " ".join(words).strip()
+    terms = []
+    for candidate in (short, head):
+        has_cjk = any("一" <= ch <= "鿿" for ch in candidate)
+        if candidate and (len(candidate) >= _NAME_MIN_CHARS or has_cjk):
+            terms.append(candidate)
+    return terms
+
+
+def symbol_terms(symbol: str, extra_names: tuple[str, ...] | list[str] = ()) -> list[str]:
+    """Search terms for one holding: root, curated aliases, official names."""
     raw = str(symbol or "").strip().upper()
     if not raw:
         return []
@@ -57,6 +91,8 @@ def symbol_terms(symbol: str) -> list[str]:
             break
     terms = [root.lower()]
     terms.extend(alias.lower() for alias in SYMBOL_ALIASES.get(root, ()))
+    for name in extra_names:
+        terms.extend(_terms_from_name(name))
     return list(dict.fromkeys(term for term in terms if term))
 
 
@@ -66,11 +102,15 @@ def news_packet_payload(
     *,
     symbols: list[str] | None = None,
     limit: int = 8,
+    symbol_names: dict[str, list[str]] | None = None,
 ) -> dict[str, Any]:
     """Bounded headlines + digest + freshness, tagged against held symbols."""
     bounded_limit = max(1, min(int(limit or 8), PACKET_MAX_ITEMS))
     held = [str(symbol).strip().upper() for symbol in (symbols or []) if str(symbol).strip()]
-    terms_by_symbol = {symbol: symbol_terms(symbol) for symbol in held}
+    names = symbol_names or {}
+    terms_by_symbol = {
+        symbol: symbol_terms(symbol, tuple(names.get(symbol, ()))) for symbol in held
+    }
 
     raw_items = news.get("items") if isinstance(news.get("items"), list) else []
     digest_items = {}

@@ -1,0 +1,35 @@
+{
+  "suite_id": "otto-core-v1",
+  "generated_at": "2026-07-21 13:56 UTC",
+  "models": {
+    "claude-haiku-4-5-20251001": {
+      "tasks": 1,
+      "passed": 1,
+      "success_rate": 1.0,
+      "avg_turns": 11.0,
+      "avg_duration_ms": 46241,
+      "harness_errors": 0,
+      "by_category": {
+        "multi_step": {
+          "total": 1,
+          "passed": 1
+        }
+      }
+    },
+    "claude-sonnet-5": {
+      "tasks": 1,
+      "passed": 1,
+      "success_rate": 1.0,
+      "avg_turns": 25.0,
+      "avg_duration_ms": 145081,
+      "harness_errors": 0,
+      "by_category": {
+        "multi_step": {
+          "total": 1,
+          "passed": 1
+        }
+      }
+    }
+  },
+  "task_count": 1
+}

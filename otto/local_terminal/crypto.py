@@ -384,10 +384,78 @@ def cancel_paper_order(
 PROCESS_NOTE = (
     "Resting orders trigger on the last trade price and fill by crossing the "
     "current spread (BUY at ask, SELL at bid; last price when no book is "
-    "available) at processing time; price paths between processing runs are "
-    "not simulated, so a level that was crossed and abandoned between runs "
-    "does not fill. Stale quotes skip their orders instead of filling."
+    "available). When cached closed candles cover the gap since the order was "
+    "placed, the price PATH is also checked: a LIMIT touched by a candle's "
+    "range fills at the limit price, a STOP touched fills at that candle's "
+    "close (never at the stop level itself — stop fills are not granted the "
+    "optimistic price); STOP_LIMIT stays trigger-at-processing only. Stale "
+    "quotes skip their orders instead of filling."
 )
+
+
+def _path_trigger(
+    order: dict[str, Any],
+    candles: list[dict[str, Any]],
+) -> tuple[Decimal, str] | None:
+    """First closed candle since order creation whose range triggers the order.
+
+    LIMIT fills at the limit price (the resting order sat at that level, so
+    a touch fills it at exactly the limit — never better). STOP fills at the
+    triggering candle's close: granting the stop level itself would price the
+    fill optimistically in exactly the adverse move the stop exists for.
+    STOP_LIMIT is excluded from path fills (two levels against one candle
+    range is guesswork) and keeps trigger-at-processing semantics.
+    """
+    order_type = str(order.get("type"))
+    side = str(order.get("side"))
+    if order_type not in {"LIMIT", "STOP"}:
+        return None
+    created_raw = str(order.get("created_at", ""))
+    try:
+        created = datetime.fromisoformat(created_raw.replace("Z", "+00:00"))
+    except ValueError:
+        return None
+    if created.tzinfo is None:
+        created = created.replace(tzinfo=UTC)
+    level_raw = order.get("limit_price") if order_type == "LIMIT" else order.get("stop_price")
+    try:
+        level = Decimal(str(level_raw))
+    except (InvalidOperation, TypeError, ValueError):
+        return None
+    for candle in candles:
+        if not isinstance(candle, dict) or not candle.get("closed", True):
+            continue
+        closed_raw = str(candle.get("closed_at", ""))
+        try:
+            closed_at = datetime.fromisoformat(closed_raw.replace("Z", "+00:00"))
+        except ValueError:
+            continue
+        if closed_at.tzinfo is None:
+            closed_at = closed_at.replace(tzinfo=UTC)
+        if closed_at <= created:
+            continue
+        try:
+            low = Decimal(str(candle.get("low")))
+            high = Decimal(str(candle.get("high")))
+            close = Decimal(str(candle.get("close")))
+        except (InvalidOperation, TypeError, ValueError):
+            continue
+        if order_type == "LIMIT":
+            touched = low <= level if side == "BUY" else high >= level
+            if touched:
+                return level, (
+                    f"candle path {closed_raw} touched limit {_money(level)} "
+                    f"(low {_money(low)} / high {_money(high)}); filled at the limit price"
+                )
+        else:
+            touched = high >= level if side == "BUY" else low <= level
+            if touched:
+                return close, (
+                    f"candle path {closed_raw} triggered stop {_money(level)} "
+                    f"(low {_money(low)} / high {_money(high)}); filled at that "
+                    f"candle's close {_money(close)}"
+                )
+    return None
 
 
 def _side_prices_from_rows(rows: list[dict[str, str]]) -> dict[str, dict[str, Decimal | None]]:
@@ -464,6 +532,8 @@ def process_paper_orders(
     state: dict[str, Any],
     market_cache: dict[str, Any] | None = None,
     detail_cache: dict[str, Any] | None = None,
+    *,
+    candles_by_symbol: dict[str, list[dict[str, Any]]] | None = None,
 ) -> tuple[dict[str, Any], dict[str, Any]]:
     """Check every WORKING order against the current fresh quote and fill
     the ones whose trigger condition holds.
@@ -507,12 +577,21 @@ def process_paper_orders(
             )
             continue
         trigger = _trigger_reason(order, price)
-        if trigger is None:
+        path_fill: tuple[Decimal, str] | None = None
+        if trigger is None and candles_by_symbol:
+            path_fill = _path_trigger(order, candles_by_symbol.get(symbol) or [])
+        if trigger is None and path_fill is None:
             continue
         quantity = Decimal(order["quantity"])
-        fill_price, fill_basis = _fill_price_for_side(
-            str(order["side"]), price, side_books.get(symbol)
-        )
+        if path_fill is not None:
+            fill_price, trigger = path_fill
+            fill_basis = (
+                "path_limit_price" if str(order.get("type")) == "LIMIT" else "path_candle_close"
+            )
+        else:
+            fill_price, fill_basis = _fill_price_for_side(
+                str(order["side"]), price, side_books.get(symbol)
+            )
         notional = quantity * fill_price
         fee = (notional * FEE_RATE).quantize(Decimal("0.01"), rounding=ROUND_HALF_UP)
         if order["side"] == "BUY" and notional + fee > Decimal(paper_state["account"]["cash"]):
