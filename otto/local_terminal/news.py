@@ -535,8 +535,38 @@ def fetch_gdelt_doc_articles(
         headers={"User-Agent": "LocalTerminal/0.1 clean-room local app"},
     )
     open_url = opener or urllib.request.urlopen
-    with open_url(request, timeout=8) as response:
-        body = response.read()
+    body: bytes | None = None
+    last_error: Exception | None = None
+    # GDELT serves a complete JSON payload alongside its 429 rate-limit code —
+    # discarding it turned a throttle into a fake outage (2026-07-22 owner
+    # fix-it round). A transient SSL/handshake timeout gets one quick retry.
+    for attempt in (1, 2):
+        try:
+            # 20s, not the default 8: when GDELT throttles it also stalls the
+            # TLS handshake, and curl-level probes confirm the payload arrives
+            # after the 8s mark — a tight timeout misreads slow as down.
+            with open_url(request, timeout=20) as response:
+                body = response.read()
+            break
+        except urllib.error.HTTPError as exc:
+            candidate = exc.read()
+            try:
+                probe = json.loads(candidate.decode("utf-8-sig"))
+            except (ValueError, UnicodeDecodeError):
+                probe = None
+            if isinstance(probe, dict) and isinstance(probe.get("articles"), list):
+                body = candidate
+                break
+            raise NewsError(
+                f"GDELT DOC rate limited or unavailable (HTTP {exc.code}); "
+                "retry after the per-IP throttle window"
+            ) from exc
+        except (urllib.error.URLError, TimeoutError, OSError) as exc:
+            last_error = exc
+            if attempt == 2:
+                raise
+    if body is None:  # pragma: no cover - loop always breaks or raises
+        raise NewsError(f"GDELT DOC fetch failed: {last_error}")
     payload = json.loads(body.decode("utf-8-sig"))
     articles = payload.get("articles") if isinstance(payload, dict) else None
     if not isinstance(articles, list):

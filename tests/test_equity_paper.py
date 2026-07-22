@@ -237,7 +237,7 @@ def test_tw_odd_lot_fills_with_stated_caveat() -> None:
     )
     assert order["status"] == "FILLED"
     assert order["lot_type"] == "odd_lot"
-    assert "not modeled" in order["odd_lot_note"]
+    assert "unavailable" in order["odd_lot_note"]  # no session row injected here
     fill = state["fills"][-1]
     assert fill["lot_type"] == "odd_lot"
     assert fill["fee"] == "20.00"  # minimum applies to tiny odd-lot notionals
@@ -300,6 +300,7 @@ def test_tw_endpoint_fills_via_injected_lookup(tmp_path, monkeypatch) -> None:
         }
 
     monkeypatch.setattr(server, "YAHOO_FETCHER", _fake_yahoo)
+    monkeypatch.setattr(server, "fetch_twse_odd_lot_row", lambda code: None)
     client = TestClient(server.create_app())
 
     response = client.post(
@@ -563,3 +564,89 @@ def test_equity_process_and_cancel_endpoints(tmp_path, monkeypatch) -> None:
     assert cancelled.status_code == 200
     assert cancelled.json()["cancelled_order"]["status"] == "CANCELLED"
     assert cancelled.json()["open_orders_remaining"] == 0
+
+
+# ---- odd-lot session pricing (2026-07-22): real TWT53U data, not a caveat ----
+
+
+def _odd_lot_row(price="602.00", bid="601.00", ask="603.00") -> dict:
+    return {"code": "2330", "price": price, "bid": bid, "ask": ask,
+            "source": "twse_odd_lot_twt53u", "retrieved_at": "now"}
+
+
+def test_odd_lot_buy_pays_the_odd_lot_session_ask() -> None:
+    state, order = place_equity_paper_order(
+        default_tw_equity_paper_state(),
+        {"symbol": "2330.TW", "side": "BUY", "quantity": "10"},
+        _tw_quote(price="600.00"),
+        TW_BOOK,
+        odd_lot_row=_odd_lot_row(),
+    )
+    assert order["odd_lot_fill_basis"] == "odd_lot_ask"
+    assert "TWT53U" in order["odd_lot_note"]
+    fill = state["fills"][-1]
+    assert fill["price"] == "603.00"  # odd-lot ask, not the regular 600
+    assert fill["odd_lot_fill_basis"] == "odd_lot_ask"
+
+
+def test_odd_lot_sell_hits_the_odd_lot_bid_and_far_data_is_refused() -> None:
+    state, _ = place_equity_paper_order(
+        default_tw_equity_paper_state(),
+        {"symbol": "2330.TW", "side": "BUY", "quantity": "10"},
+        _tw_quote(price="600.00"),
+        TW_BOOK,
+    )
+    state, sell = place_equity_paper_order(
+        state,
+        {"symbol": "2330.TW", "side": "SELL", "quantity": "10"},
+        _tw_quote(price="600.00"),
+        TW_BOOK,
+        odd_lot_row=_odd_lot_row(),
+    )
+    assert sell["odd_lot_fill_basis"] == "odd_lot_bid"
+    assert state["fills"][-1]["price"] == "601.00"
+
+    # odd-lot data >5% away from the regular quote = mixed vintage, refused
+    state2, order2 = place_equity_paper_order(
+        default_tw_equity_paper_state(),
+        {"symbol": "2330.TW", "side": "BUY", "quantity": "10"},
+        _tw_quote(price="600.00"),
+        TW_BOOK,
+        odd_lot_row=_odd_lot_row(price="700.00", bid="699.00", ask="701.00"),
+    )
+    assert "odd_lot_fill_basis" not in order2
+    assert state2["fills"][-1]["price"] == "600.00"
+    assert "unavailable" in state2["fills"][-1]["odd_lot_note"]
+
+
+def test_resting_odd_lot_limit_fills_at_session_price_when_processed() -> None:
+    state, order = place_equity_paper_order(
+        default_tw_equity_paper_state(),
+        {"symbol": "2330.TW", "side": "BUY", "quantity": "10", "order_type": "LIMIT",
+         "limit_price": "590.00"},
+        _tw_quote(price="600.00"),
+        TW_BOOK,
+    )
+    assert order["status"] == "WORKING"
+    state, report = process_equity_paper_orders(
+        state,
+        [_tw_quote(price="588.00", previous_close="595.00")],
+        TW_BOOK,
+        odd_lot_rows={"2330": _odd_lot_row(price="589.00", bid="588.50", ask="589.50")},
+    )
+    assert len(report["filled"]) == 1
+    fill = state["fills"][-1]
+    assert fill["price"] == "589.50"  # odd-lot session ask
+    assert fill["odd_lot_fill_basis"] == "odd_lot_ask"
+
+
+def test_fetch_twse_odd_lot_row_parses_and_misses_cleanly() -> None:
+    from otto.local_terminal.twse_data import fetch_twse_odd_lot_row
+
+    rows = [{"Code": "2330", "Name": "台積電", "TradePrice": "2410.0000",
+             "BestBidPrice": "2410.0000", "BestAskPrice": "2415.0000"}]
+    row = fetch_twse_odd_lot_row("2330.TW", reader=lambda: rows)
+    assert row["ask"] == "2415.0000"
+    assert row["bid"] == "2410.0000"
+    assert fetch_twse_odd_lot_row("9999", reader=lambda: rows) is None
+    assert fetch_twse_odd_lot_row("2330", reader=lambda: (_ for _ in ()).throw(OSError())) is None

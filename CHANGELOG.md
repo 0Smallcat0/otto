@@ -2,6 +2,31 @@
 
 ## Unreleased
 
+- Owner fix-it round (2026-07-22): disclosed limitations are now fixed
+  capabilities, not caveats.
+  - News matching uses official security names from local reference caches
+    (Nasdaq Trader directory for US listings, TWSE daily quotes for Chinese
+    names) on top of tickers and the small alias table — 2317.TW now matches
+    鴻海 headlines and AVGO matches "Broadcom" without hand-curated entries.
+  - TW odd-lot fills price against the real TWSE odd-lot session data
+    (TWT53U): BUY pays the odd-lot ask, SELL hits the odd-lot bid, with a
+    ±5% band guard against mixed-vintage data and a stated fallback to the
+    regular-session quote when the dataset is unreachable.
+  - Resting crypto orders now check the price PATH between processing runs
+    against cached closed candles: a LIMIT touched by a candle range fills
+    at the limit price, a triggered STOP fills at that candle's close (never
+    at the stop level itself); STOP_LIMIT stays trigger-at-processing only.
+  - GDELT news refresh accepts the article payload GDELT serves alongside
+    its 429 rate-limit code, retries once, and gets a 20s timeout (a
+    throttled GDELT stalls the TLS handshake past 8s) — a throttle no longer
+    reads as an outage. BLS macro fetch collapses three per-series GETs into
+    one multi-series POST (the unregistered quota is 25 requests/day) and a
+    same-session BLS cache reads as live-with-age instead of stale_cache.
+  - Stooq is retired: the upstream closed its no-key CSV quote endpoint, so
+    the provider registry and the refresh sweep now report `retired` with
+    the successor (`markets_quote_lookup`, Yahoo) instead of a daily
+    failure. New `retired` provider state in the catalog.
+
 - Equity LIMIT orders on both books (129 actions): a LIMIT already at or
   better than the live quote fills immediately at the market price; anything
   else rests WORKING until `equity_process_paper_orders` /

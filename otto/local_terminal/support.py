@@ -79,7 +79,8 @@ HELP_SECTIONS: tuple[dict[str, Any], ...] = (
         "label": "Local Terms",
         "items": [
             "Personal local research tool",
-            "No investment advice or broker execution",
+            "Analysis and journaled paper decisions, not licensed financial "
+            "advice; no broker execution",
             "Paper and dry-run surfaces remain isolated from live execution",
             "Live-mode work requires a separate safety contract",
         ],

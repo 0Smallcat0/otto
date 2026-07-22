@@ -96,10 +96,13 @@ def test_stooq_refresh_endpoint_writes_public_cache_and_markets_contract(
     assert (tmp_path / "market_data" / "quotes" / "stooq" / "EURUSD.json").is_file()
 
     assert markets.json()["research_summary"]["stooq_quotes"]["row_count"] == 4
+    # 2026-07-22: the upstream closed the endpoint, so the registry reports
+    # the provider as retired with its successor even while the injected
+    # fetcher keeps the refresh endpoint itself testable.
     assert any(
         provider["provider_id"] == STOOQ_PROVIDER_ID
-        and provider["health"]["state"] == "active"
-        and provider["health"]["cache_id"] == "stooq_quote_AAPLUS"
+        and provider["health"]["state"] == "retired"
+        and "markets_quote_lookup" in provider["health"]["message"]
         for provider in providers.json()["providers"]
     )
     assert local_state.json()["storage"]["stooq_quote_cache"].endswith("AAPLUS.json")
