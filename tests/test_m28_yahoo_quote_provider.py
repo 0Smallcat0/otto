@@ -117,3 +117,49 @@ def test_yahoo_action_registered_in_contract(tmp_path, monkeypatch) -> None:
         actions["markets_yahoo_quote_snapshot_refresh"]["safety_class"]
         == "public_read_only_market_data"
     )
+
+
+# ---- transient-retry at order-submit time (2026-07-24 loop drill) ----
+
+
+def test_fetch_retries_once_on_transient_network_blip(monkeypatch) -> None:
+    import io
+    import json as _json
+    from urllib.error import URLError
+
+    from otto.local_terminal import yahoo_data
+
+    calls = {"n": 0}
+    good = {"chart": {"error": None, "result": [{"meta": _meta("AAPL")}]}}
+
+    def _flaky_urlopen(request, timeout=6.0):
+        calls["n"] += 1
+        if calls["n"] == 1:
+            raise URLError("connection reset")
+        return io.BytesIO(_json.dumps(good).encode("utf-8"))
+
+    monkeypatch.setattr(yahoo_data, "urlopen", _flaky_urlopen)
+    meta = yahoo_data.fetch_yahoo_quote_snapshot(symbol="AAPL")
+    assert meta["symbol"] == "AAPL"
+    assert calls["n"] == 2  # first attempt failed, retry succeeded
+
+
+def test_fetch_raises_after_two_transient_failures(monkeypatch) -> None:
+    from urllib.error import URLError
+
+    from otto.local_terminal import yahoo_data
+
+    calls = {"n": 0}
+
+    def _always_fail(request, timeout=6.0):
+        calls["n"] += 1
+        raise URLError("down")
+
+    monkeypatch.setattr(yahoo_data, "urlopen", _always_fail)
+    try:
+        yahoo_data.fetch_yahoo_quote_snapshot(symbol="AAPL")
+    except URLError:
+        pass
+    else:  # pragma: no cover
+        raise AssertionError("expected URLError after two failures")
+    assert calls["n"] == 2  # exactly one retry, then give up
