@@ -267,6 +267,23 @@ def test_every_response_contract_key_resolves(tmp_path, monkeypatch) -> None:
     # benchmark fetch — the row records its own mark staleness instead
     run("paper_snapshot_record", {"refresh": False, "note": "truth probe"})
 
+    # research ledger: record with an explicit ref_price (hermetic, no live
+    # fetch), then score with refresh=False (no matured calls yet → empty scored,
+    # every contract key still present)
+    run(
+        "research_call_record",
+        {
+            "symbol": "AAPL",
+            "stance": "accumulate",
+            "thesis": "truth probe: reasoning required for a call to be recorded",
+            "conviction": "medium",
+            "ref_price": "100",
+            "horizon_days": 30,
+            "refresh": False,
+        },
+    )
+    run("research_calls_score", {"refresh": False})
+
     # algo chain
     saved = run("algo_save_strategy", _STRATEGY_BODY)
     strategy_id = saved.get("active_strategy_id") if isinstance(saved, dict) else None

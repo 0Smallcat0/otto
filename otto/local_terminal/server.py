@@ -204,6 +204,13 @@ from otto.local_terminal.paper_history import (
     paper_history_payload,
     record_paper_snapshot,
 )
+from otto.local_terminal.research_ledger import (
+    THESIS_MAX_CHARS,
+    ResearchLedgerError,
+    record_call,
+    research_ledger_payload,
+    score_calls,
+)
 from otto.local_terminal.forum import (
     ForumError,
     add_forum_reply,
@@ -1912,6 +1919,35 @@ class PaperSnapshotUpdate(BaseModel):
     note: str | None = Field(default=None, max_length=300)
 
 
+class ResearchCallUpdate(BaseModel):
+    model_config = ConfigDict(extra="forbid")
+
+    symbol: str = Field(min_length=1)
+    stance: str = Field(pattern="^(accumulate|reduce|avoid|hold)$")
+    thesis: str = Field(min_length=1, max_length=THESIS_MAX_CHARS)
+    conviction: str = Field(default="medium", pattern="^(low|medium|high)$")
+    market: str | None = Field(default=None)
+    horizon_days: int = Field(default=30, ge=1, le=365)
+    # ref_price is normally fetched live at record time; accept an override so a
+    # call can be reconstructed in tests or from an explicit mark.
+    ref_price: str | float | int | None = Field(default=None)
+    entry_low: str | float | int | None = Field(default=None)
+    entry_high: str | float | int | None = Field(default=None)
+    invalidation: str | float | int | None = Field(default=None)
+    name: str | None = Field(default=None)
+    evidence: dict[str, Any] | None = Field(default=None)
+    refresh: bool = Field(default=True)
+
+
+class ResearchScoreUpdate(BaseModel):
+    model_config = ConfigDict(extra="forbid")
+
+    # refresh=True fetches current marks for every open call before scoring;
+    # refresh=False scores from cached marks only (a matured call with no cached
+    # mark stays open and unscored rather than being graded on stale data).
+    refresh: bool = Field(default=True)
+
+
 class NewsPacketUpdate(BaseModel):
     model_config = ConfigDict(extra="forbid")
 
@@ -3116,6 +3152,69 @@ def create_app(frontend_dist: Path | None = None) -> FastAPI:
     @app.get("/api/paper/history")
     def paper_history(limit: int = HISTORY_DEFAULT_LIMIT) -> dict[str, Any]:
         return paper_history_payload(STORE.read_paper_history_state(), limit=limit)
+
+    def _research_marks(symbols: list[str], *, refresh: bool) -> dict[str, Any]:
+        """Map symbol→Decimal price from the shared Yahoo quote path (crypto -USD)."""
+        if not symbols:
+            return {}
+        rows = _yahoo_quote_snapshot_payload_from_store(
+            refresh=refresh, symbols=list(symbols)
+        ).get("quotes", [])
+        marks: dict[str, Any] = {}
+        for row in rows:
+            if not isinstance(row, dict):
+                continue
+            sym = str(row.get("symbol", "")).upper()
+            price = row.get("price")
+            try:
+                marks[sym] = (
+                    Decimal(str(price)) if price not in (None, "N/A", "") else None
+                )
+            except (ArithmeticError, ValueError, TypeError):
+                marks[sym] = None
+        return marks
+
+    def _open_call_symbols(state: dict[str, Any]) -> list[str]:
+        return sorted(
+            {
+                str(c.get("symbol", "")).upper()
+                for c in state.get("calls", [])
+                if isinstance(c, dict) and c.get("status") == "open"
+            }
+        )
+
+    @app.post("/api/research/call")
+    def submit_research_call(update: ResearchCallUpdate) -> dict[str, Any]:
+        symbol = update.symbol.strip().upper()
+        payload = update.model_dump()
+        payload["symbol"] = symbol
+        if payload.get("ref_price") is None:
+            mark = _research_marks([symbol], refresh=update.refresh).get(symbol)
+            payload["ref_price"] = str(mark) if mark is not None else None
+        try:
+            state, call = record_call(STORE.read_research_ledger_state(), payload)
+        except ResearchLedgerError as exc:
+            raise HTTPException(status_code=400, detail=str(exc)) from exc
+        STORE.write_research_ledger_state(state)
+        return {"call": call, "read_action": "research_ledger"}
+
+    @app.post("/api/research/score")
+    def score_research_ledger(update: ResearchScoreUpdate) -> dict[str, Any]:
+        state = STORE.read_research_ledger_state()
+        marks = _research_marks(_open_call_symbols(state), refresh=update.refresh)
+        state, scored = score_calls(state, marks)
+        STORE.write_research_ledger_state(state)
+        return {
+            "scored": scored,
+            "scored_count": len(scored),
+            **research_ledger_payload(state, marks),
+        }
+
+    @app.get("/api/research/ledger")
+    def read_research_ledger(refresh: bool = False, limit: int | None = None) -> dict[str, Any]:
+        state = STORE.read_research_ledger_state()
+        marks = _research_marks(_open_call_symbols(state), refresh=refresh)
+        return research_ledger_payload(state, marks, limit=limit)
 
     @app.post("/api/crypto/refresh")
     def refresh_crypto(update: CryptoRefreshUpdate) -> dict[str, Any]:

@@ -172,6 +172,9 @@ ROUTE_CONTRACTS: tuple[RouteAgentContract, ...] = (
             "tw_equity_paper_summary",
             "paper_snapshot_record",
             "paper_history",
+            "research_call_record",
+            "research_calls_score",
+            "research_ledger_read",
             "crypto_submit_paper_order",
             "crypto_process_paper_orders",
             "equity_submit_paper_order",
@@ -2213,6 +2216,106 @@ ACTION_CONTRACTS: tuple[AgentActionContract, ...] = (
         False,
         False,
         "local_paper_state_read_only",
+        (),
+    ),
+    AgentActionContract(
+        "research_call_record",
+        "paper",
+        "Journal one reasoned buy/reduce/avoid/hold call for the owner to reference",
+        "POST",
+        "/api/research/call",
+        (
+            '{"symbol":"2330.TW","stance":"accumulate|reduce|avoid|hold","thesis":'
+            '"the reasoning, required, <=800 chars","conviction":"low|medium|high",'
+            '"horizon_days":30,"entry_low":..,"entry_high":..,"invalidation":..,'
+            '"evidence":{..},"refresh":true}; ref_price is fetched live at record '
+            "time (Yahoo path, crypto as -USD) unless supplied explicitly; market is "
+            "inferred for universe symbols"
+        ),
+        (
+            "call",
+            "call.call_id",
+            "call.symbol",
+            "call.stance",
+            "call.thesis",
+            "call.ref_price",
+            "call.matures_at",
+            "call.status",
+            "read_action",
+        ),
+        (
+            "appends one dated judgment to the research ledger "
+            "(research_ledger.json, backup-protected); analysis for the owner's own "
+            "manual trades, never an order — a call with no thesis or no live price "
+            "is refused, not guessed"
+        ),
+        True,
+        True,
+        False,
+        False,
+        "research_ledger_append_only",
+        ("provider_unavailable",),
+    ),
+    AgentActionContract(
+        "research_calls_score",
+        "paper",
+        "Score matured/invalidated calls against real subsequent price",
+        "POST",
+        "/api/research/score",
+        (
+            '{"refresh":true|false}; empty body works (refresh defaults true: fetches '
+            "current marks for every open call before scoring). A call is closed only "
+            "once its horizon elapses or its invalidation is breached; a matured call "
+            "with no usable mark stays open rather than being graded on nothing"
+        ),
+        (
+            "scored",
+            "scored_count",
+            "scorecard",
+            "scorecard.hit_rate_pct",
+            "open_count",
+            "safety",
+        ),
+        (
+            "mutates the research ledger by closing scored calls; moves inside the "
+            "flat band count as flat, not skill, and a breached invalidation closes "
+            "as invalidated regardless of where price later lands"
+        ),
+        True,
+        True,
+        False,
+        False,
+        "research_ledger_scoring_local_only",
+        ("provider_unavailable",),
+    ),
+    AgentActionContract(
+        "research_ledger_read",
+        "paper",
+        "Read journaled calls, live unrealized favor, and the honest scorecard",
+        "GET",
+        "/api/research/ledger",
+        (
+            "optional ?refresh=true to mark open calls at current prices, ?limit=N to "
+            "cap returned scored calls (newest last)"
+        ),
+        (
+            "open_calls",
+            "scored_calls",
+            "scorecard",
+            "call_count_total",
+            "purpose",
+            "safety",
+        ),
+        (
+            "read-only; open calls show unrealized favor vs their reference price, and "
+            "the scorecard's hit rate excludes flat/range outcomes so noise cannot "
+            "inflate it"
+        ),
+        False,
+        False,
+        False,
+        False,
+        "local_research_ledger_read_only",
         (),
     ),
     AgentActionContract(
