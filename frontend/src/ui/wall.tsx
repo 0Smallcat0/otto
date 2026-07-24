@@ -75,10 +75,21 @@ export function RealBookBanner({ book, markets }: { book: RealBookSlice | null; 
   const priced = positions.map((position) => {
     const quantity = Number.parseFloat(String(position.quantity ?? ""));
     const cost = Number.parseFloat(String(position.avg_cost ?? position.avg_price ?? ""));
-    const last = historyClose[String(position.symbol)]
-      ?? priceMap.get(String(position.symbol))
-      ?? Number.parseFloat(String(position.last_price ?? ""));
-    const price = Number.isFinite(last) && last > 0 ? last : cost;
+    // Prefer the book's own live mark (/api/portfolio now prices equities off
+    // Yahoo) over the daily-candle cache, which for some symbols is a stale
+    // close and was inflating the P&L. Candle/quote-map only fill in when the
+    // book has no usable live price.
+    const liveLast = Number.parseFloat(String(position.last_price ?? ""));
+    const mapped = priceMap.get(String(position.symbol));
+    const close = historyClose[String(position.symbol)];
+    const price =
+      Number.isFinite(liveLast) && liveLast > 0
+        ? liveLast
+        : Number.isFinite(mapped) && (mapped as number) > 0
+          ? (mapped as number)
+          : Number.isFinite(close) && close > 0
+            ? close
+            : cost;
     return { symbol: String(position.symbol), quantity, cost, price };
   }).filter((row) => Number.isFinite(row.quantity) && Number.isFinite(row.cost));
   const value = priced.reduce((sum, row) => sum + row.quantity * row.price, 0);
