@@ -1003,14 +1003,15 @@ def _normalize_portfolio(raw: Any, source: str | None) -> dict[str, Any]:
     if not isinstance(raw, dict):
         raise PortfolioError("Portfolio JSON object is required")
 
+    portfolio_currency = _currency(raw.get("currency", "USD"))
     transactions = _normalize_transactions(raw.get("transactions", []))
     raw_positions = raw.get("positions", [])
     if raw_positions:
-        positions = _normalize_positions(raw_positions)
+        positions = _normalize_positions(raw_positions, portfolio_currency)
         if transactions:
             _assert_positions_match_transactions(positions, transactions)
     elif transactions:
-        positions = _positions_from_transactions(transactions)
+        positions = _positions_from_transactions(transactions, portfolio_currency)
     else:
         positions = []
 
@@ -1023,7 +1024,7 @@ def _normalize_portfolio(raw: Any, source: str | None) -> dict[str, Any]:
         "portfolio_id": portfolio_id,
         "name": _required_text(raw.get("name"), "portfolio.name", max_length=80),
         "owner": _optional_text(raw.get("owner"), "Local User", max_length=80),
-        "currency": _currency(raw.get("currency", "USD")),
+        "currency": portfolio_currency,
         "positions": positions,
         "transactions": transactions,
         "source": portfolio_source,
@@ -1037,7 +1038,7 @@ def _normalize_portfolio(raw: Any, source: str | None) -> dict[str, Any]:
     }
 
 
-def _normalize_position(raw: dict[str, Any]) -> dict[str, str]:
+def _normalize_position(raw: dict[str, Any], default_currency: str = "USD") -> dict[str, str]:
     symbol = _symbol(raw.get("symbol"))
     quantity = _positive_decimal(raw.get("quantity"), "Position quantity", allow_zero=False)
     avg_cost = _positive_decimal(raw.get("avg_cost", raw.get("cost", "0")), "Average cost")
@@ -1050,14 +1051,21 @@ def _normalize_position(raw: dict[str, Any]) -> dict[str, str]:
         "quantity": _amount(quantity),
         "avg_cost": _money(avg_cost),
         "last_price": _money(last_price),
-        "currency": _currency(raw.get("currency", "USD")),
+        # Single-currency book: a position is denominated in the portfolio's
+        # currency (value is summed without FX conversion), so the per-row unit
+        # must follow the book. An imported TWD holding tagged "USD" showed the
+        # wrong currency; forcing it here also corrects already-stored rows on
+        # read, no state migration needed.
+        "currency": default_currency,
         "day_change_pct": _pct_value(raw.get("day_change_pct", "0")),
         "beta": _ratio_value(raw.get("beta", "1")),
         "volatility_pct": _pct_value(raw.get("volatility_pct", "20")),
     }
 
 
-def _normalize_positions(raw_positions: Any) -> list[dict[str, str]]:
+def _normalize_positions(
+    raw_positions: Any, default_currency: str = "USD"
+) -> list[dict[str, str]]:
     if not isinstance(raw_positions, list):
         raise PortfolioError("Positions must be a list")
     if len(raw_positions) > MAX_POSITIONS:
@@ -1066,7 +1074,7 @@ def _normalize_positions(raw_positions: Any) -> list[dict[str, str]]:
     for raw in raw_positions:
         if not isinstance(raw, dict):
             raise PortfolioError("Position rows must be objects")
-        positions.append(_normalize_position(raw))
+        positions.append(_normalize_position(raw, default_currency))
     return positions
 
 
@@ -1125,7 +1133,9 @@ def _assert_positions_match_transactions(
         raise PortfolioError("Positions do not match transaction holdings")
 
 
-def _positions_from_transactions(transactions: list[dict[str, str]]) -> list[dict[str, str]]:
+def _positions_from_transactions(
+    transactions: list[dict[str, str]], default_currency: str = "USD"
+) -> list[dict[str, str]]:
     positions: dict[str, dict[str, Decimal | str]] = {}
     for transaction in transactions:
         symbol = transaction["symbol"]
@@ -1169,7 +1179,8 @@ def _positions_from_transactions(transactions: list[dict[str, str]]) -> list[dic
                 "quantity": state["quantity"],
                 "avg_cost": state["avg_cost"],
                 "last_price": state["last_price"],
-            }
+            },
+            default_currency,
         )
         for symbol, state in positions.items()
         if isinstance(state.get("quantity"), Decimal) and state["quantity"] > 0
