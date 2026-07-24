@@ -164,8 +164,23 @@ def fetch_yahoo_quote_snapshot(*, symbol: str, timeout: float = 6.0) -> dict[str
     safe_symbol = _safe_symbol(symbol) or YAHOO_WATCHLIST[0]
     url = f"{YAHOO_QUOTE_URL}{quote(safe_symbol, safe='^=.-')}?range=1d&interval=1d"
     request = Request(url, headers={"User-Agent": YAHOO_USER_AGENT, "Accept": "application/json"})
-    with urlopen(request, timeout=timeout) as response:
-        payload = json.loads(response.read().decode("utf-8"))
+    # One retry on a transient network blip: this quote is fetched live at
+    # order-submit time, so a single dropped connection was refusing real
+    # orders that succeeded on an identical retry (2026-07-24 loop drill —
+    # the TW submit 400'd once, then filled). A genuine Yahoo error (bad
+    # symbol, error block) still raises immediately below.
+    last_error: OSError | None = None
+    for attempt in (1, 2):
+        try:
+            with urlopen(request, timeout=timeout) as response:
+                payload = json.loads(response.read().decode("utf-8"))
+            break
+        except (TimeoutError, URLError, OSError) as exc:
+            last_error = exc
+            if attempt == 2:
+                raise
+    else:  # pragma: no cover - loop always breaks or raises
+        raise YahooQuoteError(f"Yahoo quote fetch failed for {safe_symbol}: {last_error}")
     chart = payload.get("chart") if isinstance(payload, dict) else None
     if not isinstance(chart, dict):
         raise YahooQuoteError("Yahoo chart response has no chart block")
