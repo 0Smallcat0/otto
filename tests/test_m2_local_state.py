@@ -112,6 +112,7 @@ def test_local_state_store_writes_repo_local_json(tmp_path: Path) -> None:
         "sec_fund_tickers_cache": "market_data/funds/sec/company_tickers_mf.json",
         "paper_state": "artifacts/paper/paper_state.json",
         "paper_history": "artifacts/paper/paper_history.json",
+        "research_ledger": "artifacts/research/research_ledger.json",
         "portfolio_state": "artifacts/portfolio/portfolio_state.json",
         "chat_state": "artifacts/chat/chat_state.json",
         "algo_state": "artifacts/algo/algo_state.json",
