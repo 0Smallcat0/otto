@@ -23,7 +23,10 @@ otto-mcp = "otto.local_terminal.mcp_server:main"
 dev = [
     "httpx",
     "pytest",
-    "ruff",
+    # Pin ruff so CI and local agree: an unpinned ruff let CI pull a newer
+    # release (0.16.x) that added ~285 findings across the tree and turned a
+    # PowerShell-only commit red (2026-07-24). Bump deliberately, not by drift.
+    "ruff==0.15.14",
 ]
 
 [tool.setuptools.packages.find]
