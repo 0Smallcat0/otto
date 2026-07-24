@@ -2443,7 +2443,10 @@ ACTION_CONTRACTS: tuple[AgentActionContract, ...] = (
             '{"symbols":["BTCUSDT","AAPL"],"limit":8,"refresh":false}; one ~2KB read '
             "for the judgment step: bounded headlines with age, the operator digest "
             "when written, and feed freshness; items mentioning a held symbol are "
-            'tagged and sorted first; "refresh":true pulls public feeds first'
+            'tagged and sorted first; "refresh":true pulls public feeds first AND, '
+            "when symbols are named, merges Yahoo public per-symbol news (no key) so "
+            "US single-name catalysts appear — a Yahoo outage degrades to a "
+            "source_error note, never a failed packet"
         ),
         (
             "requested_symbols",
