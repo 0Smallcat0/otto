@@ -14,6 +14,8 @@ from otto.local_terminal.research_ledger import (
     normalize_research_ledger_state,
     record_call,
     research_ledger_payload,
+    research_scan_payload,
+    scan_candidates,
     score_calls,
 )
 
@@ -150,6 +152,34 @@ def test_payload_shows_unrealized_favor_for_open_calls() -> None:
     assert row["unrealized_favor_pct"] == "5.00"
     assert payload["open_count"] == 1
     assert payload["scored_count"] == 0
+
+
+def test_scan_ranks_by_absolute_move_and_flags_open_calls() -> None:
+    quotes = {
+        "2330.TW": {"price": "2355", "change_pct": "-2.08", "currency": "TWD"},
+        "GOOGL": {"price": "318", "change_pct": "-7.13", "currency": "USD"},
+        "BTC-USD": {"price": "65300", "change_pct": "0.37", "currency": "USD"},
+        # NVDA left unpriced → must sink below priced rows
+    }
+    rows = scan_candidates(quotes, open_symbols=["2330.TW"])
+    by_symbol = {r["symbol"]: r for r in rows}
+    # biggest absolute mover first among priced names
+    priced = [r for r in rows if r["change_pct"] is not None]
+    assert priced[0]["symbol"] == "GOOGL"  # |-7.13| tops |-2.08| and |0.37|
+    assert by_symbol["2330.TW"]["has_open_call"] is True
+    assert by_symbol["GOOGL"]["has_open_call"] is False
+    # unpriced names present but ranked after every priced one
+    assert by_symbol["NVDA"]["change_pct"] is None
+    assert rows.index(by_symbol["NVDA"]) > rows.index(by_symbol["BTC-USD"])
+    assert len(rows) == len(DEFAULT_UNIVERSE)
+
+
+def test_scan_payload_counts_priced_and_notes_signal() -> None:
+    payload = research_scan_payload({"AAPL": {"price": "321", "change_pct": "-1.3"}}, [])
+    assert payload["universe_size"] == len(DEFAULT_UNIVERSE)
+    assert payload["priced_count"] == 1
+    assert "not a call" in payload["note"].lower()
+    assert payload["safety"]["paper_only"] is True
 
 
 def test_normalize_drops_junk_and_caps() -> None:

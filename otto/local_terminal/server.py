@@ -205,10 +205,12 @@ from otto.local_terminal.paper_history import (
     record_paper_snapshot,
 )
 from otto.local_terminal.research_ledger import (
+    DEFAULT_UNIVERSE,
     THESIS_MAX_CHARS,
     ResearchLedgerError,
     record_call,
     research_ledger_payload,
+    research_scan_payload,
     score_calls,
 )
 from otto.local_terminal.yahoo_news import collect_yahoo_news
@@ -3240,6 +3242,27 @@ def create_app(frontend_dist: Path | None = None) -> FastAPI:
         state = STORE.read_research_ledger_state()
         marks = _research_marks(_open_call_symbols(state), refresh=refresh)
         return research_ledger_payload(state, marks, limit=limit)
+
+    @app.get("/api/research/scan")
+    def scan_research_universe(refresh: bool = False) -> dict[str, Any]:
+        # One bounded read over the whole self-sourced universe so the agent can
+        # pick where to form a thesis instead of pulling 16 symbols by hand. The
+        # Yahoo lookup path caps at 8/call, so the 16-name universe is batched.
+        symbols = list(DEFAULT_UNIVERSE)
+        quotes: dict[str, Any] = {}
+        for start in range(0, len(symbols), 8):
+            rows = _yahoo_quote_snapshot_payload_from_store(
+                refresh=refresh, symbols=symbols[start : start + 8]
+            ).get("quotes", [])
+            for row in rows:
+                if isinstance(row, dict):
+                    quotes[str(row.get("symbol", "")).upper()] = {
+                        "price": row.get("price"),
+                        "change_pct": row.get("change_percent"),
+                        "currency": row.get("currency"),
+                    }
+        state = STORE.read_research_ledger_state()
+        return research_scan_payload(quotes, _open_call_symbols(state))
 
     @app.post("/api/crypto/refresh")
     def refresh_crypto(update: CryptoRefreshUpdate) -> dict[str, Any]:
