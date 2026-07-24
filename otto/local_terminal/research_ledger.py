@@ -309,6 +309,66 @@ def _scorecard(scored: list[dict[str, Any]]) -> dict[str, Any]:
     }
 
 
+def scan_candidates(
+    quotes: dict[str, dict[str, Any]] | None,
+    open_symbols: tuple[str, ...] | list[str] = (),
+) -> list[dict[str, Any]]:
+    """Rank the self-sourced universe by absolute 1-day move.
+
+    `quotes` maps symbol→{price, change_pct, currency}. A big move only *flags*
+    a name worth researching — it is not itself a call. `has_open_call` marks
+    names already in the ledger so a scan does not invite duplicate calls. Rows
+    with no usable change sink to the bottom (missing data, not "no move").
+    """
+    quotes = quotes or {}
+    open_set = {str(symbol).strip().upper() for symbol in open_symbols}
+    rows: list[dict[str, Any]] = []
+    for symbol, (market, name) in DEFAULT_UNIVERSE.items():
+        quote = quotes.get(symbol) if isinstance(quotes.get(symbol), dict) else {}
+        price = _decimal(quote.get("price"))
+        change = _decimal(quote.get("change_pct"))
+        rows.append(
+            {
+                "symbol": symbol,
+                "name": name,
+                "market": market,
+                "price": str(price) if price is not None else None,
+                "change_pct": f"{change:.2f}" if change is not None else None,
+                "currency": quote.get("currency") or None,
+                "has_open_call": symbol in open_set,
+                "_abs": abs(change) if change is not None else None,
+            }
+        )
+    rows.sort(key=lambda row: (row["_abs"] is None, -(row["_abs"] or Decimal(0))))
+    for row in rows:
+        row.pop("_abs", None)
+    return rows
+
+
+def research_scan_payload(
+    quotes: dict[str, dict[str, Any]] | None,
+    open_symbols: tuple[str, ...] | list[str] = (),
+) -> dict[str, Any]:
+    candidates = scan_candidates(quotes, open_symbols)
+    priced = [row for row in candidates if row["change_pct"] is not None]
+    return {
+        "as_of": datetime.now(tz=UTC).isoformat(timespec="seconds"),
+        "universe_size": len(DEFAULT_UNIVERSE),
+        "priced_count": len(priced),
+        "candidates": candidates,
+        "quote_source": "yahoo_finance_public_quote_snapshot",
+        "record_action": "research_call_record",
+        "note": (
+            "1-day change is the only signal here — a large move flags a name to "
+            "research, it is NOT a call; form a thesis (with news/context) before "
+            "recording one. has_open_call marks names already journaled. A null "
+            "change_pct is missing data, not a flat tape; run with refresh=true to "
+            "fetch current marks."
+        ),
+        "safety": {"paper_only": True, "live_execution": "disabled"},
+    }
+
+
 def research_ledger_payload(
     state: dict[str, Any],
     marks: dict[str, Decimal | None] | None = None,

@@ -175,6 +175,7 @@ ROUTE_CONTRACTS: tuple[RouteAgentContract, ...] = (
             "research_call_record",
             "research_calls_score",
             "research_ledger_read",
+            "research_scan",
             "crypto_submit_paper_order",
             "crypto_process_paper_orders",
             "equity_submit_paper_order",
@@ -2310,6 +2311,39 @@ ACTION_CONTRACTS: tuple[AgentActionContract, ...] = (
             "read-only; open calls show unrealized favor vs their reference price, and "
             "the scorecard's hit rate excludes flat/range outcomes so noise cannot "
             "inflate it"
+        ),
+        False,
+        False,
+        False,
+        False,
+        "local_research_ledger_read_only",
+        (),
+    ),
+    AgentActionContract(
+        "research_scan",
+        "paper",
+        "Scan the self-sourced universe for candidates to research",
+        "GET",
+        "/api/research/scan",
+        (
+            "optional ?refresh=true to fetch current marks (default false reads "
+            "cached quotes); one bounded read over the ~16-name universe ranked by "
+            "absolute 1-day move"
+        ),
+        (
+            "candidates",
+            "candidates[].symbol",
+            "candidates[].change_pct",
+            "candidates[].has_open_call",
+            "universe_size",
+            "priced_count",
+            "note",
+            "safety",
+        ),
+        (
+            "read-only; 1-day change only flags a name to research, it is not a "
+            "call — has_open_call marks names already journaled so a scan does not "
+            "invite duplicates, and a null change_pct is missing data not a flat tape"
         ),
         False,
         False,
