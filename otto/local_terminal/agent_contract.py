@@ -176,6 +176,7 @@ ROUTE_CONTRACTS: tuple[RouteAgentContract, ...] = (
             "research_calls_score",
             "research_ledger_read",
             "research_scan",
+            "market_sessions",
             "crypto_submit_paper_order",
             "crypto_process_paper_orders",
             "equity_submit_paper_order",
@@ -2350,6 +2351,38 @@ ACTION_CONTRACTS: tuple[AgentActionContract, ...] = (
         False,
         False,
         "local_research_ledger_read_only",
+        (),
+    ),
+    AgentActionContract(
+        "market_sessions",
+        "paper",
+        "Check whether each market is open before paying to fetch a closed tape",
+        "GET",
+        "/api/market/sessions",
+        (
+            "no body; a cheap no-network calendar — the loop checks this FIRST and, "
+            "when all_equity_closed is true, holds without fetching quotes/news that "
+            "cannot have moved"
+        ),
+        (
+            "sessions",
+            "sessions[].market",
+            "sessions[].state",
+            "any_equity_open",
+            "all_equity_closed",
+            "note",
+            "safety",
+        ),
+        (
+            "read-only, no network; regular cash sessions only and ignores exchange "
+            "holidays, US hours assume EDT and shift ~1h under EST — a weekend "
+            "'closed' is exact, intraday edges approximate; crypto is 24x7"
+        ),
+        False,
+        False,
+        False,
+        False,
+        "local_market_calendar_read_only",
         (),
     ),
     AgentActionContract(

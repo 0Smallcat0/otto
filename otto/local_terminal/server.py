@@ -204,6 +204,7 @@ from otto.local_terminal.paper_history import (
     paper_history_payload,
     record_paper_snapshot,
 )
+from otto.local_terminal.market_calendar import market_sessions_payload
 from otto.local_terminal.research_ledger import (
     DEFAULT_UNIVERSE,
     THESIS_MAX_CHARS,
@@ -3243,6 +3244,13 @@ def create_app(frontend_dist: Path | None = None) -> FastAPI:
         marks = _research_marks(_open_call_symbols(state), refresh=refresh)
         return research_ledger_payload(state, marks, limit=limit)
 
+    @app.get("/api/market/sessions")
+    def market_sessions() -> dict[str, Any]:
+        # Cheap, no-network calendar the loop checks FIRST: if the equity tape is
+        # closed (weekend/after-hours) a scan's "movers" are last session's, so
+        # the round can hold without paying to fetch quotes/news that can't move.
+        return market_sessions_payload()
+
     @app.get("/api/research/scan")
     def scan_research_universe(refresh: bool = False) -> dict[str, Any]:
         # One bounded read over the whole self-sourced universe so the agent can
@@ -3262,7 +3270,11 @@ def create_app(frontend_dist: Path | None = None) -> FastAPI:
                         "currency": row.get("currency"),
                     }
         state = STORE.read_research_ledger_state()
-        return research_scan_payload(quotes, _open_call_symbols(state))
+        payload = research_scan_payload(quotes, _open_call_symbols(state))
+        # Stamp session state so a closed-market scan cannot be mistaken for a
+        # fresh tape — its change_pct is the last session's move.
+        payload["market_sessions"] = market_sessions_payload()
+        return payload
 
     @app.post("/api/crypto/refresh")
     def refresh_crypto(update: CryptoRefreshUpdate) -> dict[str, Any]:
