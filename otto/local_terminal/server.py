@@ -1210,6 +1210,64 @@ def _merge_yahoo_symbol_news(payload: dict[str, Any], symbols: list[str]) -> Non
         payload["status"] = status
 
 
+def _portfolio_equity_price_rows(state: dict[str, Any]) -> list[dict[str, Any]]:
+    """Live Yahoo quotes for an imported portfolio's equity positions.
+
+    The portfolio pricer only ever read the crypto/markets cache, so equity
+    holdings (e.g. TW stocks) never matched and stayed frozen at their
+    import-time snapshot price forever — a book imported on 2026-07-07 kept
+    showing a stale P&L. This fetches current marks (numeric TW listing codes
+    like 2834/00982A get a .TW suffix for Yahoo) and returns them as
+    market-cache rows keyed by the bare symbol, so the existing price-book path
+    prices them live. Best-effort: a fetch miss leaves that symbol on its
+    snapshot rather than raising.
+    """
+    pf_state = state if isinstance(state, dict) else {}
+    portfolios = pf_state.get("portfolios") if isinstance(pf_state.get("portfolios"), dict) else {}
+    active = portfolios.get(pf_state.get("active_portfolio_id"))
+    if not isinstance(active, dict):
+        return []
+    want: dict[str, str] = {}  # yahoo symbol -> bare portfolio symbol
+    for position in active.get("positions", []):
+        if not isinstance(position, dict) or str(position.get("asset_class")) == "Crypto":
+            continue
+        bare = str(position.get("symbol") or "").strip().upper()
+        if not bare:
+            continue
+        yahoo_symbol = bare
+        if "." not in bare and bare[0].isdigit():  # TW listing codes are numeric-led
+            yahoo_symbol = f"{bare}.TW"
+        want[yahoo_symbol] = bare
+    if not want:
+        return []
+    rows: list[dict[str, Any]] = []
+    symbols = list(want)
+    for start in range(0, len(symbols), 8):
+        quotes = _yahoo_quote_snapshot_payload_from_store(
+            refresh=True, symbols=symbols[start : start + 8]
+        ).get("quotes", [])
+        for quote in quotes:
+            if not isinstance(quote, dict):
+                continue
+            yahoo_symbol = str(quote.get("symbol", "")).upper()
+            price = quote.get("price")
+            if yahoo_symbol not in want or price in (None, "N/A", ""):
+                continue
+            rows.append(
+                {
+                    "symbol": want[yahoo_symbol],
+                    "price": str(price),
+                    "chg_pct": str(quote.get("change_percent") or "0"),
+                    "source": "yahoo_finance_public_quote_snapshot",
+                    "state": "live",
+                    "provider_id": "yahoo_finance_public_quote_snapshot",
+                    "retrieved_at": str(quote.get("retrieved_at") or ""),
+                    "cache_path": "market_data/quotes/yahoo/",
+                }
+            )
+    return rows
+
+
 def _moex_quote_snapshot_payload_from_store(
     *,
     refresh: bool = False,
@@ -3311,13 +3369,36 @@ def create_app(frontend_dist: Path | None = None) -> FastAPI:
         )
 
     @app.get("/api/portfolio")
-    def portfolio() -> dict[str, Any]:
-        return _portfolio_payload_with_prices(STORE.read_portfolio_state())
+    def portfolio(refresh: bool = True) -> dict[str, Any]:
+        # Default live: an imported book should show current marks, not its
+        # frozen import price. refresh=false skips the equity fetch for hermetic
+        # reads (tests, rapid mutations).
+        return _portfolio_payload_with_prices(STORE.read_portfolio_state(), refresh=refresh)
 
-    def _portfolio_payload_with_prices(state: dict[str, Any]) -> dict[str, Any]:
+    def _portfolio_payload_with_prices(
+        state: dict[str, Any], *, refresh: bool = False
+    ) -> dict[str, Any]:
+        market_cache = STORE.read_market_cache() or {}
+        equity_rows = _portfolio_equity_price_rows(state) if refresh else []
+        if equity_rows:
+            base_rows = market_cache.get("rows") if isinstance(market_cache.get("rows"), list) else []
+            market_cache = {**market_cache, "rows": [*base_rows, *equity_rows]}
+            status = market_cache.get("status") if isinstance(market_cache.get("status"), dict) else {}
+            source = str(status.get("source") or "")
+            # The crypto cache source gates whether any rows are read; if it is
+            # missing/unavailable, stamp an allowed equity source so the live
+            # portfolio marks are not discarded with it.
+            if not source or source in {"offline_fixture", "public_provider_unavailable"}:
+                market_cache["status"] = {
+                    **status,
+                    "source": "yahoo_finance_public_quote_snapshot",
+                    "state": "live",
+                    "last_update": datetime.now(tz=UTC).isoformat(timespec="seconds"),
+                    "cache_path": "market_data/quotes/yahoo/",
+                }
         return portfolio_payload(
             state,
-            STORE.read_market_cache(),
+            market_cache,
             STORE.read_crypto_detail_cache(),
             STORE.root,
         )
