@@ -10,6 +10,7 @@ market-cache rows keyed by the bare symbol.
 from __future__ import annotations
 
 from otto.local_terminal import server
+from otto.local_terminal.portfolio import normalize_portfolio_state
 
 
 def _state():
@@ -73,6 +74,29 @@ def test_missing_quote_leaves_symbol_out_not_faked(monkeypatch):
     rows = server._portfolio_equity_price_rows(_state())
     symbols = {r["symbol"] for r in rows}
     assert symbols == {"2834"}  # 00982A dropped, AAPL absent from fake → dropped
+
+
+def test_position_currency_follows_the_book_not_a_hardcoded_usd():
+    # A TWD book whose imported rows are (wrongly) tagged USD must normalize the
+    # positions to TWD — the book sums value without FX conversion, so a "USD"
+    # tag on a TWD holding is just a wrong unit. Corrects stored rows on read.
+    state = {
+        "active_portfolio_id": "pf1",
+        "portfolios": {
+            "pf1": {
+                "portfolio_id": "pf1",
+                "name": "我的台股",
+                "currency": "TWD",
+                "positions": [
+                    {"symbol": "2834", "quantity": "2120", "avg_cost": "14.67", "currency": "USD"},
+                    {"symbol": "00982A", "quantity": "1000", "avg_cost": "15.15"},
+                ],
+            }
+        },
+    }
+    normalized = normalize_portfolio_state(state, strict=False)
+    positions = normalized["portfolios"]["pf1"]["positions"]
+    assert all(p["currency"] == "TWD" for p in positions)
 
 
 def test_no_active_portfolio_returns_empty(monkeypatch):
