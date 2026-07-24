@@ -211,6 +211,7 @@ from otto.local_terminal.research_ledger import (
     research_ledger_payload,
     score_calls,
 )
+from otto.local_terminal.yahoo_news import collect_yahoo_news
 from otto.local_terminal.forum import (
     ForumError,
     add_forum_reply,
@@ -1180,6 +1181,30 @@ def _yahoo_quote_snapshot_payload_from_store(
             if _cache_is_writable(quote_cache):
                 STORE.write_yahoo_quote_cache(quote_cache)
     return payload
+
+
+def _merge_yahoo_symbol_news(payload: dict[str, Any], symbols: list[str]) -> None:
+    """Merge Yahoo public per-symbol news into a news payload's item list.
+
+    Yahoo single-name items are tagged with their source symbol, so the packet's
+    keyword matcher attributes them to the holding. A per-symbol fetch failure
+    is surfaced as a source_error rather than raised or faked.
+    """
+    items, errors = collect_yahoo_news(symbols)
+    if items:
+        existing = payload.get("items") if isinstance(payload.get("items"), list) else []
+        payload["items"] = items + existing
+    if errors:
+        status = payload.get("status") if isinstance(payload.get("status"), dict) else {}
+        source_errors = list(status.get("source_errors") or [])
+        source_errors.extend(f"yahoo_news {err}" for err in errors)
+        status["source_errors"] = source_errors
+        try:
+            failed = int(status.get("failed_source_count") or 0)
+        except (TypeError, ValueError):
+            failed = 0
+        status["failed_source_count"] = failed + len(errors)
+        payload["status"] = status
 
 
 def _moex_quote_snapshot_payload_from_store(
@@ -4239,6 +4264,13 @@ def create_app(frontend_dist: Path | None = None) -> FastAPI:
     @app.post("/api/news/packet")
     def news_packet(update: NewsPacketUpdate) -> dict[str, Any]:
         payload = _news_payload_from_store(refresh=update.refresh)
+        # US single-name catalysts are thin in the GDELT/TW feeds; on an
+        # explicit refresh for named holdings, pull Yahoo's public per-symbol
+        # news (no key) and merge it in so a -7% move comes back WITH its
+        # reason instead of an abstained call. Best-effort: a Yahoo outage
+        # degrades to a source_error note, never a failed packet.
+        if update.refresh and update.symbols:
+            _merge_yahoo_symbol_news(payload, update.symbols)
         return news_packet_payload(
             payload,
             news_digest_payload(STORE.read_news_digest_state()),
