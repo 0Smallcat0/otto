@@ -14,17 +14,43 @@ import {
   fmt,
   getJson,
   hhmm,
+  isToday,
   mmddhhmm,
   num,
+  pct,
   quotePct,
-  usePoll
+  usePoll,
+  activateOnKey
 } from "./api";
 import { useT } from "./i18n";
+// Same loading shape as the wall — a first fetch in flight must not read as
+// "nothing here" on these pages either.
+import { Skeleton } from "./wall";
+
+/** Timestamps older than today need their date, or a three-day-old row reads
+ *  as if it happened this afternoon. */
+function stamp(iso?: string): string {
+  return isToday(iso) ? hhmm(iso) : mmddhhmm(iso);
+}
+
+/** The theme lives on <html data-theme>, written by the shell. Reading it
+ *  during render never re-runs, so the displayed value froze at first paint. */
+function useThemeName(): string {
+  const [theme, setTheme] = useState(() => document.documentElement.dataset.theme ?? "dark");
+  useEffect(() => {
+    const observer = new MutationObserver(() =>
+      setTheme(document.documentElement.dataset.theme ?? "dark")
+    );
+    observer.observe(document.documentElement, { attributes: true, attributeFilter: ["data-theme"] });
+    return () => observer.disconnect();
+  }, []);
+  return theme;
+}
 
 function Table({ cols, children, quote }: { cols: string[]; children: ReactNode; quote?: boolean }) {
   return (
     <table className={quote ? "ft-table ft-qt" : "ft-table"}>
-      <thead><tr>{cols.map((col) => <th key={col}>{col}</th>)}</tr></thead>
+      <thead><tr>{cols.map((col) => <th scope="col" key={col}>{col}</th>)}</tr></thead>
       <tbody>{children}</tbody>
     </table>
   );
@@ -109,7 +135,8 @@ function CandleChart({ symbol, market, row }: { symbol: string; market?: string;
   }, [symbol, market]);
   if (candles === null || fetching) {
     return (
-      <div className="ft-faint" style={{ padding: "6px 0" }}>
+      <div className="ft-faint" style={{ padding: "6px 0" }} role="status">
+        <span className="ft-spin" aria-hidden="true" />
         {fetching ? t("首次抓取 K 線中…(之後就有快取)") : t("讀取中…")}
       </div>
     );
@@ -238,7 +265,9 @@ function QuoteDetailRow({ row, market, name }: { row: Quoteish; market: string; 
   const change = quotePct(row);
   return (
     <>
-      <tr onClick={() => setOpen(!open)} style={{ cursor: "pointer" }} title={t("點列展開詳情")}>
+      <tr onClick={() => setOpen(!open)} tabIndex={0} aria-expanded={open}
+        onKeyDown={activateOnKey(() => setOpen(!open))}
+        style={{ cursor: "pointer" }}>
         <td className="ft-am">{open ? "▾" : "▸"}</td>
         <td>{row.symbol}</td>
         <td className="ft-dim" style={{ fontFamily: "var(--sans)" }}>{name ?? row.name ?? ""}</td>
@@ -340,6 +369,84 @@ export function CryptoPage({ heading, crypto }: { heading: ReactNode; crypto: Cr
 
 /* ── Paper:AI 的紙上交易帳本(從 Crypto 拆出,獨立成頁)── */
 
+interface EquityPaperSlice {
+  account?: { quote_asset?: string; cash?: string; equity?: string; initial_cash?: string; total_pnl?: string };
+  positions?: Record<string, string>[];
+  recent_orders?: Record<string, string>[];
+}
+
+/** One equity paper book. Two of the three books had no UI at all: the terminal
+ *  ran a TW book with a real position and six figures of P&L that could only be
+ *  seen through the API, so the discipline the agent actually practises — the
+ *  cap, the staged trims, the rationale on every order — was invisible. */
+function EquityPaperBook({ path, label }: { path: string; label: string }) {
+  const { t } = useT();
+  const { data, settled } = usePoll<EquityPaperSlice>(path, 60_000);
+  const account = data?.account;
+  const positions = data?.positions ?? [];
+  const orders = (data?.recent_orders ?? []).slice(0, 6);
+  if (!settled && !data) return <><div className="ft-h2">{label}</div><Skeleton rows={3} /></>;
+  if (!account) return <><div className="ft-h2">{label}</div><div className="ft-note">{t("讀不到這本帳")}</div></>;
+  const pnl = Number.parseFloat(String(account.total_pnl ?? ""));
+  const initial = Number.parseFloat(String(account.initial_cash ?? ""));
+  const pnlPct = Number.isFinite(pnl) && initial > 0 ? (pnl / initial) * 100 : NaN;
+  const pnlView = Number.isFinite(pnlPct) ? pct(pnlPct) : null;
+  return (
+    <>
+      <div className="ft-h2" style={{ marginTop: 10 }}>{label}</div>
+      <div className="ft-stat">
+        {t("權益")} <b>{num(account.equity, 0)}</b> {account.quote_asset} · {t("現金")} <b>{num(account.cash, 0)}</b>
+        {Number.isFinite(pnl) ? (
+          <>
+            {" · "}{t("損益")} <b className={pnlView?.cls}>{pnl > 0 ? "+" : ""}{num(pnl, 0)}</b>
+            {pnlView ? <span className={pnlView.cls}> {pnlView.text}</span> : null}
+          </>
+        ) : null}
+      </div>
+      {positions.length === 0 ? (
+        <div className="ft-note">{t("此帳本無持倉")}</div>
+      ) : (
+        <Table cols={[t("代號"), t("數量"), t("成本"), t("現價"), t("未實現"), t("已實現")]}>
+          {positions.map((position) => {
+            const view = pct(
+              Number.parseFloat(String(position.avg_price ?? "")) > 0
+                ? ((Number.parseFloat(String(position.last_price ?? "")) -
+                    Number.parseFloat(String(position.avg_price ?? ""))) /
+                    Number.parseFloat(String(position.avg_price ?? ""))) * 100
+                : NaN
+            );
+            return (
+              <tr key={position.symbol}>
+                <td>{position.symbol}</td>
+                <td>{fmt(position.quantity)}</td>
+                <td>{num(position.avg_price)}</td>
+                <td>{num(position.last_price)}</td>
+                <td className={view.cls}>{view.text}</td>
+                <td className="ft-dim">{num(position.realized_pnl, 0)}</td>
+              </tr>
+            );
+          })}
+        </Table>
+      )}
+      {orders.length === 0 ? null : (
+        <Table cols={[t("時間"), t("代號"), t("方向"), t("數量"), t("狀態"), t("理由")]}>
+          {orders.map((order) => (
+            <tr key={order.order_id}>
+              <td>{mmddhhmm(order.created_at)}</td>
+              <td>{order.symbol}</td>
+              <td className={order.side === "BUY" ? "ft-up" : "ft-down"}>{order.side}</td>
+              <td>{fmt(order.quantity)}</td>
+              <td className="ft-dim">{order.status}</td>
+              {/* The rationale is the whole point of a journaled paper book. */}
+              <td className="s" style={{ maxWidth: 420 }}>{order.rationale ?? "—"}</td>
+            </tr>
+          ))}
+        </Table>
+      )}
+    </>
+  );
+}
+
 export function PaperPage({ heading, crypto }: { heading: ReactNode; crypto: CryptoSlice | null }) {
   const { t } = useT();
   const orders = (crypto?.orders ?? []) as Record<string, string>[];
@@ -348,8 +455,10 @@ export function PaperPage({ heading, crypto }: { heading: ReactNode; crypto: Cry
   return (
     <div className="ft-page" data-testid="workspace-paper">
       {heading}
-      <div className="ft-note">{t("AI 的紙上交易帳本(模擬,非實盤;實盤閘門由後端鎖定)。")}</div>
-      <div className="ft-h2">{t("紙上帳戶")}</div>
+      <div className="ft-note">{t("AI 的紙上交易帳本(模擬,非實盤;實盤閘門由後端鎖定)。三本各自獨立計價,不換匯。")}</div>
+      <EquityPaperBook path="/api/equity/tw/summary?refresh=true" label={t("台股紙上帳(TWD)")} />
+      <EquityPaperBook path="/api/equity/summary?refresh=true" label={t("美股紙上帳(USD)")} />
+      <div className="ft-h2" style={{ marginTop: 10 }}>{t("加密紙上帳(USDT)")}</div>
       <div className="ft-stat">
         {t("權益")} <b>{num(account?.equity)}</b> {account?.quote_asset ?? "USDT"} · {t("現金")} <b>{num(account?.cash)}</b> · {t("起始")} {num(account?.initial_cash, 0)}
       </div>
@@ -422,8 +531,16 @@ function BookRow({ book, active }: {
   const transactions = (detail?.book?.transactions ?? []).slice(0, 10);
   return (
     <>
-      <tr onClick={() => setOpen(!open)} style={{ cursor: "pointer" }} title={t("點列展開詳情")}>
-        <td className="ft-am">{active ? "●" : open ? "▾" : "▸"}</td>
+      <tr onClick={() => setOpen(!open)} tabIndex={0} aria-expanded={open}
+        onKeyDown={activateOnKey(() => setOpen(!open))}
+        style={{ cursor: "pointer" }}>
+        {/* The active dot used to replace the expand chevron, so an owner with a
+            single (always-active) book saw a one-row table with no hint that it
+            opens onto his holdings. Show both: state and affordance. */}
+        <td className="ft-am" style={{ whiteSpace: "nowrap" }}>
+          {active ? "●" : ""}
+          <span className="ft-faint">{open ? "▾" : "▸"}</span>
+        </td>
         <td style={{ fontFamily: "var(--sans)" }}>{book.name}</td>
         <td className="ft-dim">{book.owner}</td>
         <td>{book.currency}</td>
@@ -432,27 +549,41 @@ function BookRow({ book, active }: {
       {open ? (
         <tr><td colSpan={5} style={{ padding: "10px 14px", background: "var(--bg2)" }}>
           {!detail ? (
-            <span className="ft-faint">{t("讀取中…")}</span>
+            <span className="ft-faint" role="status"><span className="ft-spin" aria-hidden="true" />{t("讀取中…")}</span>
           ) : (
             <>
               <div className="ft-cap" style={{ marginBottom: 4 }}>{t("持倉")}</div>
               {positions.length === 0 ? (
                 <div className="ft-faint" style={{ marginBottom: 8 }}>{t("此帳本無持倉")}</div>
               ) : (
-                <Table cols={[t("代號"), t("數量"), t("成本"), t("現價")]}>
-                  {positions.map((position) => (
-                    <tr key={position.symbol}>
-                      <td>{position.symbol}</td>
-                      <td>{fmt(position.quantity)}</td>
-                      <td>{num(position.avg_cost ?? position.avg_price)}</td>
-                      <td>
-                        {num(position.last_price)}
-                        {position.price_basis === "cost_basis" ? <small className="ft-faint"> {t("(成本)")}</small>
-                          : position.price_basis === "stale_history_close" ? <small className="ft-am"> {t("(舊)")}</small>
-                          : null}
-                      </td>
-                    </tr>
-                  ))}
+                <Table cols={[t("代號"), t("數量"), t("成本"), t("現價"), t("未實現"), t("市值")]}>
+                  {positions.map((position) => {
+                    // Cost and price without the P&L made the reader do the
+                    // arithmetic on his own holdings; the money is the point.
+                    const cost = Number.parseFloat(String(position.avg_cost ?? position.avg_price ?? ""));
+                    const last = Number.parseFloat(String(position.last_price ?? ""));
+                    const qty = Number.parseFloat(String(position.quantity ?? ""));
+                    const gainPct = Number.isFinite(cost) && cost > 0 && Number.isFinite(last)
+                      ? ((last - cost) / cost) * 100
+                      : NaN;
+                    const view = Number.isFinite(gainPct) ? pct(gainPct) : null;
+                    const value = Number.isFinite(qty) && Number.isFinite(last) ? qty * last : NaN;
+                    return (
+                      <tr key={position.symbol}>
+                        <td>{position.symbol}</td>
+                        <td>{fmt(position.quantity)}</td>
+                        <td>{num(position.avg_cost ?? position.avg_price)}</td>
+                        <td>
+                          {num(position.last_price)}
+                          {position.price_basis === "cost_basis" ? <small className="ft-faint"> {t("(成本)")}</small>
+                            : position.price_basis === "stale_history_close" ? <small className="ft-am"> {t("(舊)")}</small>
+                            : null}
+                        </td>
+                        <td className={view?.cls}>{view ? view.text : "—"}</td>
+                        <td>{Number.isFinite(value) ? num(value, 0) : "—"}</td>
+                      </tr>
+                    );
+                  })}
                 </Table>
               )}
               <div className="ft-cap" style={{ margin: "10px 0 4px" }}>{t("近 10 筆交易")}</div>
@@ -489,14 +620,16 @@ const SOURCE_ZH: Record<string, string> = {
 
 export function PortfolioPage({ heading }: { heading: ReactNode }) {
   const { t } = useT();
-  const { data } = usePoll<PortfolioSlice>("/api/portfolio", 60_000);
+  const { data, settled } = usePoll<PortfolioSlice>("/api/portfolio", 60_000);
   const books = data?.portfolios ?? [];
   return (
     <div className="ft-page" data-testid="workspace-portfolio">
       {heading}
       <div className="ft-note">{t("「帳本」=一組持倉的紀錄簿。AI 可建立、鏡像紙上或回測結果、依對話切換 active(●)。")}</div>
       <div className="ft-h2">{t("帳本(active 由 AI 依對話切換)")}</div>
-      {books.length === 0 ? (
+      {books.length === 0 && !settled ? (
+        <Skeleton rows={4} />
+      ) : books.length === 0 ? (
         <Empty>{t("尚無帳本——在對話請 AI 建立或連結。")}</Empty>
       ) : (
         <Table cols={["", t("名稱"), t("擁有者"), t("幣別"), t("來源")]}>
@@ -520,14 +653,16 @@ interface AlgoSlice {
 
 export function AlgoPage({ heading, onOpenArtifact }: { heading: ReactNode; onOpenArtifact: (path: string) => void }) {
   const { t } = useT();
-  const { data } = usePoll<AlgoSlice>("/api/algo", 60_000);
+  const { data, settled } = usePoll<AlgoSlice>("/api/algo", 60_000);
   const strategies = data?.strategies ?? [];
   return (
     <div className="ft-page" data-testid="workspace-algo">
       {heading}
       <div className="ft-note">{t("Algo=AI 的策略研究循環:一句話描述想法(例:「建一個 BTC 均線交叉策略」),AI 會建立策略→掃描訊號→跑回測,產出都留在這頁,報告可點開。")}</div>
       <div className="ft-h2">{t("策略庫(建/刪/選都在對話)")}</div>
-      {strategies.length === 0 ? (
+      {strategies.length === 0 && !settled ? (
+        <Skeleton rows={4} />
+      ) : strategies.length === 0 ? (
         <Empty>{t("尚無策略——在對話請 AI「幫我建一個○○策略」。")}</Empty>
       ) : (
         <Table cols={["", t("名稱"), t("標的"), t("週期"), t("更新")]}>
@@ -537,18 +672,18 @@ export function AlgoPage({ heading, onOpenArtifact }: { heading: ReactNode; onOp
               <td style={{ fontFamily: "var(--sans)" }}>{strategy.name}</td>
               <td>{strategy.symbol}</td>
               <td>{strategy.timeframe}</td>
-              <td className="ft-dim">{hhmm(strategy.updated_at)}</td>
+              <td className="ft-dim">{stamp(strategy.updated_at)}</td>
             </tr>
           ))}
         </Table>
       )}
       <div className="ft-h2" style={{ marginTop: 8 }}>{t("最新研究產出")}</div>
-      <div className="ft-note">
+      <div className="ft-note ft-lede">
         {data?.last_scan?.artifact_dir ? (
-          <>{t("訊號掃描")} <span className="ft-mono">{data.last_scan.scan_id}</span> · <a className="ft-link" onClick={() => onOpenArtifact(data.last_scan?.artifact_dir ?? "")}>{t("開掃描 →")}</a><br /></>
+          <>{t("訊號掃描")} <span className="ft-mono">{data.last_scan.scan_id}</span> · <a className="ft-link" role="button" tabIndex={0} onClick={() => onOpenArtifact(data.last_scan?.artifact_dir ?? "")} onKeyDown={activateOnKey(() => onOpenArtifact(data.last_scan?.artifact_dir ?? ""))}>{t("開掃描 →")}</a><br /></>
         ) : t("尚無掃描。")}
         {data?.last_backtest?.artifact_dir ? (
-          <>{t("策略回測")} · <a className="ft-link" onClick={() => onOpenArtifact(data.last_backtest?.artifact_dir ?? "")}>{t("開報告 →")}</a></>
+          <>{t("策略回測")} · <a className="ft-link" role="button" tabIndex={0} onClick={() => onOpenArtifact(data.last_backtest?.artifact_dir ?? "")} onKeyDown={activateOnKey(() => onOpenArtifact(data.last_backtest?.artifact_dir ?? ""))}>{t("開報告 →")}</a></>
         ) : t(" 尚無策略回測。")}
       </div>
     </div>
@@ -559,6 +694,7 @@ export function AlgoPage({ heading, onOpenArtifact }: { heading: ReactNode; onOp
 
 function PrefsBlock() {
   const { t, lang } = useT();
+  const theme = useThemeName();
   const { data } = usePoll<{ profile?: Record<string, unknown>; settings?: Record<string, unknown> }>("/api/local-state", 120_000);
   const profile = (data?.profile ?? {}) as Record<string, unknown>;
   const settings = (data?.settings ?? {}) as Record<string, unknown>;
@@ -567,7 +703,7 @@ function PrefsBlock() {
       <div className="ft-h2">{t("偏好")}</div>
       <div className="ft-note">
         {t("顯示名稱")} <b>{String(profile.display_name ?? "Local User")}</b> ·
-        {" "}{t("主題")} <b>{document.documentElement.dataset.theme === "light" ? t("亮") : t("暗")}</b> ·
+        {" "}{t("主題")} <b>{theme === "light" ? t("亮") : t("暗")}</b> ·
         {" "}{t("語言")} <b>{lang === "zh" ? "中" : "EN"}</b> ·
         {" "}{t("資料刷新")} <b>{String(settings.data_refresh_seconds ?? 60)}s</b>
         <br />{t("要改任何偏好,在對話說即可;主題與語言也可用頂條即時切換。")}
@@ -598,7 +734,7 @@ export function SettingsPage({ heading }: { heading: ReactNode }) {
       {heading}
       <PrefsBlock />
       <div className="ft-h2" style={{ marginTop: 8 }}>{t("系統摘要")}</div>
-      <div className="ft-note" style={{ lineHeight: 2 }}>
+      <div className="ft-note ft-lede" style={{ lineHeight: 2 }}>
         <span className="ft-up">●</span> {t("安全閘門")}: {t("實盤交易")}/{t("外部執行")}/{t("憑證明文讀取")} {t("全部")} <b className="ft-down">{t("關")}</b>({t("後端鎖定")})<br />
         <span className="ft-up">●</span> {t("資料 Keys")}: <b>{stored}/{eligible}</b> {t("已接")}<br />
         <span className={withBak > 0 ? "ft-up" : "ft-dim"}>●</span> {t("狀態備份")}: <b>{backupSummary?.protected_file_count ?? "—"}</b> {t("檔受保護")} · <b>{withBak}</b> {t("檔已有還原點")}<br />
@@ -647,18 +783,20 @@ interface ForumSlice {
 
 export function ForumPage({ heading }: { heading: ReactNode }) {
   const { t } = useT();
-  const { data } = usePoll<ForumSlice>("/api/forum", 120_000);
+  const { data, settled } = usePoll<ForumSlice>("/api/forum", 120_000);
   const posts = data?.posts ?? [];
   return (
     <div className="ft-page" data-testid="workspace-forum">
       {heading}
-      {posts.length === 0 ? (
+      {posts.length === 0 && !settled ? (
+        <Skeleton rows={5} />
+      ) : posts.length === 0 ? (
         <Empty>{t("尚無研究筆記——AI 的研究記錄與你要求的備忘會存在這裡。")}</Empty>
       ) : (
         <Table cols={[t("時間"), t("標題"), t("頻道"), t("回覆")]}>
           {posts.slice(0, 40).map((post) => (
             <tr key={post.post_id}>
-              <td>{hhmm(post.created_at)}</td>
+              <td>{stamp(post.created_at)}</td>
               <td style={{ fontFamily: "var(--sans)" }}>{post.title}</td>
               <td className="ft-dim">{post.channel_id}</td>
               <td>{post.reply_count ?? 0}</td>
@@ -678,7 +816,7 @@ export function AiRoutePage({ heading, routeId, testId, activity }: {
   testId: string;
   activity: ActivitySlice | null;
 }) {
-  const { t, lang } = useT();
+  const { t } = useT();
   const events = (activity?.events ?? []).filter((event) => event.route_id === routeId).slice(0, 20);
   return (
     <div className="ft-page" data-testid={testId}>
@@ -689,10 +827,10 @@ export function AiRoutePage({ heading, routeId, testId, activity }: {
       {events.length === 0 ? (
         <Empty>{t("此路由尚無 AI 活動。")}</Empty>
       ) : (
-        <Table cols={[t("時間"), lang === "en" ? "ACTION" : t("動作"), t("狀態"), t("摘要")]}>
+        <Table cols={[t("時間"), t("動作"), t("狀態"), t("摘要")]}>
           {events.map((event) => (
             <tr key={event.event_id}>
-              <td>{hhmm(event.created_at)}</td>
+              <td>{stamp(event.created_at)}</td>
               <td>{event.action_id}</td>
               <td className={event.state === "succeeded" ? "ft-up" : "ft-am"}>{event.state}</td>
               <td className="ft-dim" style={{ fontFamily: "var(--sans)" }}>{event.summary}</td>

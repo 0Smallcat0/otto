@@ -2,6 +2,19 @@
 // The AI operates the terminal through these same endpoints; this UI only reads.
 
 import { useEffect, useRef, useState } from "react";
+import type { KeyboardEvent } from "react";
+
+/** Enter/Space activation for things that are clickable but are not buttons.
+ *  Always pair with tabIndex={0}, or the element never enters the tab order
+ *  and the handler can never fire. */
+export function activateOnKey(run: () => void) {
+  return (event: KeyboardEvent<Element>) => {
+    if (event.key === "Enter" || event.key === " ") {
+      event.preventDefault();
+      run();
+    }
+  };
+}
 
 export async function getJson<T>(path: string): Promise<T | null> {
   try {
@@ -13,15 +26,21 @@ export async function getJson<T>(path: string): Promise<T | null> {
   }
 }
 
-/** Poll an endpoint; refetch on an interval and on demand. */
-export function usePoll<T>(path: string, intervalMs: number): { data: T | null; reload: () => void } {
+/** Poll an endpoint; refetch on an interval and on demand.
+ *  `settled` flips once the first fetch resolves — success or failure — so a
+ *  column can tell "still loading" from "genuinely empty" instead of claiming
+ *  there is no data while the very first request is still in flight. */
+export function usePoll<T>(path: string, intervalMs: number): { data: T | null; settled: boolean; reload: () => void } {
   const [data, setData] = useState<T | null>(null);
+  const [settled, setSettled] = useState(false);
   const [tick, setTick] = useState(0);
   const alive = useRef(true);
   useEffect(() => {
     alive.current = true;
     void getJson<T>(path).then((value) => {
-      if (alive.current && value !== null) setData(value);
+      if (!alive.current) return;
+      if (value !== null) setData(value);
+      setSettled(true);
     });
     const timer = intervalMs > 0
       ? window.setInterval(() => {
@@ -35,7 +54,7 @@ export function usePoll<T>(path: string, intervalMs: number): { data: T | null; 
       if (timer) window.clearInterval(timer);
     };
   }, [path, intervalMs, tick]);
-  return { data, reload: () => setTick((n) => n + 1) };
+  return { data, settled, reload: () => setTick((n) => n + 1) };
 }
 
 /* ── payload slices actually consumed by the wall ── */
@@ -109,6 +128,10 @@ export interface NewsItem {
   age_minutes?: number;
   category?: string;
   url?: string;
+  /** Positions in the active book this headline mentions, if any. */
+  held_symbols?: string[];
+  /** Names with a live judgment that this headline mentions. */
+  watched_symbols?: string[];
 }
 
 export interface NewsSlice {

@@ -344,3 +344,42 @@ def test_invalidation_breach_is_never_late() -> None:
     assert scored[0]["outcome"] == "invalidated"
     assert scored[0]["window_honored"] is True
     assert scored[0]["scored_late_days"] == 0
+
+
+def test_superseding_a_call_withdraws_it_instead_of_stacking() -> None:
+    # The owner's largest holding once appeared three times with three
+    # different invalidation levels because "supersede" was only a convention.
+    st, first = _record(default_research_ledger_state(), ref_price="100", invalidation="90")
+    st, second = _record(st, ref_price="100", invalidation="95", supersedes=first["call_id"])
+
+    old = st["calls"][0]
+    assert old["status"] == "superseded"
+    assert old["superseded_by"] == second["call_id"]
+    assert old["superseded_at"] == second["as_of"]
+    assert second["supersedes"] == first["call_id"]
+
+    payload = research_ledger_payload(st)
+    assert payload["open_count"] == 1  # only the replacement is live
+    assert payload["superseded_count"] == 1
+    assert [c["call_id"] for c in payload["open_calls"]] == [second["call_id"]]
+
+
+def test_a_withdrawn_view_is_never_scored() -> None:
+    st, first = _record(default_research_ledger_state(), ref_price="100")
+    st, _ = _record(st, ref_price="100", supersedes=first["call_id"])
+    st, scored = score_calls(_mature(st), {"2330.TW": Decimal("120")})
+    # the replacement scores; the withdrawn thesis is not graded
+    assert len(scored) == 1
+    assert scored[0]["supersedes"] == first["call_id"]
+    assert st["calls"][0]["status"] == "superseded"
+    card = research_ledger_payload(st)["scorecard"]
+    assert card["scored_count"] == 1
+
+
+def test_supersede_refuses_unknown_or_closed_targets() -> None:
+    st, first = _record(default_research_ledger_state(), ref_price="100")
+    with pytest.raises(ResearchLedgerError, match="no call"):
+        _record(st, ref_price="100", supersedes="call-nope")
+    st, _ = _record(st, ref_price="100", supersedes=first["call_id"])
+    with pytest.raises(ResearchLedgerError, match="superseded, not open"):
+        _record(st, ref_price="100", supersedes=first["call_id"])

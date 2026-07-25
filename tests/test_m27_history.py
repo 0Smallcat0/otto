@@ -120,9 +120,16 @@ def test_tw_quote_rows_prefer_freshest_history_close(tmp_path, monkeypatch) -> N
 
 
 def test_book_position_prices_overlay_uses_freshest_close(tmp_path, monkeypatch) -> None:
-    """Book detail must show current value, not the cost it was created with."""
+    """With no live quote, the book falls back to the freshest close we hold.
+
+    A live mark now outranks this path (the daily-close cache was quoting
+    00982A at 23.83 against a market at 21.98), so the fallback is asserted
+    with the live source explicitly empty — which also keeps this test off the
+    network.
+    """
     store = LocalStateStore(root=tmp_path)
     monkeypatch.setattr(server, "STORE", store)
+    monkeypatch.setattr(server, "_live_equity_marks", lambda symbols: {})
     recent = (datetime.now(tz=UTC).date() - timedelta(days=1)).isoformat()
     store.write_history_cache("00982A", {
         "symbol": "00982A",
@@ -147,6 +154,7 @@ def test_book_overlay_flags_a_genuinely_stale_close(tmp_path, monkeypatch) -> No
     """A weeks-old close is served but flagged, not passed off as current."""
     store = LocalStateStore(root=tmp_path)
     monkeypatch.setattr(server, "STORE", store)
+    monkeypatch.setattr(server, "_live_equity_marks", lambda symbols: {})  # keep it off the network
     store.write_history_cache("STALE", {
         "symbol": "STALE",
         "candles": [{"close": "50", "closed_at": "2020-01-02"}],
@@ -177,3 +185,48 @@ def test_history_without_key_marks_only_key_symbols(tmp_path, monkeypatch) -> No
     body = client.post("/api/markets/history/refresh", json={"symbols": ["TSLA", "2330"]})
     assert body.status_code == 200
     assert body.json()["results"] == {"TSLA": "key_required", "2330": "live"}
+
+
+def test_live_mark_outranks_the_daily_close_cache(tmp_path, monkeypatch) -> None:
+    """The defect this ordering fixes: the book page quoted a stale close.
+
+    00982A showed 23.83 from the daily-close cache while the market said 21.98,
+    inflating the position's P&L by more than twelve points on the one page
+    named after the owner's own money.
+    """
+    store = LocalStateStore(root=tmp_path)
+    monkeypatch.setattr(server, "STORE", store)
+    recent = (datetime.now(tz=UTC).date() - timedelta(days=1)).isoformat()
+    store.write_history_cache("00982A", {
+        "symbol": "00982A",
+        "candles": [{"close": "23.83", "closed_at": recent}],
+    })
+    monkeypatch.setattr(
+        server,
+        "_live_equity_marks",
+        lambda symbols: {"00982A": {"price": "21.98", "change_pct": "-2.2", "retrieved_at": "now"}},
+    )
+    book = {"positions": [{"symbol": "00982A", "quantity": "1000", "avg_cost": "15.15"}]}
+    server._overlay_book_position_prices(book)
+    position = book["positions"][0]
+    assert position["last_price"] == "21.98"  # the market, not the cache
+    assert position["price_basis"] == "live_quote"
+    assert position["market_value"] == "21980.00"
+
+
+def test_crypto_positions_are_not_sent_to_the_equity_quote_path(tmp_path, monkeypatch) -> None:
+    store = LocalStateStore(root=tmp_path)
+    monkeypatch.setattr(server, "STORE", store)
+    seen: dict[str, list[str]] = {}
+
+    def fake_marks(symbols):
+        seen["symbols"] = list(symbols)
+        return {}
+
+    monkeypatch.setattr(server, "_live_equity_marks", fake_marks)
+    book = {"positions": [
+        {"symbol": "2834", "quantity": "1", "avg_cost": "10", "asset_class": "Equity"},
+        {"symbol": "BTCUSDT", "quantity": "1", "avg_cost": "10", "asset_class": "Crypto"},
+    ]}
+    server._overlay_book_position_prices(book)
+    assert seen["symbols"] == ["2834"]

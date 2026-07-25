@@ -277,7 +277,12 @@ from otto.local_terminal.news import (
     news_topic_entity_map_payload,
     write_news_research_brief,
 )
-from otto.local_terminal.news_packet import PACKET_MAX_ITEMS, news_packet_payload
+from otto.local_terminal.news_packet import (
+    PACKET_MAX_ITEMS,
+    news_packet_payload,
+    symbol_terms,
+    term_matches,
+)
 from otto.local_terminal.nodes import (
     NodesError,
     clear_workflow,
@@ -1211,6 +1216,45 @@ def _merge_yahoo_symbol_news(payload: dict[str, Any], symbols: list[str]) -> Non
         payload["status"] = status
 
 
+def _live_equity_marks(symbols: list[str]) -> dict[str, dict[str, str]]:
+    """Current Yahoo marks keyed by the bare portfolio symbol.
+
+    Shared by every place a held equity gets priced, so a fix in one path
+    cannot leave another showing a stale number — which is exactly how the
+    book-detail page ended up contradicting the dashboard.
+    """
+    wanted: dict[str, str] = {}  # yahoo symbol -> bare symbol
+    for raw in symbols:
+        bare = str(raw or "").strip().upper()
+        if not bare:
+            continue
+        yahoo_symbol = bare
+        if "." not in bare and bare[0].isdigit():  # numeric TW listing codes
+            yahoo_symbol = f"{bare}.TW"
+        wanted[yahoo_symbol] = bare
+    if not wanted:
+        return {}
+    marks: dict[str, dict[str, str]] = {}
+    batch = list(wanted)
+    for start in range(0, len(batch), 8):  # the Yahoo lookup path caps at 8/call
+        quotes = _yahoo_quote_snapshot_payload_from_store(
+            refresh=True, symbols=batch[start : start + 8]
+        ).get("quotes", [])
+        for quote in quotes:
+            if not isinstance(quote, dict):
+                continue
+            yahoo_symbol = str(quote.get("symbol", "")).upper()
+            price = quote.get("price")
+            if yahoo_symbol not in wanted or price in (None, "", "N/A"):
+                continue
+            marks[wanted[yahoo_symbol]] = {
+                "price": str(price),
+                "change_pct": str(quote.get("change_percent") or "0"),
+                "retrieved_at": str(quote.get("retrieved_at") or ""),
+            }
+    return marks
+
+
 def _owner_holdings_universe(state: dict[str, Any]) -> dict[str, tuple[str, str]]:
     """The owner's real equity positions as research-universe entries.
 
@@ -1241,61 +1285,37 @@ def _owner_holdings_universe(state: dict[str, Any]) -> dict[str, tuple[str, str]
 
 
 def _portfolio_equity_price_rows(state: dict[str, Any]) -> list[dict[str, Any]]:
-    """Live Yahoo quotes for an imported portfolio's equity positions.
+    """Live marks for the active book's equity positions, as market-cache rows.
 
     The portfolio pricer only ever read the crypto/markets cache, so equity
-    holdings (e.g. TW stocks) never matched and stayed frozen at their
-    import-time snapshot price forever — a book imported on 2026-07-07 kept
-    showing a stale P&L. This fetches current marks (numeric TW listing codes
-    like 2834/00982A get a .TW suffix for Yahoo) and returns them as
-    market-cache rows keyed by the bare symbol, so the existing price-book path
-    prices them live. Best-effort: a fetch miss leaves that symbol on its
-    snapshot rather than raising.
+    holdings never matched a quote and stayed frozen at their import-time
+    snapshot price. Rows are keyed by the bare symbol so the existing
+    price-book path prices them live; a per-symbol miss simply leaves that
+    holding on its snapshot rather than faking a price.
     """
     pf_state = state if isinstance(state, dict) else {}
     portfolios = pf_state.get("portfolios") if isinstance(pf_state.get("portfolios"), dict) else {}
     active = portfolios.get(pf_state.get("active_portfolio_id"))
     if not isinstance(active, dict):
         return []
-    want: dict[str, str] = {}  # yahoo symbol -> bare portfolio symbol
-    for position in active.get("positions", []):
-        if not isinstance(position, dict) or str(position.get("asset_class")) == "Crypto":
-            continue
-        bare = str(position.get("symbol") or "").strip().upper()
-        if not bare:
-            continue
-        yahoo_symbol = bare
-        if "." not in bare and bare[0].isdigit():  # TW listing codes are numeric-led
-            yahoo_symbol = f"{bare}.TW"
-        want[yahoo_symbol] = bare
-    if not want:
-        return []
-    rows: list[dict[str, Any]] = []
-    symbols = list(want)
-    for start in range(0, len(symbols), 8):
-        quotes = _yahoo_quote_snapshot_payload_from_store(
-            refresh=True, symbols=symbols[start : start + 8]
-        ).get("quotes", [])
-        for quote in quotes:
-            if not isinstance(quote, dict):
-                continue
-            yahoo_symbol = str(quote.get("symbol", "")).upper()
-            price = quote.get("price")
-            if yahoo_symbol not in want or price in (None, "N/A", ""):
-                continue
-            rows.append(
-                {
-                    "symbol": want[yahoo_symbol],
-                    "price": str(price),
-                    "chg_pct": str(quote.get("change_percent") or "0"),
-                    "source": "yahoo_finance_public_quote_snapshot",
-                    "state": "live",
-                    "provider_id": "yahoo_finance_public_quote_snapshot",
-                    "retrieved_at": str(quote.get("retrieved_at") or ""),
-                    "cache_path": "market_data/quotes/yahoo/",
-                }
-            )
-    return rows
+    symbols = [
+        str(position.get("symbol") or "")
+        for position in active.get("positions", [])
+        if isinstance(position, dict) and str(position.get("asset_class")) != "Crypto"
+    ]
+    return [
+        {
+            "symbol": symbol,
+            "price": mark["price"],
+            "chg_pct": mark["change_pct"],
+            "source": "yahoo_finance_public_quote_snapshot",
+            "state": "live",
+            "provider_id": "yahoo_finance_public_quote_snapshot",
+            "retrieved_at": mark["retrieved_at"],
+            "cache_path": "market_data/quotes/yahoo/",
+        }
+        for symbol, mark in _live_equity_marks(symbols).items()
+    ]
 
 
 def _moex_quote_snapshot_payload_from_store(
@@ -1376,8 +1396,29 @@ def _overlay_book_position_prices(book: Any) -> None:
     if not isinstance(positions, list):
         return
     today = datetime.now(tz=UTC).date()
+    # Live marks first. The daily-close cache below is often days behind — it
+    # was showing 00982A at 23.83 while the market said 21.98, so this page
+    # contradicted the dashboard it is supposed to detail, with a P&L inflated
+    # by more than twelve points.
+    live = _live_equity_marks(
+        [
+            str(position.get("symbol") or "")
+            for position in positions
+            if isinstance(position, dict) and str(position.get("asset_class")) != "Crypto"
+        ]
+    )
     for position in positions:
         if not isinstance(position, dict):
+            continue
+        mark = live.get(str(position.get("symbol") or "").upper())
+        if mark:
+            position["last_price"] = mark["price"]
+            position["price_basis"] = "live_quote"
+            position["price_retrieved_at"] = mark.get("retrieved_at", "")
+            with contextlib.suppress(ArithmeticError, ValueError, TypeError):
+                position["market_value"] = str(
+                    Decimal(str(position.get("quantity", "0"))) * Decimal(mark["price"])
+                )
             continue
         history = STORE.read_history_cache(str(position.get("symbol") or ""))
         candles = history.get("candles") if isinstance(history.get("candles"), list) else []
@@ -1741,7 +1782,43 @@ def _markets_payload_from_store(
     if payload.get("cache"):
         STORE.write_market_cache(payload["cache"])
     payload["cache"] = None
+    _fill_equity_quote_names(payload)
     return payload
+
+
+def _fill_equity_quote_names(payload: dict[str, Any]) -> None:
+    """Give US quote rows the security name the TW rows already have.
+
+    The markets table showed 台積電 next to 2330 but left AAPL, MSFT and NVDA
+    with an empty name column — while the Nasdaq Trader directory sitting in the
+    local cache carries the name for all thirteen thousand of them. The quote
+    providers simply do not return it, so it is filled here rather than left as
+    a blank the reader has to recognise tickers to read past.
+    """
+    research = payload.get("research_summary")
+    if not isinstance(research, dict):
+        return
+    directory = STORE.read_nasdaq_trader_symbol_directory_cache()
+    rows = directory.get("symbols") if isinstance(directory, dict) else []
+    # The directory spells them out — "Apple Inc. - Common Stock" — which is
+    # three times the width of 台積電 in the same column. The share class is
+    # not what the reader is scanning for.
+    names = {
+        str(row.get("symbol", "")).upper(): str(row.get("name", "")).split(" - ")[0].strip()
+        for row in rows or []
+        if isinstance(row, dict) and row.get("symbol") and row.get("name")
+    }
+    if not names:
+        return
+    for block in ("finnhub_quotes", "twelve_data_quotes", "stooq_quotes"):
+        section = research.get(block)
+        if not isinstance(section, dict):
+            continue
+        for quote in section.get("rows") or []:
+            if isinstance(quote, dict) and not str(quote.get("name") or "").strip():
+                name = names.get(str(quote.get("symbol", "")).upper())
+                if name:
+                    quote["name"] = name
 
 
 def _algo_payload_from_store() -> dict[str, Any]:
@@ -2057,6 +2134,9 @@ class ResearchCallUpdate(BaseModel):
     cap_pct: str | float | int | None = Field(default=None)
     name: str | None = Field(default=None)
     evidence: dict[str, Any] | None = Field(default=None)
+    # call_id of an open call this one replaces — the old view is withdrawn
+    # rather than left to sit beside its replacement.
+    supersedes: str | None = Field(default=None)
     refresh: bool = Field(default=True)
 
 
@@ -2584,12 +2664,70 @@ def create_app(frontend_dist: Path | None = None) -> FastAPI:
             raise HTTPException(status_code=404, detail="Unknown news brief id")
         return payload
 
+    def _tag_news_against_holdings(payload: dict[str, Any]) -> None:
+        """Mark the headlines that touch the reader's own money.
+
+        The news page listed 25 items with nothing to say which of them
+        concerned his positions, so finding the two that mattered meant reading
+        all of them — while the symbol matcher to do it already existed and was
+        only wired into the agent's packet. Items keep their order otherwise;
+        this adds a fact, it does not rank the news for him.
+        """
+        items = payload.get("items")
+        if not isinstance(items, list):
+            return
+        held: list[str] = []
+        pf_state = STORE.read_portfolio_state()
+        portfolios = pf_state.get("portfolios") if isinstance(pf_state.get("portfolios"), dict) else {}
+        active = portfolios.get(pf_state.get("active_portfolio_id"))
+        if isinstance(active, dict):
+            held = [
+                str(position.get("symbol") or "").upper()
+                for position in active.get("positions", [])
+                if isinstance(position, dict) and position.get("symbol")
+            ]
+        # His own holdings are a small bank and a niche ETF that almost never
+        # make headlines, so tagging only those would light up roughly never.
+        # The names he has a live judgment on are the other half of what he is
+        # actually watching, and news about them is news he wants.
+        watched = [
+            symbol
+            for symbol in _open_call_symbols(STORE.read_research_ledger_state())
+            if symbol not in held
+        ]
+        if not held and not watched:
+            return
+        names = _news_symbol_names([*held, *watched])
+        terms = {
+            symbol: symbol_terms(symbol, tuple(names.get(symbol, ())))
+            for symbol in [*held, *watched]
+        }
+        held_set = set(held)
+        for item in items:
+            if not isinstance(item, dict):
+                continue
+            haystack = " ".join(
+                [
+                    str(item.get("title", "")),
+                    str(item.get("summary", "")),
+                    " ".join(str(tag) for tag in item.get("tags", []) if tag),
+                ]
+            ).lower()
+            matched = [
+                symbol
+                for symbol, symbol_words in terms.items()
+                if any(term_matches(term, haystack) for term in symbol_words)
+            ]
+            item["held_symbols"] = [s for s in matched if s in held_set]
+            item["watched_symbols"] = [s for s in matched if s not in held_set]
+
     @app.get("/api/news")
     def news() -> dict[str, Any]:
         # Reads always serve the local cache instantly; external fetches happen
         # only through POST /api/news/refresh so a flaky source can never stall
         # or shrink a plain read.
         payload = _news_payload_from_store(refresh=False)
+        _tag_news_against_holdings(payload)
         return _public_news_payload(_attach_news_research_brief_index(payload))
 
     @app.get("/api/news/topic-entity-map")
@@ -5152,7 +5290,10 @@ def create_app(frontend_dist: Path | None = None) -> FastAPI:
             "safety": {
                 "safety_class": "read_only_portfolio_book_detail",
                 "mutates_local_state": False,
-                "external_calls": False,
+                # Equity positions are marked from a live public quote, so this
+                # read does reach the network. Saying otherwise would be the
+                # kind of quiet inaccuracy the freshness rules exist to prevent.
+                "external_calls": True,
             },
         }
 
