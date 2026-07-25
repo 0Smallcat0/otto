@@ -533,6 +533,8 @@ interface ResearchCall {
   matures_at: string;
   weight_pct?: string | null;
   cap_pct?: string | null;
+  needs_review?: boolean;
+  review_reasons?: string[];
 }
 
 const STANCE_LABEL: Record<string, string> = {
@@ -574,7 +576,9 @@ export function JudgmentBoard() {
   // Sizing warnings ride at the top: they are about how much of the book one
   // name owns, which is the loudest thing a judgment can say about real money.
   const ordered = [...calls].sort(
-    (a, b) => Number(b.stance === "size_down") - Number(a.stance === "size_down")
+    (a, b) =>
+      Number(b.stance === "size_down") - Number(a.stance === "size_down") ||
+      Number(Boolean(b.needs_review)) - Number(Boolean(a.needs_review))
   );
   return (
     <div className="ft-card" data-testid="wall-judgments">
@@ -611,6 +615,7 @@ export function JudgmentBoard() {
                   <td>
                     {call.symbol}
                     {call.name ? <small> {call.name}</small> : null}
+                    {call.needs_review ? <small className="ft-down"> ⟳{t("待檢視")}</small> : null}
                   </td>
                   <td className={cls}>
                     {t(STANCE_LABEL[call.stance] ?? call.stance)}
@@ -627,6 +632,11 @@ export function JudgmentBoard() {
                 {open === call.call_id ? (
                   <tr>
                     <td colSpan={6} className="s">
+                      {call.review_reasons?.length ? (
+                        <div className="ft-down">
+                          {t("需重新檢視")}: {call.review_reasons.join(" · ")}
+                        </div>
+                      ) : null}
                       {call.thesis}
                     </td>
                   </tr>
