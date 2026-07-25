@@ -58,14 +58,72 @@ The point of the round is the journaled judgment ledger, not activity.
 7. POST /api/paper/snapshot then GET /api/paper/history?limit=30 and report
    each book against its benchmark.
 
-If a data or behavior problem appears, fix it in the same run - with tests and
-a local commit in D:\Otto - instead of only reporting it. Do NOT push to the
-public mirror and do NOT create or change scheduled tasks: an unattended run
-has nobody reviewing it, so anything that leaves this machine waits for the
-owner. Name what is waiting at the end of the round.
+Reach the terminal through the otto MCP tools (run_action / list_actions);
+plain HTTP clients are not available in this run.
+
+If a data or behavior problem appears, diagnose it precisely - the action, the
+inputs, the wrong output, and the file you believe is at fault - and say so at
+the end of the round. This run cannot edit code, run tests, commit, push, or
+change scheduled tasks: nobody is reviewing it. Naming the defect exactly is
+the deliverable; an attended session fixes it.
 '@
 
-claude -p $prompt --max-turns 40
+# 3) Run it, and record what the round cost. A daily unattended agent spends
+# real money, so every run appends its own duration, turn count and dollar cost
+# to artifacts/loop/runs.jsonl — the owner should never have to guess whether
+# this schedule is affordable.
+# Headless runs get no interactive permission prompts: the first real run died
+# on "Blocked on permission grant" after 8 turns and $1.10, having done nothing.
+# So the terminal's own MCP server is loaded explicitly and its tools are
+# pre-allowed, scoped to exactly what a round needs. Read-only inspection is
+# included so a round can diagnose; editing, tests and git are deliberately NOT
+# allowed, because an unattended agent should report a code problem, not
+# rewrite the repo while nobody is watching.
+$allowed = @(
+    "mcp__otto__run_action",
+    "mcp__otto__list_actions",
+    "mcp__otto__list_routes",
+    "mcp__otto__get_route",
+    "mcp__otto__terminal_status",
+    "mcp__otto__refresh_public_data",
+    "Read", "Grep", "Glob"
+) -join " "
+
+$started = Get-Date
+Push-Location $repo
+try {
+    $raw = claude -p $prompt --max-turns 40 --output-format json `
+        --mcp-config (Join-Path $repo ".mcp.json") --strict-mcp-config `
+        --allowedTools $allowed
+} finally {
+    Pop-Location
+}
+$ended = Get-Date
+
+$log = Join-Path $repo "artifacts\loop\runs.jsonl"
+New-Item -ItemType Directory -Force -Path (Split-Path $log) | Out-Null
+
+$cost = $null; $turns = $null; $text = $raw; $failed = $null
+try {
+    $parsed = $raw | ConvertFrom-Json
+    $cost = $parsed.total_cost_usd
+    $turns = $parsed.num_turns
+    $text = $parsed.result
+    $failed = $parsed.is_error
+} catch {
+    $failed = $true
+}
+
+$entry = [ordered]@{
+    started_at = $started.ToString("o")
+    seconds    = [math]::Round(($ended - $started).TotalSeconds)
+    cost_usd   = $cost
+    turns      = $turns
+    is_error   = $failed
+}
+($entry | ConvertTo-Json -Compress) | Add-Content -Path $log -Encoding utf8
+
+Write-Output $text
 
 # --- One-time registration. The owner authorizes this; the script never
 # registers itself, because a standing scheduled task is a persistent change
