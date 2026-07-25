@@ -85,7 +85,7 @@ def test_chain_raises_when_both_fail() -> None:
 
 # ---- P3: the status must name the provider that actually served ----
 
-from otto.local_terminal.markets import (
+from otto.local_terminal.markets import (  # noqa: E402
     default_markets_layout,
     markets_payload,
 )
