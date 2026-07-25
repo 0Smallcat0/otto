@@ -8,7 +8,7 @@
   --line2: #242c38;
   --txt: #cfd6df;
   --dim: #79848f;
-  --faint: #4e5761;
+  --faint: #767f8a; /* contrast-tuned for WCAG AA — this drives every caps/label/header */
   --up: #3fb96a;
   --down: #e05656;
   --amber: #d9a441;
@@ -23,11 +23,11 @@
   --line: #d8d3c6;
   --line2: #c4beae;
   --txt: #2b2f35;
-  --dim: #6b7280;
-  --faint: #9aa1ab;
-  --up: #1e7f44;
+  --dim: #5c6470; /* AA-tuned (was #6b7280) */
+  --faint: #5f6874; /* AA-tuned (was #9aa1ab); dim stays stronger than faint */
+  --up: #1b743e; /* AA-tuned (was #1e7f44) — P&L green on panels */
   --down: #b93838;
-  --amber: #9a6b16;
+  --amber: #875c0f; /* AA-tuned (was #9a6b16) — links/accents/group heads */
   --amber2: #7a5511;
 }
 
@@ -44,6 +44,11 @@ body { background: var(--bg); color: var(--txt); font: 12.5px/1.5 var(--sans); }
 a.ft-link { color: var(--amber); text-decoration: none; cursor: pointer; }
 a.ft-link:hover { text-decoration: underline; }
 .ft-cap { font-size: 10.5px; letter-spacing: 0.16em; color: var(--faint); text-transform: uppercase; }
+
+/* keyboard focus (WCAG 2.4.7) — shows only on keyboard focus; mouse users unaffected */
+:focus-visible { outline: 2px solid var(--amber); outline-offset: 1px; }
+.ft-side button:focus-visible { outline-offset: -2px; }
+a.ft-link:focus-visible { outline-offset: 2px; text-decoration: underline; }
 
 /* ── shell ─────────────────────────────────────── */
 .ft-shell { display: flex; min-height: 100vh; }
@@ -87,6 +92,43 @@ a.ft-link:hover { text-decoration: underline; }
 .ft-pos th { font-size: 10px; letter-spacing: 0.12em; color: var(--faint); text-align: right; font-weight: 400; padding: 2px 10px; border-bottom: 1px solid var(--line); white-space: nowrap; }
 .ft-pos td { text-align: right; padding: 4px 10px; white-space: nowrap; }
 .ft-pos th:first-child, .ft-pos td:first-child { text-align: left; padding-left: 0; }
+
+/* ── route page stack ──────────────────────────── */
+/* Route pages stack these full-width, so their left edges must line up — they
+   shipped at 18/16/14/12px and read as a ragged margin. The wall's own copies
+   sit deeper (.ft-wall .ft-col ...) and keep their column padding. */
+.ft-page > .ft-page-head,
+.ft-page > .ft-h2,
+.ft-page > .ft-stat,
+.ft-page > .ft-note,
+.ft-page > .ft-empty { padding-left: 14px; padding-right: 14px; }
+.ft-page > .ft-table th,
+.ft-page > .ft-table td { padding-left: 14px; padding-right: 14px; }
+/* .ft-h2 sticks so a wall column keeps its header while scrolling; on a page
+   with three stacked sections that behaviour is not the intent. */
+.ft-page > .ft-h2 { position: static; }
+/* Dense numeric tables become unreadable when a wide monitor stretches the
+   symbol and the change column to opposite edges. Left-aligned, not centred —
+   this is a terminal, not an article. */
+.ft-page > .ft-table,
+.ft-page > .ft-note,
+.ft-page > .ft-stat,
+.ft-page > .ft-empty { max-width: 1180px; }
+/* .ft-note is the quietest tier by design; some blocks using it carry real
+   status content, which should not be the faintest thing on screen. */
+.ft-note.ft-lede { color: var(--txt); }
+
+/* ── judgment board band ───────────────────────── */
+/* Sits between the two banners, so it wears the same band treatment. The
+   markup shipped ahead of its styles and was rendering as bare divs. */
+.ft-card { background: var(--bg2); border-bottom: 1px solid var(--line2); }
+.ft-card-h { font-size: 10.5px; letter-spacing: 0.18em; color: var(--faint); text-transform: uppercase;
+  padding: 10px 16px 8px; border-bottom: 1px solid var(--line); display: flex; align-items: baseline; }
+/* `.s` is only ever defined under a parent (.ft-book, .ft-nw); give the card its own. */
+.ft-card .s { font-family: var(--mono); font-size: 11px; letter-spacing: 0; text-transform: none; color: var(--dim); }
+/* A concentration warning is content, not a footnote — .ft-note's faint is too quiet for it. */
+.ft-card .ft-note { color: var(--txt); border-bottom: 1px solid var(--line); }
+.ft-card .ft-note:hover { background: var(--bg); }
 
 /* ── wall grid ─────────────────────────────────── */
 .ft-wall { display: grid; grid-template-columns: 300px 1fr 348px; flex: 1; min-height: 0; }
@@ -154,3 +196,36 @@ a.ft-link:hover { text-decoration: underline; }
 .ft-table { width: 100%; border-collapse: collapse; font-size: 12.5px; }
 .ft-table th { font-size: 10px; letter-spacing: 0.12em; color: var(--faint); text-align: left; font-weight: 400; padding: 7px 12px; border-bottom: 1px solid var(--line2); text-transform: uppercase; }
 .ft-table td { font-family: var(--mono); font-size: 12px; padding: 6px 12px; border-bottom: 1px solid var(--line); }
+
+/* ── loading ───────────────────────────────────── */
+/* A first fetch in flight is not "no data" — skeleton rows say "coming",
+   the empty state says "nothing here". Never let one wear the other's face. */
+.ft-sk { padding: 7px 14px; }
+.ft-sk span { display: block; height: 9px; margin: 7px 0; background: var(--line2); opacity: 0.55; animation: ft-sheen 1.4s ease-in-out infinite; }
+.ft-sk span:nth-child(2) { width: 72%; }
+.ft-sk span:nth-child(3) { width: 88%; }
+.ft-sk span:nth-child(4) { width: 64%; }
+.ft-sk span:nth-child(5) { width: 80%; }
+.ft-sk span:nth-child(6) { width: 68%; }
+@keyframes ft-sheen { 0%, 100% { opacity: 0.35; } 50% { opacity: 0.8; } }
+
+.ft-spin { display: inline-block; width: 11px; height: 11px; margin-right: 8px; vertical-align: -1px;
+  border: 1px solid var(--line2); border-top-color: var(--amber); border-radius: 50%;
+  animation: ft-rot 0.8s linear infinite; }
+@keyframes ft-rot { to { transform: rotate(360deg); } }
+
+/* ── sidebar tooltip ───────────────────────────── */
+/* Replaces title="" — native tooltips lag, cannot be styled, and never appear
+   on keyboard focus. */
+.ft-side button[data-tip] { position: relative; }
+.ft-side button[data-tip]:hover::after,
+.ft-side button[data-tip]:focus-visible::after {
+  content: attr(data-tip); position: absolute; left: 100%; top: 50%; transform: translateY(-50%);
+  margin-left: 6px; z-index: 5; white-space: nowrap; pointer-events: none;
+  background: var(--bg2); color: var(--txt); border: 1px solid var(--line2);
+  font-family: var(--mono); font-size: 11px; letter-spacing: 0.04em; padding: 3px 7px;
+}
+
+@media (prefers-reduced-motion: reduce) {
+  .ft-ev .ic.run, .ft-sk span, .ft-spin { animation: none; }
+}

@@ -3,6 +3,7 @@
 import { Fragment, useEffect, useState } from "react";
 import type { ReactNode } from "react";
 import {
+  activateOnKey,
   getJson,
   type ActivityEvent,
   type ActivitySlice,
@@ -128,7 +129,7 @@ export function RealBookBanner({ book, markets }: { book: RealBookSlice | null; 
       </div>
       <div className="ft-pos">
         <table>
-          <thead><tr><th>{t("持倉")}</th><th>{t("數量")}</th><th>{t("成本")}</th><th>{t("現價")}</th><th>{t("未實現")}</th></tr></thead>
+          <thead><tr><th scope="col">{t("持倉")}</th><th scope="col">{t("數量")}</th><th scope="col">{t("成本")}</th><th scope="col">{t("現價")}</th><th scope="col">{t("未實現")}</th></tr></thead>
           <tbody>
             {priced.map((row) => {
               const rowPnl = row.cost > 0 ? ((row.price - row.cost) / row.cost) * 100 : NaN;
@@ -208,7 +209,7 @@ export function EquityBanner({ crypto }: { crypto: CryptoSlice | null }) {
       <div className="ft-pos">
         <table>
           <thead>
-            <tr><th>{t("持倉")}</th><th>{t("數量")}</th><th>{t("成本")}</th><th>{t("現價")}</th><th>{t("未實現")}</th><th>{t("今日交易")}</th></tr>
+            <tr><th scope="col">{t("持倉")}</th><th scope="col">{t("數量")}</th><th scope="col">{t("成本")}</th><th scope="col">{t("現價")}</th><th scope="col">{t("未實現")}</th><th scope="col">{t("今日交易")}</th></tr>
           </thead>
           <tbody>
             {positions.length === 0 ? (
@@ -242,7 +243,7 @@ export function EquityBanner({ crypto }: { crypto: CryptoSlice | null }) {
 
 /** First poll still in flight — show the shape of what is coming, never the
  *  "nothing here" copy. */
-function Skeleton({ rows = 5 }: { rows?: number }) {
+export function Skeleton({ rows = 5 }: { rows?: number }) {
   const { t } = useT();
   return (
     <div className="ft-sk" role="status" aria-label={t("讀取中…")}>
@@ -426,7 +427,9 @@ function EventRow({ event, onOpenArtifact }: { event: ActivityEvent; onOpenArtif
         {event.artifact_path ? (
           <div className="ft-art">
             <span className="ft-dim">{event.artifact_path}</span>
-            <a className="ft-link open" onClick={() => onOpenArtifact(event.artifact_path ?? "")}>{t("開 →")}</a>
+            <a className="ft-link open" role="button" tabIndex={0}
+              onClick={() => onOpenArtifact(event.artifact_path ?? "")}
+              onKeyDown={activateOnKey(() => onOpenArtifact(event.artifact_path ?? ""))}>{t("開 →")}</a>
           </div>
         ) : null}
       </div>
@@ -635,8 +638,19 @@ export function JudgmentBoard() {
         <div
           key={call.call_id}
           className="ft-note"
+          role="button"
+          tabIndex={0}
+          aria-expanded={open === call.call_id}
           onClick={() => toggle(call.call_id)}
-          style={{ cursor: "pointer", borderLeft: "3px solid var(--ft-down, #d46)", paddingLeft: 8 }}
+          onKeyDown={(event) => {
+            if (event.key === "Enter" || event.key === " ") {
+              event.preventDefault();
+              toggle(call.call_id);
+            }
+          }}
+          // --ft-down is not a token (the token is --down; ft-down is the class),
+          // so this always fell through to a hardcoded off-palette red.
+          style={{ cursor: "pointer", borderLeft: "3px solid var(--down)", paddingLeft: 8 }}
         >
           <div>
             <b className="ft-down">{t("集中度提醒")}</b>{" "}
@@ -657,12 +671,12 @@ export function JudgmentBoard() {
         <table>
           <thead>
             <tr>
-              <th>{t("標的")}</th>
-              <th>{t("我的看法")}</th>
-              <th>{t("記錄時")}</th>
-              <th>{t("現在")}</th>
-              <th>{t("什麼情況算看錯")}</th>
-              <th>{t("驗收日")}</th>
+              <th scope="col">{t("標的")}</th>
+              <th scope="col">{t("我的看法")}</th>
+              <th scope="col">{t("記錄時")}</th>
+              <th scope="col">{t("現在")}</th>
+              <th scope="col">{t("什麼情況算看錯")}</th>
+              <th scope="col">{t("驗收日")}</th>
             </tr>
           </thead>
           <tbody>
@@ -672,7 +686,8 @@ export function JudgmentBoard() {
               const view = Number.isFinite(move) ? pct(move) : null;
               return (
                 <Fragment key={call.call_id}>
-                  <tr onClick={() => toggle(call.call_id)} style={{ cursor: "pointer" }}>
+                  <tr onClick={() => toggle(call.call_id)} tabIndex={0} aria-expanded={open === call.call_id}
+                    onKeyDown={activateOnKey(() => toggle(call.call_id))} style={{ cursor: "pointer" }}>
                     <td>
                       <span className="ft-faint">{open === call.call_id ? "▾" : "▸"}</span>{" "}
                       {call.symbol}

@@ -420,6 +420,12 @@ function Shell() {
   const navigate = (routeId: string) => {
     window.location.hash = `#/${routeId}`;
     setActiveRoute(routeId);
+    // The capabilities page and the artifact reader render *instead of* the
+    // workspace, so with either open the sidebar highlighted the new route and
+    // then showed the old view — clicking 回測 did nothing until you first
+    // found "← 回任務牆". Navigation now always lands where it says.
+    setShowCaps(false);
+    setArtifactPath(null);
   };
 
   return (
