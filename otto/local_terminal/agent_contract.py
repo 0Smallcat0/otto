@@ -2233,7 +2233,10 @@ ACTION_CONTRACTS: tuple[AgentActionContract, ...] = (
             '"invalidation":..,"weight_pct":..,"cap_pct":..,"evidence":{..},'
             '"refresh":true}; ref_price is fetched live at record time (Yahoo path, '
             "crypto as -USD) unless supplied explicitly; market is inferred for "
-            'universe symbols. stance "size_down" is a risk view — the position is '
+            "universe symbols. Write the thesis in the operator's language "
+            "(Traditional Chinese for this install) — the ledger exists to be read, "
+            'and a judgment that needs translating does not land. stance "size_down" '
+            "is a risk view — the position is "
             "too large for the book, with no directional claim — and requires "
             "weight_pct; it is scored on whether the oversized position went on to "
             "drop materially, never as a directional win or loss"

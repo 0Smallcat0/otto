@@ -61,6 +61,10 @@ The point of the round is the journaled judgment ledger, not activity.
 Reach the terminal through the otto MCP tools (run_action / list_actions);
 plain HTTP clients are not available in this run.
 
+Write every thesis in Traditional Chinese. The ledger exists to be read by the
+owner, who reads Chinese; a judgment he has to translate is a judgment that
+does not land. Ticker symbols, numbers and price levels stay as they are.
+
 If a data or behavior problem appears, diagnose it precisely - the action, the
 inputs, the wrong output, and the file you believe is at fault - and say so at
 the end of the round. This run cannot edit code, run tests, commit, push, or
