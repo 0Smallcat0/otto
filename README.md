@@ -79,6 +79,15 @@ methodology: [ADR-0004](docs/architecture/ADR-0004-eval-methodology.md).
   React UI at `http://127.0.0.1:8765/`.
 - **AI operator surface** — a standard-library-only [MCP](https://modelcontextprotocol.io)
   server (`otto/local_terminal/mcp_server.py`) exposes routes and gated actions as tools.
+- **A judgment ledger scored on real prices** — the agent records dated calls (stance,
+  reasoning, entry zone, the level that would prove it wrong, horizon) struck at a live
+  mark, and each one is later scored against the *actual* subsequent price. The honesty is
+  structural: a call with no reasoning or no live price is refused rather than guessed,
+  moves inside a flat band count as flat instead of skill, a `size_down` concentration
+  warning makes no directional claim and is excluded from the hit rate entirely, and a call
+  scored long after it matured is flagged and left out because it measured a window its
+  thesis never claimed. The dashboard shows the open calls; the scorecard is whatever the
+  market says it is.
 - **Safety-gated by design** — live trading, credential entry, and code execution are off
   by default and refuse loudly; the default runtime is read-only / paper / dry-run.
 - **Public, no-key market data** where available (crypto, equities, FX, macro), with an
@@ -89,7 +98,7 @@ methodology: [ADR-0004](docs/architecture/ADR-0004-eval-methodology.md).
   guard, explicit fee/slippage economics, walk-forward validation with engine-issued
   consistency verdicts, and overfitting red flags printed in words
   (see the [walk-forward methodology study](docs/research/sma-cross-walk-forward-study.md)).
-- **470+ tests** covering the contract, safety gates, providers, eval harness, and UI
+- **630+ tests** covering the contract, safety gates, providers, eval harness, and UI
   end-to-end, on Windows + Linux CI.
 
 ## Screenshots
