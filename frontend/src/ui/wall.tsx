@@ -1,6 +1,6 @@
 // M27 任務牆 — the AI operates; a person watches. Every zone is read-only.
 
-import { useEffect, useState } from "react";
+import { Fragment, useEffect, useState } from "react";
 import type { ReactNode } from "react";
 import {
   getJson,
@@ -517,6 +517,133 @@ export function Headlines({ news, digest }: {
   );
 }
 
+/* ── AI 判斷板:蒐集→思考→給看法,寫在人看得到的地方 ── */
+
+interface ResearchCall {
+  call_id: string;
+  symbol: string;
+  name?: string | null;
+  stance: string;
+  conviction: string;
+  thesis: string;
+  ref_price: string;
+  mark_price?: string | null;
+  unrealized_pct?: string | null;
+  invalidation?: string | null;
+  matures_at: string;
+  weight_pct?: string | null;
+  cap_pct?: string | null;
+}
+
+const STANCE_LABEL: Record<string, string> = {
+  accumulate: "加碼",
+  reduce: "減碼",
+  avoid: "避開",
+  hold: "持有觀望",
+  size_down: "降集中度"
+};
+
+const STANCE_CLASS: Record<string, string> = {
+  accumulate: "ft-up",
+  reduce: "ft-down",
+  avoid: "ft-down",
+  hold: "ft-dim",
+  size_down: "ft-down"
+};
+
+/** Open judgments with their reasoning — the thing the whole loop exists to produce. */
+export function JudgmentBoard() {
+  const { t } = useT();
+  const [calls, setCalls] = useState<ResearchCall[]>([]);
+  const [open, setOpen] = useState<string | null>(null);
+  useEffect(() => {
+    let alive = true;
+    const load = () =>
+      void getJson<{ open_calls?: ResearchCall[] }>("/api/research/ledger").then((data) => {
+        if (!alive || !data) return;
+        setCalls(Array.isArray(data.open_calls) ? data.open_calls : []);
+      });
+    load();
+    const timer = setInterval(load, 60_000);
+    return () => {
+      alive = false;
+      clearInterval(timer);
+    };
+  }, []);
+  if (!calls.length) return null;
+  // Sizing warnings ride at the top: they are about how much of the book one
+  // name owns, which is the loudest thing a judgment can say about real money.
+  const ordered = [...calls].sort(
+    (a, b) => Number(b.stance === "size_down") - Number(a.stance === "size_down")
+  );
+  return (
+    <div className="ft-card" data-testid="wall-judgments">
+      <div className="ft-card-h">
+        <span>{t("AI 判斷")}</span>
+        <span className="s">
+          {ordered.length} {t("則進行中")} · {t("點列展開理由")}
+        </span>
+      </div>
+      <div className="ft-pos">
+      <table>
+        <thead>
+          <tr>
+            <th>{t("標的")}</th>
+            <th>{t("看法")}</th>
+            <th>{t("記錄價")}</th>
+            <th>{t("現價")}</th>
+            <th>{t("失效")}</th>
+            <th>{t("檢驗日")}</th>
+          </tr>
+        </thead>
+        <tbody>
+          {ordered.map((call) => {
+            const cls = STANCE_CLASS[call.stance] ?? "ft-dim";
+            const move = Number.parseFloat(String(call.unrealized_pct ?? ""));
+            const view = Number.isFinite(move) ? pct(move) : null;
+            const sizing = call.stance === "size_down";
+            return (
+              <Fragment key={call.call_id}>
+                <tr
+                  onClick={() => setOpen(open === call.call_id ? null : call.call_id)}
+                  style={{ cursor: "pointer" }}
+                >
+                  <td>
+                    {call.symbol}
+                    {call.name ? <small> {call.name}</small> : null}
+                  </td>
+                  <td className={cls}>
+                    {t(STANCE_LABEL[call.stance] ?? call.stance)}
+                    <small> {call.conviction}</small>
+                  </td>
+                  <td>{call.ref_price}</td>
+                  <td>
+                    {call.mark_price ?? "—"}
+                    {view ? <small className={view.cls}> {view.text}</small> : null}
+                  </td>
+                  <td>{sizing ? `${call.weight_pct}% / ${call.cap_pct}%` : (call.invalidation ?? "—")}</td>
+                  <td className="s">{String(call.matures_at).slice(0, 10)}</td>
+                </tr>
+                {open === call.call_id ? (
+                  <tr>
+                    <td colSpan={6} className="s">
+                      {call.thesis}
+                    </td>
+                  </tr>
+                ) : null}
+              </Fragment>
+            );
+          })}
+        </tbody>
+      </table>
+      </div>
+      <div className="ft-note">
+        {t("到期或跌破失效價時,用真實價格計分;集中度警示不計入方向命中率。分析供參考,你自行決定。")}
+      </div>
+    </div>
+  );
+}
+
 /* ── 任務牆組合 ── */
 
 export function Wall({ markets, crypto, activity, news, watchlist, digest, book, onOpenArtifact, heading }: {
@@ -537,6 +664,7 @@ export function Wall({ markets, crypto, activity, news, watchlist, digest, book,
     <div className="ft-page" data-testid="workspace-dashboard">
       {heading}
       <RealBookBanner book={book} markets={markets} />
+      <JudgmentBoard />
       <EquityBanner crypto={crypto} />
       <div className="ft-wall">
         <QuoteMonitor markets={markets} crypto={crypto} watchlist={watchlist} />
