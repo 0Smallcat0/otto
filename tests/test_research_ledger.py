@@ -299,3 +299,48 @@ def test_breached_call_is_not_double_flagged_as_approaching() -> None:
     payload = research_ledger_payload(st, {"2330.TW": Decimal("88")})
     reasons = " ".join(payload["open_calls"][0]["review_reasons"])
     assert "invalidation" not in reasons  # breach is scoring's job, not review's
+
+
+def _age_call(state, matured_days_ago, horizon_days=30):
+    """Make a call that matured N days ago with the given horizon."""
+    call = state["calls"][0]
+    call["horizon_days"] = horizon_days
+    call["as_of"] = (
+        datetime.now(tz=UTC) - timedelta(days=horizon_days + matured_days_ago)
+    ).isoformat()
+    call["matures_at"] = (datetime.now(tz=UTC) - timedelta(days=matured_days_ago)).isoformat()
+    return state
+
+
+def test_score_run_on_time_honors_the_window() -> None:
+    st, _ = _record(default_research_ledger_state(), ref_price="100", horizon_days=30)
+    st, scored = score_calls(_age_call(st, matured_days_ago=1), {"2330.TW": Decimal("110")})
+    assert scored[0]["scored_late_days"] == 1
+    assert scored[0]["window_honored"] is True  # 1 day late on a 30-day call
+
+
+def test_badly_late_score_is_marked_and_kept_out_of_the_hit_rate() -> None:
+    # nothing ran for 20 days after a 30-day call matured: the measured window
+    # is 50 days, not the 30 the thesis claimed
+    st, _ = _record(default_research_ledger_state(), ref_price="100", horizon_days=30)
+    st, scored = score_calls(_age_call(st, matured_days_ago=20), {"2330.TW": Decimal("110")})
+    assert scored[0]["scored_late_days"] == 20
+    assert scored[0]["window_honored"] is False
+    assert scored[0]["outcome"] == "worked"  # the raw outcome is still visible
+
+    card = research_ledger_payload(st)["scorecard"]
+    assert card["stale_scored_count"] == 1
+    assert card["decided_count"] == 0  # excluded — cannot claim this as a hit
+    assert card["hit_rate_pct"] is None
+    assert "rounds were missed" in card["stale_note"]
+
+
+def test_invalidation_breach_is_never_late() -> None:
+    # a breach is an event, scored whenever price crosses — not a deadline
+    st, _ = _record(
+        default_research_ledger_state(), ref_price="100", invalidation="95", horizon_days=30
+    )
+    st, scored = score_calls(_age_call(st, matured_days_ago=90), {"2330.TW": Decimal("90")})
+    assert scored[0]["outcome"] == "invalidated"
+    assert scored[0]["window_honored"] is True
+    assert scored[0]["scored_late_days"] == 0
