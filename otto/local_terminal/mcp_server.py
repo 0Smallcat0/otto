@@ -487,7 +487,7 @@ def handle_request(message: dict[str, Any], client: TerminalClient) -> dict[str,
             return _result(request_id, _text_content(str(exc), is_error=True))
         except ValueError as exc:
             return _result(request_id, _text_content(str(exc), is_error=True))
-        except Exception as exc:  # noqa: BLE001 - surface as tool error, never crash the loop
+        except Exception as exc:
             return _result(request_id, _text_content(f"tool error: {exc}", is_error=True))
 
     if is_notification:

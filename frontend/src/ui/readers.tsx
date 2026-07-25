@@ -309,6 +309,7 @@ export function NewsPage({ heading, items, digest }: {
     url?: string;
     held_symbols?: string[];
     watched_symbols?: string[];
+    relevance?: string;
   }[];
   digest: {
     items?: Record<string, { title_zh?: string; summary_zh?: string }>;
@@ -335,16 +336,44 @@ export function NewsPage({ heading, items, digest }: {
   const readable = items
     .filter((item) => (item.item_id && digest?.items?.[item.item_id]) || isZhNative(item))
     .sort((a, b) => (a.age_minutes ?? 9e9) - (b.age_minutes ?? 9e9));
+  // A flat list of ninety-nine headlines made the reader do the sorting: a
+  // third of it was crypto for someone who holds none, beside a Turkish bank
+  // licence and the receipt-lottery numbers. Grouping by what it is worth to
+  // him puts his own positions first and folds the rest away with a count —
+  // nothing is deleted, so "irrelevant" stays checkable.
+  const bucket = (name: string) => readable.filter((item) => (item.relevance ?? "global") === name);
+  const mine = bucket("mine");
+  const twNews = bucket("tw").slice(0, 20);
+  const global = bucket("global").slice(0, 12);
+  const noise = bucket("noise");
   const translated = readable.slice(0, 25);
+  // A "summary" that is a raw headline in a language nobody asked for is not a
+  // summary; the section claims to be AI-organised, so only show the ones that
+  // actually were.
+  // A section whose "title" is verbatim one of the headlines below it was
+  // pasted, not summarised — and the block claims to be AI-organised. Lottery
+  // draws are dropped for the same reason they are dropped from the list.
+  const headlineSet = new Set(items.map((item) => String(item.title ?? "").trim()));
+  const realSections = (digest?.sections ?? []).filter((section) => {
+    const title = String(section.title_zh ?? "").trim();
+    if (!title || headlineSet.has(title)) return false;
+    if (/統一發票|開獎|中獎|今彩|威力彩/.test(title + String(section.summary_zh ?? ""))) return false;
+    return /[一-鿿]/.test(title);
+  });
   const originals = items.filter((item) => !readable.includes(item));
+  const otherHeadlines = [
+    ...originals.filter((item) => (item.held_symbols?.length ?? 0) + (item.watched_symbols?.length ?? 0) > 0),
+    ...originals.filter((item) => (item.held_symbols?.length ?? 0) + (item.watched_symbols?.length ?? 0) === 0)
+  ];
+
   return (
     <div className="ft-page" data-testid="workspace-news">
       {heading}
-      {(digest?.sections?.length ?? 0) > 0 ? (
+      {realSections.length > 0 ? (
         <>
           <div className="ft-h2">{t("今日速覽(AI 整理)")}{digest?.updated_at ? <span className="r ft-dim">{ageLabel(digest.updated_at, lang).text}</span> : null}</div>
           <div style={{ padding: "6px 14px 10px", borderBottom: "1px solid var(--line)" }}>
-            {(digest?.sections ?? []).map((section, index) => (
+            {realSections.map((section, index) => (
               <div key={index} style={{ fontSize: 13, margin: "4px 0" }}>
                 <b className="ft-am">{section.title_zh}</b>
                 {section.summary_zh ? <span className="ft-dim"> — {section.summary_zh}</span> : null}
@@ -357,38 +386,55 @@ export function NewsPage({ heading, items, digest }: {
         <div className="ft-empty">{t("尚無新聞快取")}</div>
       ) : (
         <>
-          <div className="ft-h2">{t("中文頭條(台股原生+AI 整理)")} <span className="r ft-dim">{translated.length}</span></div>
-          {translated.length === 0 ? (
-            <div className="ft-note">{t("尚未整理——跟 AI 說「補新聞摘要」即可")}</div>
-          ) : (
-            translated.map((item) => {
-              const entry = digest?.items?.[item.item_id ?? ""];
-              return (
-                <div className="ft-nw" key={item.item_id ?? item.title}>
-                  <div className="h">
-                    {/* Which of these touch his own positions — the reason he
-                        is reading the page at all. */}
-                    {(item.held_symbols?.length ?? 0) > 0 ? (
-                      <b className="ft-am">[{t("我的持股")} {item.held_symbols!.join(" ")}] </b>
-                    ) : null}
-                    {(item.watched_symbols?.length ?? 0) > 0 ? (
-                      <b className="ft-dim">[{t("追蹤中")} {item.watched_symbols!.join(" ")}] </b>
-                    ) : null}
-                    {entry?.title_zh ?? item.title}
-                    {item.url ? (
-                      <span className="ft-faint" style={{ fontSize: 11 }}> · <a className="ft-link" href={item.url} target="_blank" rel="noreferrer noopener">{t("原文 ↗")}</a></span>
-                    ) : null}
-                  </div>
-                  {entry?.summary_zh ? <div className="s" style={{ fontFamily: "var(--sans)" }}>{entry.summary_zh}</div> : null}
-                  <div className="s">{item.source} · {typeof item.age_minutes === "number" ? minutesToAge(item.age_minutes, lang) : ""}</div>
-                </div>
-              );
-            })
+          {([
+            ["跟你有關(持股與追蹤中)", mine],
+            ["台股與總經", twNews],
+            ["國際與其他", global]
+          ] as Array<[string, typeof mine]>).map(([label, group]) =>
+            group.length === 0 ? null : (
+              <div key={label}>
+                <div className="ft-h2">{t(label)} <span className="r ft-dim">{group.length}</span></div>
+                {group.map((item) => {
+                  const entry = digest?.items?.[item.item_id ?? ""];
+                  return (
+                    <div className="ft-nw" key={item.item_id ?? item.title}>
+                      <div className="h">
+                        {(item.held_symbols?.length ?? 0) > 0 ? (
+                          <b className="ft-am">[{t("我的持股")} {item.held_symbols!.join(" ")}] </b>
+                        ) : null}
+                        {(item.watched_symbols?.length ?? 0) > 0 ? (
+                          <b className="ft-dim">[{t("追蹤中")} {item.watched_symbols!.join(" ")}] </b>
+                        ) : null}
+                        {entry?.title_zh ?? item.title}
+                        {item.url ? (
+                          <span className="ft-faint" style={{ fontSize: 11 }}> · <a className="ft-link" href={item.url} target="_blank" rel="noreferrer noopener">{t("原文 ↗")}</a></span>
+                        ) : null}
+                      </div>
+                      {entry?.summary_zh ? <div className="s" style={{ fontFamily: "var(--sans)" }}>{entry.summary_zh}</div> : null}
+                      <div className="s">{item.source} · {typeof item.age_minutes === "number" ? minutesToAge(item.age_minutes, lang) : ""}</div>
+                    </div>
+                  );
+                })}
+              </div>
+            )
           )}
+          {mine.length === 0 ? (
+            <div className="ft-note">{t("今天沒有直接提到你持股或追蹤標的的新聞——這是事實,不是漏抓。")}</div>
+          ) : null}
+          {noise.length > 0 ? (
+            <div className="ft-note s">
+              {t("另收起")} {noise.length} {t("則與投資無關的(開獎號碼之類)。要看就跟 AI 說「把收起來的新聞也show出來」。")}
+            </div>
+          ) : null}
+          {/* Thirty untranslated headlines, most of them crypto for someone who
+              holds none, was the tail end of the same problem the grouping
+              above fixes. Anything touching his positions is lifted out of the
+              dump; the rest is trimmed to a readable few and the true count is
+              stated rather than quietly hidden. */}
           <div className="ft-h2" style={{ marginTop: 8 }}>{t("其他原文頭條")} <span className="r ft-dim">
-            {originals.length} · {t("要整理哪條跟 AI 說")}
+            {t("顯示")} {Math.min(otherHeadlines.length, 8)} / {originals.length} · {t("要整理哪條跟 AI 說")}
           </span></div>
-          {originals.slice(0, 30).map((item) => (
+          {otherHeadlines.slice(0, 8).map((item) => (
             <div className="ft-nw" key={item.item_id ?? item.title}>
               <div className="h ft-dim" style={{ fontSize: 12 }}>
                 {(item.held_symbols?.length ?? 0) > 0 ? (

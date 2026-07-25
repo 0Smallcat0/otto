@@ -223,3 +223,33 @@ def _int(value: Any) -> int:
         return int(value)
     except (TypeError, ValueError):
         return -1
+
+
+# ── relevance buckets ────────────────────────────────────────────────────────
+# Sources that write for a Taiwanese investor, in a language he reads.
+TW_NATIVE_SOURCES = ("鉅亨", "中央社", "經濟日報", "工商時報", "自由財經", "MoneyDJ")
+# Finance-shaped headlines with no investment content.
+NEWS_NOISE_PATTERNS = ("統一發票", "開獎", "中獎", "樂透", "威力彩", "發票號碼", "今彩")
+
+
+def news_relevance(item: dict[str, Any]) -> str:
+    """Bucket one headline by what it is worth to the reader.
+
+    The feed ran 99 items where 29 were crypto for someone whose book holds
+    none, next to a foreign bank licence revocation and the national receipt
+    lottery. Nothing is deleted — the bucket lets a page lead with what touches
+    the reader's money and fold the rest away with a count, so "irrelevant"
+    stays a claim that can be checked.
+
+    "mine" wins over everything: a lottery headline that somehow names a held
+    symbol is still about his money.
+    """
+    if item.get("held_symbols") or item.get("watched_symbols"):
+        return "mine"
+    title = str(item.get("title", ""))
+    if any(pattern in title for pattern in NEWS_NOISE_PATTERNS):
+        return "noise"
+    source = str(item.get("source", ""))
+    if any(native in source for native in TW_NATIVE_SOURCES):
+        return "tw"
+    return "global"
