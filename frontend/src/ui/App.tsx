@@ -14,6 +14,7 @@ import {
   type ShellContractSlice,
   type WatchlistSlice,
   type ShellRouteSlice,
+  activateOnKey,
   getJson,
   hhmm,
   isToday,
@@ -74,6 +75,17 @@ const ROUTE_ZH: Record<string, string> = {
 // Task-level, human-first: what a person can SAY. Curated by hand; the raw
 // contract stays available in the fold-out below so nothing is hidden.
 const SAYABLE: Array<{ group: string; items: string[] }> = [
+  // The judgment ledger is the most useful thing here and this page — where a
+  // person learns what to ask for — did not mention it at all, so there was no
+  // way to discover it short of noticing the board on the wall. It goes first:
+  // it is the reason the rest of the terminal is worth running.
+  { group: "判斷(AI 給看法,到期用真實價格驗收)", items: [
+    "你對我持股的看法是什麼?",
+    "幫我看 2834 現在該怎麼辦",
+    "掃一下有什麼標的值得研究",
+    "你的判斷準嗎?給我命中率",
+    "2834 的估值和有沒有重大訊息"
+  ] },
   { group: "看行情", items: [
     "幫我盯 TSLA 和 2454",
     "拉 AAPL 的歷史 K 線",
@@ -129,7 +141,8 @@ function SayableItem({ text }: { text: string }) {
     }
   };
   return (
-    <div onClick={copy} style={{ cursor: "pointer", padding: "5px 10px", margin: "4px 0",
+    <div onClick={copy} role="button" tabIndex={0} onKeyDown={activateOnKey(copy)}
+      style={{ cursor: "pointer", padding: "5px 10px", margin: "4px 0",
       border: "1px solid var(--line)", background: "var(--bg)", fontSize: 13 }}>
       「{t(text)}」
       <span className="ft-faint" style={{ float: "right", fontSize: 11 }}>
@@ -155,7 +168,7 @@ function CapabilitiesDoc({ onBack }: { onBack: () => void }) {
   }
   return (
     <div className="ft-doc-wrap" data-testid="capabilities-doc">
-      <a className="ft-link ft-mono" onClick={onBack}>{t("← 回任務牆")}</a>
+      <a className="ft-link ft-mono" role="button" tabIndex={0} onClick={onBack} onKeyDown={activateOnKey(onBack)}>{t("← 回任務牆")}</a>
       <div className="ft-doc">
         <h1>{t("AI 能做什麼")}</h1>
         <div className="sub">{t("不用記指令——想做什麼,用你的話說。下面每一句都可以直接用(點一下就複製,貼到對話裡)。")}</div>
@@ -166,7 +179,8 @@ function CapabilitiesDoc({ onBack }: { onBack: () => void }) {
           </div>
         ))}
         <div style={{ marginTop: 20, borderTop: "1px solid var(--line)", paddingTop: 10 }}>
-          <a className="ft-link" style={{ fontSize: 12 }} onClick={() => setShowRaw(!showRaw)}>
+          <a className="ft-link" style={{ fontSize: 12 }} role="button" tabIndex={0} aria-expanded={showRaw}
+            onClick={() => setShowRaw(!showRaw)} onKeyDown={activateOnKey(() => setShowRaw(!showRaw))}>
             {showRaw ? "▾" : "▸"} {t("技術明細")}:{actions.length} {t("個底層動作(讀自 agent-contract,新功能自動出現)")}
           </a>
           {showRaw ? (
@@ -412,18 +426,23 @@ function Shell() {
     <div className="ft-shell">
       <nav className="ft-side" data-testid="shell-sidebar">
         <div className="ft-cap">OTTO</div>
-        {humanRoutes.map((route) => (
-          <button
-            key={route.route_id}
-            type="button"
-            className={route.route_id === active?.route_id ? "on" : ""}
-            data-testid={buttonIdFor(route)}
-            onClick={() => navigate(route.route_id)}
-            title={route.label}
-          >
-            {t(ROUTE_ZH[route.route_id] ?? route.label)}
-          </button>
-        ))}
+        {humanRoutes.map((route) => {
+          // Native title="" lagged, could not be styled, and never showed on
+          // keyboard focus. Only worth a tip when it adds the canonical name.
+          const visible = t(ROUTE_ZH[route.route_id] ?? route.label);
+          return (
+            <button
+              key={route.route_id}
+              type="button"
+              className={route.route_id === active?.route_id ? "on" : ""}
+              data-testid={buttonIdFor(route)}
+              onClick={() => navigate(route.route_id)}
+              data-tip={visible === route.label ? undefined : route.label}
+            >
+              {visible}
+            </button>
+          );
+        })}
         <div className="ft-cap" style={{ marginTop: 14 }}>{t("操作")}</div>
         <div className="ft-note">{t("全部指令走對話。這裡只負責看。")}</div>
         <button type="button" className="on" style={{ borderLeftColor: "transparent" }}
@@ -476,7 +495,8 @@ function Shell() {
           if (briefMatch) return <NewsBriefReader briefId={briefMatch[1]} onBack={() => setArtifactPath(null)} />;
           return (
             <div className="ft-doc-wrap" data-testid="artifact-reader">
-              <a className="ft-link ft-mono" onClick={() => setArtifactPath(null)}>{t("← 回任務牆")}</a>
+              <a className="ft-link ft-mono" role="button" tabIndex={0}
+                onClick={() => setArtifactPath(null)} onKeyDown={activateOnKey(() => setArtifactPath(null))}>{t("← 回任務牆")}</a>
               <div className="ft-doc">
                 <h1>{t("產出位置")}</h1>
                 <div className="sub">{artifactPath}</div>
@@ -522,6 +542,7 @@ function Shell() {
             book={portfolio.data}
             onOpenArtifact={setArtifactPath}
             heading={<RouteHeading routeId={active.route_id} label={active.label} />}
+            settled={{ markets: markets.settled, activity: activity.settled, news: news.settled }}
           />
         ) : active ? (
           <PlaceholderPage route={active} />

@@ -1,7 +1,7 @@
 // M27 細讀模式 — finished research rendered as documents, not panels.
 
 import { useEffect, useState } from "react";
-import { ageLabel, fmt, getJson, hhmm, isZhNative, minutesToAge, num, pct } from "./api";
+import { activateOnKey, ageLabel, fmt, getJson, hhmm, isZhNative, minutesToAge, num, pct } from "./api";
 
 const TRADE_COL_LABELS: Record<string, string> = {
   side: "方向", quantity: "數量", price: "價格", fee: "手續費",
@@ -15,14 +15,20 @@ function DocShell({ onBack, children }: { onBack: () => void; children: React.Re
   const { t } = useT();
   return (
     <div className="ft-doc-wrap">
-      <a className="ft-link ft-mono" onClick={onBack}>{t("← 回任務牆")}</a>
+      <a className="ft-link ft-mono" role="button" tabIndex={0} onClick={onBack} onKeyDown={activateOnKey(onBack)}>{t("← 回任務牆")}</a>
       <div className="ft-doc">{children}</div>
     </div>
   );
 }
 
 function Loading({ text }: { text: string }) {
-  return <div className="ft-empty">{text}</div>;
+  // Same words as before, but no longer wearing the empty state's clothes.
+  return (
+    <div className="ft-empty" role="status">
+      <span className="ft-spin" aria-hidden="true" />
+      {text}
+    </div>
+  );
 }
 
 /* ── 回測報告 ── */
@@ -130,7 +136,7 @@ export function BacktestRunReader({ runId, onBack }: { runId: string; onBack: ()
         <div className="ft-empty">{t("此回測無成交")}</div>
       ) : (
         <table>
-          <thead><tr>{tradeCols.map((col) => <th key={col}>{t(TRADE_COL_LABELS[col] ?? col)}</th>)}</tr></thead>
+          <thead><tr>{tradeCols.map((col) => <th scope="col" key={col}>{t(TRADE_COL_LABELS[col] ?? col)}</th>)}</tr></thead>
           <tbody>
             {trades.slice(0, 12).map((trade, index) => (
               <tr key={index}>
@@ -265,7 +271,7 @@ export function BacktestPage({ heading }: { heading: React.ReactNode }) {
         <div className="ft-empty">{t("尚無回測——在對話請 AI「幫我回測○○」,完成的報告會列在這裡。")}</div>
       ) : (
         <table className="ft-table">
-          <thead><tr><th>{t("時間")}</th><th>{t("策略")}</th><th>{t("標的")}</th><th style={{ textAlign: "right" }}>{t("報酬")}</th><th></th></tr></thead>
+          <thead><tr><th scope="col">{t("時間")}</th><th scope="col">{t("策略")}</th><th scope="col">{t("標的")}</th><th scope="col" style={{ textAlign: "right" }}>{t("報酬")}</th><th scope="col"></th></tr></thead>
           <tbody>
             {rows.map((row) => {
               const ret = pct(row.return_pct);
@@ -275,7 +281,9 @@ export function BacktestPage({ heading }: { heading: React.ReactNode }) {
                   <td style={{ fontFamily: "var(--sans)" }}>{row.strategy_label ?? row.strategy ?? "—"}</td>
                   <td>{row.symbol ?? "—"}{row.timeframe ? ` · ${row.timeframe}` : ""}</td>
                   <td className={ret.cls} style={{ textAlign: "right" }}>{ret.text}</td>
-                  <td><a className="ft-link" onClick={() => setOpenRun(row.run_id ?? null)}>{t("開報告 →")}</a></td>
+                  <td><a className="ft-link" role="button" tabIndex={0}
+                    onClick={() => setOpenRun(row.run_id ?? null)}
+                    onKeyDown={activateOnKey(() => setOpenRun(row.run_id ?? null))}>{t("開報告 →")}</a></td>
                 </tr>
               );
             })}
@@ -293,7 +301,15 @@ interface BriefIndexRow {
 
 export function NewsPage({ heading, items, digest }: {
   heading: React.ReactNode;
-  items: { item_id?: string; title?: string; source?: string; age_minutes?: number; url?: string }[];
+  items: {
+    item_id?: string;
+    title?: string;
+    source?: string;
+    age_minutes?: number;
+    url?: string;
+    held_symbols?: string[];
+    watched_symbols?: string[];
+  }[];
   digest: {
     items?: Record<string, { title_zh?: string; summary_zh?: string }>;
     sections?: { category?: string; title_zh?: string; summary_zh?: string }[];
@@ -350,6 +366,14 @@ export function NewsPage({ heading, items, digest }: {
               return (
                 <div className="ft-nw" key={item.item_id ?? item.title}>
                   <div className="h">
+                    {/* Which of these touch his own positions — the reason he
+                        is reading the page at all. */}
+                    {(item.held_symbols?.length ?? 0) > 0 ? (
+                      <b className="ft-am">[{t("我的持股")} {item.held_symbols!.join(" ")}] </b>
+                    ) : null}
+                    {(item.watched_symbols?.length ?? 0) > 0 ? (
+                      <b className="ft-dim">[{t("追蹤中")} {item.watched_symbols!.join(" ")}] </b>
+                    ) : null}
                     {entry?.title_zh ?? item.title}
                     {item.url ? (
                       <span className="ft-faint" style={{ fontSize: 11 }}> · <a className="ft-link" href={item.url} target="_blank" rel="noreferrer noopener">{t("原文 ↗")}</a></span>
@@ -367,6 +391,12 @@ export function NewsPage({ heading, items, digest }: {
           {originals.slice(0, 30).map((item) => (
             <div className="ft-nw" key={item.item_id ?? item.title}>
               <div className="h ft-dim" style={{ fontSize: 12 }}>
+                {(item.held_symbols?.length ?? 0) > 0 ? (
+                  <b className="ft-am">[{t("我的持股")} {item.held_symbols!.join(" ")}] </b>
+                ) : null}
+                {(item.watched_symbols?.length ?? 0) > 0 ? (
+                  <b className="ft-dim">[{t("追蹤中")} {item.watched_symbols!.join(" ")}] </b>
+                ) : null}
                 {item.title}
                 {item.url ? (
                   <a className="ft-link" href={item.url} target="_blank" rel="noreferrer noopener" style={{ marginLeft: 6, fontSize: 11 }}>↗</a>

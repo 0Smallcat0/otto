@@ -181,6 +181,24 @@ def record_call(state: dict[str, Any], payload: dict[str, Any]) -> tuple[dict[st
     if stance == "size_down" and weight_pct is None:
         raise ResearchLedgerError("size_down requires weight_pct — the position's share of the book")
 
+    # Replacing a view was only ever a convention in the operating prompt, so a
+    # revised call simply piled up next to the old one: the owner's largest
+    # holding ended up listed three times with three different invalidation
+    # levels, which reads as a broken ledger rather than a changed mind. A
+    # supersede is now recorded on both sides.
+    supersedes = str(payload.get("supersedes") or "").strip()
+    superseded: dict[str, Any] | None = None
+    if supersedes:
+        superseded = next(
+            (c for c in ledger["calls"] if str(c.get("call_id")) == supersedes), None
+        )
+        if superseded is None:
+            raise ResearchLedgerError(f"supersedes: no call {supersedes} in the ledger")
+        if superseded.get("status") != "open":
+            raise ResearchLedgerError(
+                f"supersedes: call {supersedes} is {superseded.get('status')}, not open"
+            )
+
     name = payload.get("name")
     if not name and symbol in DEFAULT_UNIVERSE:
         name = DEFAULT_UNIVERSE[symbol][1]
@@ -207,6 +225,7 @@ def record_call(state: dict[str, Any], payload: dict[str, Any]) -> tuple[dict[st
         "horizon_days": horizon_days,
         "matures_at": (now + timedelta(days=horizon_days)).isoformat(timespec="seconds"),
         "evidence": evidence,
+        "supersedes": supersedes or None,
         "status": "open",
         "scored_at": None,
         "score_price": None,
@@ -214,6 +233,14 @@ def record_call(state: dict[str, Any], payload: dict[str, Any]) -> tuple[dict[st
         "favor_pct": None,
         "outcome": None,
     }
+    if superseded is not None:
+        # Withdrawn, not judged: the thesis was replaced because its premise
+        # changed, so scoring it later would grade a view no longer held. It
+        # stays in the ledger — the record of having changed one's mind is part
+        # of the track record — but leaves the open list and the scorecard.
+        superseded["status"] = "superseded"
+        superseded["superseded_by"] = call["call_id"]
+        superseded["superseded_at"] = call["as_of"]
     ledger["calls"].append(call)
     return normalize_research_ledger_state(ledger), call
 
@@ -572,6 +599,7 @@ def research_ledger_payload(
     marks = marks or {}
     open_calls = [c for c in calls if c.get("status") == "open"]
     scored_calls = [c for c in calls if c.get("status") == "scored"]
+    superseded_calls = [c for c in calls if c.get("status") == "superseded"]
     if limit is not None:
         limit = max(1, int(limit))
         scored_view = scored_calls[-limit:]
@@ -593,6 +621,12 @@ def research_ledger_payload(
         "call_count_total": len(calls),
         "open_count": len(open_calls),
         "scored_count": len(scored_calls),
+        "superseded_count": len(superseded_calls),
+        "superseded_note": (
+            "a superseded call was replaced because its premise changed; it is kept "
+            "as the record of a changed mind but is never scored and never counted "
+            "in the hit rate, since grading it would judge a view no longer held"
+        ),
         "max_calls_retained": MAX_CALLS,
         "open_calls": open_view,
         "scored_calls": scored_view,
