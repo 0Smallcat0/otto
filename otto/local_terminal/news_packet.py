@@ -15,6 +15,7 @@ position half — bounded, freshness-labeled, and honest about its limits:
 
 from __future__ import annotations
 
+import re
 from typing import Any
 
 PACKET_MAX_ITEMS = 12
@@ -23,7 +24,9 @@ PACKET_SUMMARY_CHARS = 240
 MATCH_MODE_NOTE = (
     "keyword match over title/summary/tags using each ticker plus its official "
     "security name from local reference caches (Nasdaq Trader directory, TWSE "
-    "daily quotes); an item without a matched symbol is not evidence that it "
+    "daily quotes); ASCII terms must sit on alphanumeric boundaries so a numeric "
+    "Taiwan ticker like 2834 no longer matches any text that merely contains "
+    "those digits; an item without a matched symbol is not evidence that it "
     "is irrelevant"
 )
 
@@ -96,6 +99,22 @@ def symbol_terms(symbol: str, extra_names: tuple[str, ...] | list[str] = ()) -> 
     return list(dict.fromkeys(term for term in terms if term))
 
 
+def term_matches(term: str, haystack: str) -> bool:
+    """Whether one search term occurs in the (lowered) haystack.
+
+    Plain substring matching made numeric Taiwan tickers useless: "2834" hit
+    any text containing those digits — article ids, prices, longer numbers —
+    so a TW holding matched a run of unrelated US stories (2026-07-25 live
+    drill). ASCII terms therefore need alphanumeric boundaries on both sides;
+    CJK names have no such boundaries and keep substring semantics.
+    """
+    if not term:
+        return False
+    if term.isascii():
+        return re.search(rf"(?<![0-9a-z]){re.escape(term)}(?![0-9a-z])", haystack) is not None
+    return term in haystack
+
+
 def news_packet_payload(
     news: dict[str, Any],
     digest: dict[str, Any] | None = None,
@@ -131,7 +150,7 @@ def news_packet_payload(
         matched = [
             symbol
             for symbol, terms in terms_by_symbol.items()
-            if any(term in haystack for term in terms)
+            if any(term_matches(term, haystack) for term in terms)
         ]
         item_id = str(raw.get("item_id", ""))
         digest_entry = digest_items.get(item_id) if isinstance(digest_items, dict) else None

@@ -43,8 +43,8 @@ def test_normalize_shapes_items_and_tags_source_symbol() -> None:
 
 def test_normalize_skips_untitled_and_caps_title() -> None:
     rows = [
-        _row("x", "", 1_780_000_000),
-        _row("y", "A" * 400, 1_780_000_000),
+        _row("x", "", 1_780_000_000, related=["AAPL"]),
+        _row("y", "A" * 400, 1_780_000_000, related=["AAPL"]),
     ]
     items = normalize_yahoo_news_items("AAPL", rows, now=_NOW)
     assert len(items) == 1  # empty-title row dropped
@@ -53,7 +53,7 @@ def test_normalize_skips_untitled_and_caps_title() -> None:
 
 
 def test_normalize_bad_timestamp_is_missing_not_zero() -> None:
-    rows = [_row("z", "Headline", "not-a-number")]
+    rows = [_row("z", "Headline", "not-a-number", related=["NVDA"])]
     items = normalize_yahoo_news_items("NVDA", rows, now=_NOW)
     assert items[0]["age_minutes"] == -1
     assert items[0]["published_at"] == ""
@@ -68,7 +68,7 @@ def test_collect_merges_dedupes_and_isolates_failures() -> None:
         if symbol == "GOOGL":
             return [
                 _row("shared", "Big Tech sell-off", epoch, related=["GOOGL", "AMZN"]),
-                _row("g1", "Alphabet specific", epoch),
+                _row("g1", "Alphabet specific", epoch, related=["GOOGL"]),
             ]
         if symbol == "AMZN":
             # 'shared' is the same macro headline Yahoo returns for AMZN too
@@ -93,3 +93,25 @@ def test_collect_never_raises_when_all_fail() -> None:
 def test_collect_handles_empty_and_bad_symbols() -> None:
     items, errors = collect_yahoo_news([], fetcher=lambda **_: [], now=_NOW)
     assert items == [] and errors == []
+
+
+def test_unrelated_filler_is_dropped_not_stamped_with_the_symbol() -> None:
+    """2026-07-25 live drill: Yahoo cannot resolve TW listings and answered a
+    query for 00982A.TW with Toll Brothers / Revolution Medicines / Visa. Those
+    were being tagged as that holding's news — fabricated attribution. Only
+    stories Yahoo itself relates to the symbol may be kept."""
+    epoch = int(_NOW.timestamp()) - 600
+    rows = [
+        _row("f1", "How Toll Brothers' Communities Could Shift", epoch, related=["TOL"]),
+        _row("f2", "Visa Completed China's First B2B Agentic Payment", epoch, related=["V", "2598.HK"]),
+        _row("f3", "Novilla Marks 15 Years of Comfort", epoch, related=None),
+    ]
+    assert normalize_yahoo_news_items("00982A.TW", rows, now=_NOW) == []
+
+
+def test_bare_root_counts_as_related_for_suffixed_symbols() -> None:
+    epoch = int(_NOW.timestamp()) - 600
+    rows = [_row("t1", "臺企銀法說會展望", epoch, related=["2834"])]
+    items = normalize_yahoo_news_items("2834.TW", rows, now=_NOW)
+    assert len(items) == 1  # related "2834" ties to requested "2834.TW"
+    assert items[0]["tags"][0] == "2834.TW"

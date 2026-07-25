@@ -190,3 +190,37 @@ def test_packet_matches_via_official_name_not_just_ticker() -> None:
     assert matched["n1"] == ["AVGO"]
     assert matched["n2"] == ["2317.TW"]
     assert "official security name" in payload["matching"]["note"]
+
+
+def test_numeric_tw_ticker_needs_boundaries_not_bare_substring() -> None:
+    """2026-07-25 live drill: the owner's TW holdings matched unrelated US
+    stories because "2834" was substring-matched into ids/prices/longer
+    numbers. ASCII terms now need alphanumeric boundaries on both sides."""
+    news = _news(
+        [
+            _item("hit", "臺企銀 2834 法說會釋出展望", 10),
+            _item("longer", "Fund NAV rose to 12834 on the day", 12),
+            _item("glued", "Ticker 28345 hits limit up", 14),
+            _item("price", "Revenue of $2,834 million reported", 16),
+        ]
+    )
+    payload = news_packet_payload(news, symbols=["2834.TW"], limit=8)
+    matched = {item["item_id"]: item.get("matched_symbols", []) for item in payload["items"]}
+    assert matched["hit"] == ["2834.TW"]  # real mention still matches
+    assert matched["longer"] == []  # 12834 is not 2834
+    assert matched["glued"] == []  # 28345 is not 2834
+    assert matched["price"] == []  # 2,834 has a separator, not the bare code
+    assert payload["summary"]["matched_count"] == 1
+
+
+def test_ascii_ticker_does_not_match_inside_a_longer_word() -> None:
+    news = _news(
+        [
+            _item("real", "Apple lifts AAPL guidance", 5),
+            _item("glued", "AAPLX fund launches", 6),
+        ]
+    )
+    payload = news_packet_payload(news, symbols=["AAPL"], limit=8)
+    matched = {item["item_id"]: item.get("matched_symbols", []) for item in payload["items"]}
+    assert matched["real"] == ["AAPL"]
+    assert matched["glued"] == []

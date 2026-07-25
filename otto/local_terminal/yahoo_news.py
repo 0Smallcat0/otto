@@ -105,6 +105,21 @@ def _published_iso(publish_epoch: Any) -> str:
     return published.replace(microsecond=0).isoformat().replace("+00:00", "Z")
 
 
+def _relates_to(symbol: str, related: list[str]) -> bool:
+    """Whether Yahoo itself ties this story to the requested symbol.
+
+    Yahoo's search silently returns unrelated filler for symbols it cannot
+    resolve — a query for the TW listing 00982A.TW came back with Toll
+    Brothers, Revolution Medicines and Visa (2026-07-25 live drill). Stamping
+    the requested symbol on those made the packet claim they were that
+    holding's news, which is fabricated attribution. An item counts only when
+    Yahoo's own relatedTickers name the symbol (bare root accepted, so
+    "2834.TW" matches a related "2834").
+    """
+    root = symbol.split(".")[0]
+    return any(ticker == symbol or ticker.split(".")[0] == root for ticker in related)
+
+
 def normalize_yahoo_news_items(
     symbol: str,
     news: list[dict[str, Any]],
@@ -113,9 +128,12 @@ def normalize_yahoo_news_items(
 ) -> list[dict[str, Any]]:
     """Normalize Yahoo `news` rows into the packet's raw-item shape.
 
-    Each item is tagged with its source symbol (and Yahoo's relatedTickers) so
-    the packet's keyword matcher attributes it to the holding even when the
-    headline names the company rather than the ticker.
+    Only stories Yahoo itself relates to the symbol are kept, so the packet
+    never claims an unrelated headline as a holding's news. Items are tagged
+    with the symbol (and Yahoo's relatedTickers) so the packet's keyword
+    matcher attributes them even when the headline names the company rather
+    than the ticker. A symbol Yahoo cannot resolve simply yields nothing —
+    honest silence beats invented context.
     """
     safe_symbol = _safe_symbol(symbol)
     now = now or datetime.now(tz=UTC)
@@ -127,11 +145,14 @@ def normalize_yahoo_news_items(
         if not title:
             continue
         uuid = str(row.get("uuid") or "").strip()
+        raw_related = row.get("relatedTickers")
         related = [
             str(ticker).strip().upper()
-            for ticker in row.get("relatedTickers", [])
+            for ticker in (raw_related if isinstance(raw_related, list) else [])
             if str(ticker).strip()
         ]
+        if not _relates_to(safe_symbol, related):
+            continue
         tags = list(dict.fromkeys([safe_symbol, *related]))
         publish_epoch = row.get("providerPublishTime")
         items.append(

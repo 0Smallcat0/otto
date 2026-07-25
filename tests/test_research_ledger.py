@@ -174,6 +174,36 @@ def test_scan_ranks_by_absolute_move_and_flags_open_calls() -> None:
     assert len(rows) == len(DEFAULT_UNIVERSE)
 
 
+def test_owned_holdings_join_the_universe_and_sort_first() -> None:
+    # The owner really holds 00982A/2834; they are NOT in DEFAULT_UNIVERSE, and
+    # a research loop that ignores his real money is researching the wrong list.
+    owned = {"00982A.TW": ("tw_equity", "主動群益台灣強棒"), "2834.TW": ("tw_equity", "臺企銀")}
+    quotes = {
+        "00982A.TW": {"price": "21.98", "change_pct": "-2.22"},
+        "2834.TW": {"price": "18.0", "change_pct": "1.12"},
+        "GOOGL": {"price": "318", "change_pct": "-7.13"},  # much bigger mover
+    }
+    rows = scan_candidates(quotes, open_symbols=["2834.TW"], owned=owned)
+    # owner's positions rank above the -7% mover: real money outranks size
+    assert [r["symbol"] for r in rows[:2]] == ["00982A.TW", "2834.TW"]
+    assert rows[0]["owned"] is True and rows[0]["name"] == "主動群益台灣強棒"
+    assert rows[2]["symbol"] == "GOOGL" and rows[2]["owned"] is False
+    assert len(rows) == len(DEFAULT_UNIVERSE) + 2
+
+    payload = research_scan_payload(quotes, ["2834.TW"], owned)
+    assert payload["owned_count"] == 2
+    # 2834 already journaled; 00982A is a real holding with NO view — the gap
+    assert payload["owned_without_call"] == ["00982A.TW"]
+    assert payload["universe_size"] == len(DEFAULT_UNIVERSE) + 2
+
+
+def test_scan_without_owned_holdings_is_unchanged() -> None:
+    rows = scan_candidates({"AAPL": {"price": "331", "change_pct": "3.0"}})
+    assert len(rows) == len(DEFAULT_UNIVERSE)
+    assert all(r["owned"] is False for r in rows)
+    assert research_scan_payload(None)["owned_without_call"] == []
+
+
 def test_scan_payload_counts_priced_and_notes_signal() -> None:
     payload = research_scan_payload({"AAPL": {"price": "321", "change_pct": "-1.3"}}, [])
     assert payload["universe_size"] == len(DEFAULT_UNIVERSE)
@@ -188,3 +218,46 @@ def test_normalize_drops_junk_and_caps() -> None:
     mixed = {"calls": [{"call_id": "a"}, "junk", 5, {"call_id": "b"}]}
     out = normalize_research_ledger_state(mixed)
     assert [c["call_id"] for c in out["calls"]] == ["a", "b"]
+
+
+def test_size_down_requires_a_weight_number() -> None:
+    with pytest.raises(ResearchLedgerError, match="weight_pct"):
+        _record(default_research_ledger_state(), stance="size_down")
+
+
+def test_size_down_is_scored_on_risk_not_direction() -> None:
+    # The owner's real book held one name at 63.5%. A concentration warning
+    # makes no directional claim, so it must never be graded as a price call.
+    st, call = _record(
+        default_research_ledger_state(), stance="size_down", ref_price="100", weight_pct="63.5", cap_pct="40"
+    )
+    assert call["weight_pct"] == "63.50" and call["cap_pct"] == "40.00"
+
+    # rose 20%: the warning simply did not bite — NOT a "failed" call
+    up, scored = score_calls(_mature({"calls": [dict(call)]}), {"2330.TW": Decimal("120")})
+    assert scored[0]["outcome"] == "risk_not_realized"
+    assert scored[0]["favor_pct"] is None  # no directional favor is invented
+    assert scored[0]["realized_pct"] == "20.00"
+
+    # dropped 15%: the oversized position did inflict real damage
+    down, scored = score_calls(_mature({"calls": [dict(call)]}), {"2330.TW": Decimal("85")})
+    assert scored[0]["outcome"] == "risk_realized"
+
+    # a 5% dip is not material for a sizing warning
+    _, scored = score_calls(_mature({"calls": [dict(call)]}), {"2330.TW": Decimal("95")})
+    assert scored[0]["outcome"] == "risk_not_realized"
+
+
+def test_sizing_calls_are_excluded_from_the_directional_hit_rate() -> None:
+    st = default_research_ledger_state()
+    st, directional = _record(st, ref_price="100")  # accumulate
+    st, sizing = _record(st, stance="size_down", ref_price="100", weight_pct="63.5")
+    st = _mature(st)
+    # accumulate wins (+10%), sizing call's own drop would look like a "loss"
+    scored_state, _ = score_calls(st, {"2330.TW": Decimal("110")})
+    card = research_ledger_payload(scored_state)["scorecard"]
+    assert card["scored_count"] == 2
+    assert card["decided_count"] == 1  # only the directional call counts
+    assert card["hit_rate_pct"] == "100.0"  # sizing cannot dilute or inflate it
+    assert card["sizing"]["scored_count"] == 1
+    assert "not a directional prediction" in card["sizing"]["note"]
