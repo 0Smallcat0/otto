@@ -280,6 +280,7 @@ from otto.local_terminal.news import (
 from otto.local_terminal.news_packet import (
     PACKET_MAX_ITEMS,
     news_packet_payload,
+    news_relevance,
     symbol_terms,
     term_matches,
 )
@@ -732,7 +733,7 @@ def _fred_core_series_from_store(*, refresh: bool = False) -> dict[str, Any]:
                 credential=credential_value,
                 series_id=series_id,
             )
-        except Exception:  # noqa: BLE001 - one series failing must not abort the set
+        except Exception:
             rows.append(
                 {
                     "series_id": series_id,
@@ -2720,6 +2721,7 @@ def create_app(frontend_dist: Path | None = None) -> FastAPI:
             ]
             item["held_symbols"] = [s for s in matched if s in held_set]
             item["watched_symbols"] = [s for s in matched if s not in held_set]
+            item["relevance"] = news_relevance(item)
 
     @app.get("/api/news")
     def news() -> dict[str, Any]:

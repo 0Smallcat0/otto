@@ -177,7 +177,7 @@ def test_contract_registration(tmp_path, monkeypatch) -> None:
 
 # ---- TW book (TWD, board lots, real fee/tax rules) ----
 
-from otto.local_terminal.equity_paper import (  # noqa: E402
+from otto.local_terminal.equity_paper import (
     TW_BOOK,
     default_tw_equity_paper_state,
 )
@@ -388,7 +388,7 @@ def test_tw_summary_accepts_refresh_flag(tmp_path, monkeypatch) -> None:
 
 # ---- LIMIT orders: rest, process, cancel (2026-07-22) ----
 
-from otto.local_terminal.equity_paper import (  # noqa: E402
+from otto.local_terminal.equity_paper import (
     cancel_equity_paper_order,
     process_equity_paper_orders,
 )

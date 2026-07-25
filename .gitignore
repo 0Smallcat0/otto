@@ -58,3 +58,5 @@ artifacts/healthcheck/*
 # M28 agent eval harness
 evals/.sandbox/
 evals/results/*/sandboxes/
+artifacts/loop/*
+artifacts/research/*

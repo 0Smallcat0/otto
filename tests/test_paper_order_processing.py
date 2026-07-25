@@ -221,7 +221,7 @@ def test_process_endpoint_and_contract(tmp_path, monkeypatch) -> None:
 # ---- candle-path fills (2026-07-22): the gap between runs is now simulated --
 
 
-from datetime import UTC, datetime, timedelta  # noqa: E402  (section-local import)
+from datetime import UTC, datetime, timedelta
 
 
 def _candle(low: str, high: str, close: str, *, offset_s: int = 60) -> dict:
