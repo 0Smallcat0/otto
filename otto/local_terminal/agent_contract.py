@@ -2227,12 +2227,16 @@ ACTION_CONTRACTS: tuple[AgentActionContract, ...] = (
         "POST",
         "/api/research/call",
         (
-            '{"symbol":"2330.TW","stance":"accumulate|reduce|avoid|hold","thesis":'
-            '"the reasoning, required, <=800 chars","conviction":"low|medium|high",'
-            '"horizon_days":30,"entry_low":..,"entry_high":..,"invalidation":..,'
-            '"evidence":{..},"refresh":true}; ref_price is fetched live at record '
-            "time (Yahoo path, crypto as -USD) unless supplied explicitly; market is "
-            "inferred for universe symbols"
+            '{"symbol":"2330.TW","stance":"accumulate|reduce|avoid|hold|size_down",'
+            '"thesis":"the reasoning, required, <=800 chars","conviction":'
+            '"low|medium|high","horizon_days":30,"entry_low":..,"entry_high":..,'
+            '"invalidation":..,"weight_pct":..,"cap_pct":..,"evidence":{..},'
+            '"refresh":true}; ref_price is fetched live at record time (Yahoo path, '
+            "crypto as -USD) unless supplied explicitly; market is inferred for "
+            'universe symbols. stance "size_down" is a risk view — the position is '
+            "too large for the book, with no directional claim — and requires "
+            "weight_pct; it is scored on whether the oversized position went on to "
+            "drop materially, never as a directional win or loss"
         ),
         (
             "call",

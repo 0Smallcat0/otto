@@ -1210,6 +1210,35 @@ def _merge_yahoo_symbol_news(payload: dict[str, Any], symbols: list[str]) -> Non
         payload["status"] = status
 
 
+def _owner_holdings_universe(state: dict[str, Any]) -> dict[str, tuple[str, str]]:
+    """The owner's real equity positions as research-universe entries.
+
+    Maps each holding to its Yahoo symbol (numeric TW listing codes get .TW)
+    -> (market, display name), so the research scan covers what he actually
+    owns. A ledger that never forms a view on his real positions is researching
+    the wrong list; crypto rows are skipped (the paper crypto book covers them).
+    """
+    pf_state = state if isinstance(state, dict) else {}
+    portfolios = pf_state.get("portfolios") if isinstance(pf_state.get("portfolios"), dict) else {}
+    active = portfolios.get(pf_state.get("active_portfolio_id"))
+    universe: dict[str, tuple[str, str]] = {}
+    if not isinstance(active, dict):
+        return universe
+    for position in active.get("positions", []):
+        if not isinstance(position, dict) or str(position.get("asset_class")) == "Crypto":
+            continue
+        bare = str(position.get("symbol") or "").strip().upper()
+        if not bare:
+            continue
+        yahoo_symbol = bare
+        if "." not in bare and bare[0].isdigit():
+            yahoo_symbol = f"{bare}.TW"
+        market = "tw_equity" if yahoo_symbol.endswith(".TW") else "us_equity"
+        name = str(position.get("name") or bare)
+        universe[yahoo_symbol] = (market, name)
+    return universe
+
+
 def _portfolio_equity_price_rows(state: dict[str, Any]) -> list[dict[str, Any]]:
     """Live Yahoo quotes for an imported portfolio's equity positions.
 
@@ -2009,7 +2038,7 @@ class ResearchCallUpdate(BaseModel):
     model_config = ConfigDict(extra="forbid")
 
     symbol: str = Field(min_length=1)
-    stance: str = Field(pattern="^(accumulate|reduce|avoid|hold)$")
+    stance: str = Field(pattern="^(accumulate|reduce|avoid|hold|size_down)$")
     thesis: str = Field(min_length=1, max_length=THESIS_MAX_CHARS)
     conviction: str = Field(default="medium", pattern="^(low|medium|high)$")
     market: str | None = Field(default=None)
@@ -2020,6 +2049,11 @@ class ResearchCallUpdate(BaseModel):
     entry_low: str | float | int | None = Field(default=None)
     entry_high: str | float | int | None = Field(default=None)
     invalidation: str | float | int | None = Field(default=None)
+    # Sizing views: the position's share of the book and the cap it breaches.
+    # Required for stance=size_down — a concentration call without a number is
+    # just an opinion.
+    weight_pct: str | float | int | None = Field(default=None)
+    cap_pct: str | float | int | None = Field(default=None)
     name: str | None = Field(default=None)
     evidence: dict[str, Any] | None = Field(default=None)
     refresh: bool = Field(default=True)
@@ -3311,10 +3345,13 @@ def create_app(frontend_dist: Path | None = None) -> FastAPI:
 
     @app.get("/api/research/scan")
     def scan_research_universe(refresh: bool = False) -> dict[str, Any]:
-        # One bounded read over the whole self-sourced universe so the agent can
-        # pick where to form a thesis instead of pulling 16 symbols by hand. The
-        # Yahoo lookup path caps at 8/call, so the 16-name universe is batched.
-        symbols = list(DEFAULT_UNIVERSE)
+        # One bounded read over the research universe so the agent can pick
+        # where to form a thesis instead of pulling symbols by hand. The
+        # universe is the default list PLUS the owner's real holdings — the
+        # point of the ledger is judgments he can use, and his own positions
+        # were missing from it. The Yahoo lookup caps at 8/call, so batched.
+        owned = _owner_holdings_universe(STORE.read_portfolio_state())
+        symbols = list({**DEFAULT_UNIVERSE, **owned})
         quotes: dict[str, Any] = {}
         for start in range(0, len(symbols), 8):
             rows = _yahoo_quote_snapshot_payload_from_store(
@@ -3328,7 +3365,7 @@ def create_app(frontend_dist: Path | None = None) -> FastAPI:
                         "currency": row.get("currency"),
                     }
         state = STORE.read_research_ledger_state()
-        payload = research_scan_payload(quotes, _open_call_symbols(state))
+        payload = research_scan_payload(quotes, _open_call_symbols(state), owned)
         # Stamp session state so a closed-market scan cannot be mistaken for a
         # fresh tape — its change_pct is the last session's move.
         payload["market_sessions"] = market_sessions_payload()
