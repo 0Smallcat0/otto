@@ -51,6 +51,13 @@ STANCES = ("accumulate", "reduce", "avoid", "hold", "size_down")
 # wrong by direction. It is only asked, at horizon: did the oversized position
 # actually inflict a material drawdown on the book?
 RISK_MATERIAL_DROP_PCT = Decimal("10")
+
+# When an open call deserves a fresh look rather than silent drift toward its
+# horizon: the market left the price it was struck at, the invalidation is
+# closing in, or the clock has nearly run out.
+REVIEW_DRIFT_PCT = Decimal("5")
+REVIEW_INVALIDATION_PROXIMITY_PCT = Decimal("25")
+REVIEW_HORIZON_ELAPSED_PCT = Decimal("80")
 CONVICTIONS = ("low", "medium", "high")
 MARKETS = ("crypto", "us_equity", "tw_equity")
 
@@ -304,8 +311,54 @@ def score_calls(
     return normalize_research_ledger_state(ledger), scored
 
 
-def _open_view(call: dict[str, Any], price: Decimal | None) -> dict[str, Any]:
+def _review_reasons(call: dict[str, Any], price: Decimal | None, now: datetime) -> list[str]:
+    """Why an open call deserves a fresh look before its horizon runs out.
+
+    A view recorded once and never revisited quietly rots: the price it was
+    struck at stops resembling the market, the invalidation creeps closer, or
+    the horizon nearly elapses and the call scores on a thesis nobody
+    re-examined. These flags make the daily round a review instead of a
+    read-out. They say "think again", never "the call is wrong".
+    """
+    reasons: list[str] = []
+    ref = _decimal(call.get("ref_price"))
+    if price is not None and ref is not None and ref > 0:
+        drift = abs((price / ref - 1) * 100)
+        if drift >= REVIEW_DRIFT_PCT:
+            reasons.append(f"price moved {drift:.1f}% from the {ref} it was struck at")
+        invalidation = _decimal(call.get("invalidation"))
+        stance = str(call.get("stance"))
+        if invalidation is not None and stance in ("accumulate", "reduce", "avoid"):
+            span = abs(ref - invalidation)
+            if span > 0:
+                left = abs(price - invalidation) / span * 100
+                if left <= REVIEW_INVALIDATION_PROXIMITY_PCT and not _invalidation_breached(
+                    stance, invalidation, price
+                ):
+                    reasons.append(f"within {left:.0f}% of its invalidation at {invalidation}")
+    matures_at, as_of = call.get("matures_at"), call.get("as_of")
+    try:
+        end = datetime.fromisoformat(str(matures_at))
+        start = datetime.fromisoformat(str(as_of))
+    except (TypeError, ValueError):
+        return reasons
+    end = end if end.tzinfo else end.replace(tzinfo=UTC)
+    start = start if start.tzinfo else start.replace(tzinfo=UTC)
+    total = (end - start).total_seconds()
+    if total > 0:
+        elapsed = (now - start).total_seconds() / total * 100
+        if elapsed >= REVIEW_HORIZON_ELAPSED_PCT:
+            reasons.append(f"{elapsed:.0f}% of its horizon has elapsed")
+    return reasons
+
+
+def _open_view(
+    call: dict[str, Any], price: Decimal | None, now: datetime | None = None
+) -> dict[str, Any]:
     row = dict(call)
+    reasons = _review_reasons(call, price, now or datetime.now(tz=UTC))
+    row["needs_review"] = bool(reasons)
+    row["review_reasons"] = reasons
     ref = _decimal(call.get("ref_price"))
     if price is not None and ref is not None and ref > 0:
         favor = _favor_pct(str(call.get("stance")), ref, price)
@@ -471,8 +524,18 @@ def research_ledger_payload(
         scored_view = scored_calls[-limit:]
     else:
         scored_view = scored_calls
-    open_view = [_open_view(c, marks.get(str(c.get("symbol", "")))) for c in open_calls]
+    now = datetime.now(tz=UTC)
+    open_view = [_open_view(c, marks.get(str(c.get("symbol", ""))), now) for c in open_calls]
+    to_review = [row["symbol"] for row in open_view if row["needs_review"]]
     return {
+        "needs_review_count": len(to_review),
+        "needs_review": to_review,
+        "review_note": (
+            "these open calls drifted from the price they were struck at, are "
+            "closing on their invalidation, or are near the end of their horizon — "
+            "re-examine the thesis rather than letting it score untouched; a flag "
+            "means think again, not that the call is wrong"
+        ),
         "as_of": datetime.now(tz=UTC).isoformat(timespec="seconds"),
         "call_count_total": len(calls),
         "open_count": len(open_calls),

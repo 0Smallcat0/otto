@@ -261,3 +261,41 @@ def test_sizing_calls_are_excluded_from_the_directional_hit_rate() -> None:
     assert card["hit_rate_pct"] == "100.0"  # sizing cannot dilute or inflate it
     assert card["sizing"]["scored_count"] == 1
     assert "not a directional prediction" in card["sizing"]["note"]
+
+
+def test_open_call_flags_price_drift_for_review() -> None:
+    st, _ = _record(default_research_ledger_state(), ref_price="100")
+    quiet = research_ledger_payload(st, {"2330.TW": Decimal("102")})
+    assert quiet["needs_review_count"] == 0  # 2% drift is not worth a rethink
+    assert quiet["open_calls"][0]["needs_review"] is False
+
+    drifted = research_ledger_payload(st, {"2330.TW": Decimal("108")})
+    assert drifted["needs_review"] == ["2330.TW"]
+    assert "moved 8.0%" in drifted["open_calls"][0]["review_reasons"][0]
+
+
+def test_open_call_flags_approaching_invalidation() -> None:
+    # struck at 100 with a stop at 90; 92 is 20% of the way left → review
+    st, _ = _record(default_research_ledger_state(), ref_price="100", invalidation="90")
+    payload = research_ledger_payload(st, {"2330.TW": Decimal("92")})
+    reasons = " ".join(payload["open_calls"][0]["review_reasons"])
+    assert "invalidation" in reasons
+    assert payload["needs_review_count"] == 1
+
+
+def test_open_call_flags_nearly_elapsed_horizon() -> None:
+    st, call = _record(default_research_ledger_state(), ref_price="100", horizon_days=10)
+    # rewind the call's start so 90% of its horizon has passed
+    call["as_of"] = (datetime.now(tz=UTC) - timedelta(days=9)).isoformat()
+    call["matures_at"] = (datetime.now(tz=UTC) + timedelta(days=1)).isoformat()
+    payload = research_ledger_payload({"calls": [call]}, {"2330.TW": Decimal("100")})
+    assert payload["needs_review_count"] == 1
+    assert "horizon" in payload["open_calls"][0]["review_reasons"][0]
+
+
+def test_breached_call_is_not_double_flagged_as_approaching() -> None:
+    # already through the stop: scoring closes it, review must not also nag
+    st, _ = _record(default_research_ledger_state(), ref_price="100", invalidation="90")
+    payload = research_ledger_payload(st, {"2330.TW": Decimal("88")})
+    reasons = " ".join(payload["open_calls"][0]["review_reasons"])
+    assert "invalidation" not in reasons  # breach is scoring's job, not review's
