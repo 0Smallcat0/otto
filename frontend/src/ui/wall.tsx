@@ -240,6 +240,17 @@ export function EquityBanner({ crypto }: { crypto: CryptoSlice | null }) {
   );
 }
 
+/** First poll still in flight — show the shape of what is coming, never the
+ *  "nothing here" copy. */
+function Skeleton({ rows = 5 }: { rows?: number }) {
+  const { t } = useT();
+  return (
+    <div className="ft-sk" role="status" aria-label={t("讀取中…")}>
+      {Array.from({ length: rows }, (_, index) => <span key={index} />)}
+    </div>
+  );
+}
+
 /* ── 報價監視表(Bloomberg 慣例:密度)── */
 
 function QuoteRow({ row, label }: { row: Quoteish; label?: string }) {
@@ -256,10 +267,11 @@ function QuoteRow({ row, label }: { row: Quoteish; label?: string }) {
   );
 }
 
-export function QuoteMonitor({ markets, crypto, watchlist }: {
+export function QuoteMonitor({ markets, crypto, watchlist, settled = true }: {
   markets: MarketsSlice | null;
   crypto: CryptoSlice | null;
   watchlist: { groups?: Record<string, string[] | undefined> } | null;
+  settled?: boolean;
 }) {
   const { t, lang } = useT();
   // Never pass off cached numbers as current: every group carries its age,
@@ -328,7 +340,11 @@ export function QuoteMonitor({ markets, crypto, watchlist }: {
       {/* R5: FRED macro removed from the wall — monthly/quarterly series are
           context, not quotes. They live at the bottom of Markets, inside news
           速覽 when relevant, and one question away in the conversation. */}
-      {count === 0 ? <div className="ft-empty">{t("尚無報價快取——AI 刷新資料後這裡會亮起來")}</div> : null}
+      {count === 0
+        ? settled
+          ? <div className="ft-empty">{t("尚無報價快取——AI 刷新資料後這裡會亮起來")}</div>
+          : <Skeleton rows={6} />
+        : null}
       <div className="ft-note">{t("監看清單由 AI 依持倉與研究主題維護——在對話說「幫我盯○○」即可增減")}</div>
     </div>
   );
@@ -418,9 +434,10 @@ function EventRow({ event, onOpenArtifact }: { event: ActivityEvent; onOpenArtif
   );
 }
 
-export function ActivityFeed({ activity, onOpenArtifact }: {
+export function ActivityFeed({ activity, onOpenArtifact, settled = true }: {
   activity: ActivitySlice | null;
   onOpenArtifact: (path: string) => void;
+  settled?: boolean;
 }) {
   const { t } = useT();
   const events = activity?.events ?? [];
@@ -437,7 +454,9 @@ export function ActivityFeed({ activity, onOpenArtifact }: {
       <div className="ft-stat">
         {t("今日")} <b>{todays.length}</b> {t("動作")} · <b className="ft-up">{ok}✓</b> <b className="ft-am">{warn}⚠</b>
       </div>
-      {events.length === 0 ? (
+      {events.length === 0 && !settled ? (
+        <Skeleton rows={4} />
+      ) : events.length === 0 ? (
         <div className="ft-empty">
           {t("尚無活動——AI 開始操作終端機後,每一步都會出現在這裡。")}<br />
           {t("在 Claude Code 對話下指令即可開始。")}
@@ -453,7 +472,7 @@ export function ActivityFeed({ activity, onOpenArtifact }: {
 
 /* ── 頭條 + 日曆 ── */
 
-export function Headlines({ news, digest }: {
+export function Headlines({ news, digest, settled = true }: {
   news: NewsSlice | null;
   digest: {
     items?: Record<string, { title_zh?: string; summary_zh?: string }>;
@@ -461,6 +480,7 @@ export function Headlines({ news, digest }: {
     updated_at?: string;
     origin?: string;
   } | null;
+  settled?: boolean;
 }) {
   const { t, lang } = useT();
   const items = [...(news?.items ?? [])]
@@ -486,7 +506,9 @@ export function Headlines({ news, digest }: {
           ))}
         </div>
       ) : null}
-      {items.length === 0 ? (
+      {items.length === 0 && !settled ? (
+        <Skeleton rows={5} />
+      ) : items.length === 0 ? (
         <div className="ft-empty">{t("尚無新聞快取——AI 刷新後會列出頭條")}</div>
       ) : (
         items.map((item) => {
@@ -538,11 +560,17 @@ interface ResearchCall {
 }
 
 const STANCE_LABEL: Record<string, string> = {
-  accumulate: "加碼",
-  reduce: "減碼",
-  avoid: "避開",
-  hold: "持有觀望",
+  accumulate: "可加碼",
+  reduce: "宜減碼",
+  avoid: "先避開",
+  hold: "續抱觀望",
   size_down: "降集中度"
+};
+
+const CONVICTION_LABEL: Record<string, string> = {
+  low: "低信心",
+  medium: "中信心",
+  high: "高信心"
 };
 
 const STANCE_CLASS: Record<string, string> = {
@@ -573,82 +601,118 @@ export function JudgmentBoard() {
     };
   }, []);
   if (!calls.length) return null;
-  // Sizing warnings ride at the top: they are about how much of the book one
-  // name owns, which is the loudest thing a judgment can say about real money.
-  const ordered = [...calls].sort(
-    (a, b) =>
-      Number(b.stance === "size_down") - Number(a.stance === "size_down") ||
-      Number(Boolean(b.needs_review)) - Number(Boolean(a.needs_review))
-  );
+  // A concentration warning and a directional view answer different questions,
+  // so they stopped sharing a table: crammed into one grid the "失效" column
+  // held a price for six rows and "63.50% / 40.00%" for a seventh, and the same
+  // symbol appeared twice looking like a bug. The warning is now its own band.
+  const sizing = calls.filter((call) => call.stance === "size_down");
+  const directional = calls
+    .filter((call) => call.stance !== "size_down")
+    .sort((a, b) => Number(Boolean(b.needs_review)) - Number(Boolean(a.needs_review)));
+  const toggle = (id: string) => setOpen(open === id ? null : id);
+  // 63.50% reads like false precision for a position weight; 63.5% is the number.
+  const trimPct = (raw?: string | null) =>
+    raw ? String(Number.parseFloat(raw)) : "—";
+  // "what would prove me wrong" reads as a direction, not a bare number.
+  const wrongIf = (call: ResearchCall) => {
+    if (!call.invalidation) return "—";
+    return call.stance === "avoid" || call.stance === "reduce"
+      ? `${t("漲過")} ${call.invalidation}`
+      : `${t("跌破")} ${call.invalidation}`;
+  };
   return (
     <div className="ft-card" data-testid="wall-judgments">
       <div className="ft-card-h">
         <span>{t("AI 判斷")}</span>
-        <span className="s">
-          {ordered.length} {t("則進行中")} · {t("點列展開理由")}
+        <span className="s" style={{ marginLeft: 10 }}>
+          {calls.length} {t("則進行中")}
+          {" · "}
+          {t("到期用真實價格驗收")}
         </span>
       </div>
+
+      {sizing.map((call) => (
+        <div
+          key={call.call_id}
+          className="ft-note"
+          onClick={() => toggle(call.call_id)}
+          style={{ cursor: "pointer", borderLeft: "3px solid var(--ft-down, #d46)", paddingLeft: 8 }}
+        >
+          <div>
+            <b className="ft-down">{t("集中度提醒")}</b>{" "}
+            {call.symbol}
+            {call.name ? ` ${call.name}` : ""} {t("佔你帳本")}{" "}
+            <b className="ft-down">{trimPct(call.weight_pct)}%</b>
+            {t(",超過建議上限")} {trimPct(call.cap_pct)}%
+          </div>
+          <div className="s">
+            {open === call.call_id
+              ? call.thesis
+              : `${call.thesis.slice(0, 46)}… ${t("(點開看完整理由)")}`}
+          </div>
+        </div>
+      ))}
+
       <div className="ft-pos">
-      <table>
-        <thead>
-          <tr>
-            <th>{t("標的")}</th>
-            <th>{t("看法")}</th>
-            <th>{t("記錄價")}</th>
-            <th>{t("現價")}</th>
-            <th>{t("失效")}</th>
-            <th>{t("檢驗日")}</th>
-          </tr>
-        </thead>
-        <tbody>
-          {ordered.map((call) => {
-            const cls = STANCE_CLASS[call.stance] ?? "ft-dim";
-            const move = Number.parseFloat(String(call.unrealized_pct ?? ""));
-            const view = Number.isFinite(move) ? pct(move) : null;
-            const sizing = call.stance === "size_down";
-            return (
-              <Fragment key={call.call_id}>
-                <tr
-                  onClick={() => setOpen(open === call.call_id ? null : call.call_id)}
-                  style={{ cursor: "pointer" }}
-                >
-                  <td>
-                    {call.symbol}
-                    {call.name ? <small> {call.name}</small> : null}
-                    {call.needs_review ? <small className="ft-down"> ⟳{t("待檢視")}</small> : null}
-                  </td>
-                  <td className={cls}>
-                    {t(STANCE_LABEL[call.stance] ?? call.stance)}
-                    <small> {call.conviction}</small>
-                  </td>
-                  <td>{call.ref_price}</td>
-                  <td>
-                    {call.mark_price ?? "—"}
-                    {view ? <small className={view.cls}> {view.text}</small> : null}
-                  </td>
-                  <td>{sizing ? `${call.weight_pct}% / ${call.cap_pct}%` : (call.invalidation ?? "—")}</td>
-                  <td className="s">{String(call.matures_at).slice(0, 10)}</td>
-                </tr>
-                {open === call.call_id ? (
-                  <tr>
-                    <td colSpan={6} className="s">
-                      {call.review_reasons?.length ? (
-                        <div className="ft-down">
-                          {t("需重新檢視")}: {call.review_reasons.join(" · ")}
-                        </div>
+        <table>
+          <thead>
+            <tr>
+              <th>{t("標的")}</th>
+              <th>{t("我的看法")}</th>
+              <th>{t("記錄時")}</th>
+              <th>{t("現在")}</th>
+              <th>{t("什麼情況算看錯")}</th>
+              <th>{t("驗收日")}</th>
+            </tr>
+          </thead>
+          <tbody>
+            {directional.map((call) => {
+              const cls = STANCE_CLASS[call.stance] ?? "ft-dim";
+              const move = Number.parseFloat(String(call.unrealized_pct ?? ""));
+              const view = Number.isFinite(move) ? pct(move) : null;
+              return (
+                <Fragment key={call.call_id}>
+                  <tr onClick={() => toggle(call.call_id)} style={{ cursor: "pointer" }}>
+                    <td>
+                      <span className="ft-faint">{open === call.call_id ? "▾" : "▸"}</span>{" "}
+                      {call.symbol}
+                      {call.name ? <small> {call.name}</small> : null}
+                      {call.needs_review ? (
+                        <small className="ft-down"> ⟳{t("該重想")}</small>
                       ) : null}
-                      {call.thesis}
                     </td>
+                    <td className={cls}>
+                      {t(STANCE_LABEL[call.stance] ?? call.stance)}
+                      <small> {t(CONVICTION_LABEL[call.conviction] ?? call.conviction)}</small>
+                    </td>
+                    <td className="ft-faint">{call.ref_price}</td>
+                    <td>
+                      {call.mark_price ?? "—"}
+                      {view ? <small className={view.cls}> {view.text}</small> : null}
+                    </td>
+                    <td className="s">{wrongIf(call)}</td>
+                    <td className="s">{String(call.matures_at).slice(5, 10).replace("-", "/")}</td>
                   </tr>
-                ) : null}
-              </Fragment>
-            );
-          })}
-        </tbody>
-      </table>
+                  {open === call.call_id ? (
+                    <tr>
+                      <td colSpan={6} className="s">
+                        {call.review_reasons?.length ? (
+                          <div className="ft-down">
+                            {t("該重想")}: {call.review_reasons.join(" · ")}
+                          </div>
+                        ) : null}
+                        {call.thesis}
+                      </td>
+                    </tr>
+                  ) : null}
+                </Fragment>
+              );
+            })}
+          </tbody>
+        </table>
       </div>
-      <div className="ft-note">
-        {t("到期或跌破失效價時,用真實價格計分;集中度警示不計入方向命中率。分析供參考,你自行決定。")}
+      <div className="ft-note s">
+        {t("驗收日到、或價格走到「算我看錯」的位置,就用當下真實價格結算。集中度提醒只看風險有沒有發生,不算方向對錯。這是分析,不是叫你買賣。")}
       </div>
     </div>
   );
@@ -656,7 +720,7 @@ export function JudgmentBoard() {
 
 /* ── 任務牆組合 ── */
 
-export function Wall({ markets, crypto, activity, news, watchlist, digest, book, onOpenArtifact, heading }: {
+export function Wall({ markets, crypto, activity, news, watchlist, digest, book, onOpenArtifact, heading, settled }: {
   markets: MarketsSlice | null;
   crypto: CryptoSlice | null;
   activity: ActivitySlice | null;
@@ -669,6 +733,8 @@ export function Wall({ markets, crypto, activity, news, watchlist, digest, book,
   book: RealBookSlice | null;
   onOpenArtifact: (path: string) => void;
   heading: ReactNode;
+  /** Per-column first-fetch state, so a pending poll never reads as "no data". */
+  settled?: { markets?: boolean; activity?: boolean; news?: boolean };
 }) {
   return (
     <div className="ft-page" data-testid="workspace-dashboard">
@@ -677,9 +743,9 @@ export function Wall({ markets, crypto, activity, news, watchlist, digest, book,
       <JudgmentBoard />
       <EquityBanner crypto={crypto} />
       <div className="ft-wall">
-        <QuoteMonitor markets={markets} crypto={crypto} watchlist={watchlist} />
-        <ActivityFeed activity={activity} onOpenArtifact={onOpenArtifact} />
-        <Headlines news={news} digest={digest} />
+        <QuoteMonitor markets={markets} crypto={crypto} watchlist={watchlist} settled={settled?.markets ?? true} />
+        <ActivityFeed activity={activity} onOpenArtifact={onOpenArtifact} settled={settled?.activity ?? true} />
+        <Headlines news={news} digest={digest} settled={settled?.news ?? true} />
       </div>
     </div>
   );
