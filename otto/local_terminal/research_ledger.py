@@ -58,6 +58,15 @@ RISK_MATERIAL_DROP_PCT = Decimal("10")
 REVIEW_DRIFT_PCT = Decimal("5")
 REVIEW_INVALIDATION_PROXIMITY_PCT = Decimal("25")
 REVIEW_HORIZON_ELAPSED_PCT = Decimal("80")
+
+# Scoring reads the price at the moment it runs, so a call scored long after it
+# matured is measured over a window its thesis never claimed. Nothing guarantees
+# a run happens on the day a call comes due — the scheduler is session-bound and
+# has silently missed days before — so late scoring is the normal case, not the
+# exception. Beyond this share of the horizon the measured window is not the
+# stated one, and grading it as a hit or a miss would put a number on something
+# the call never said.
+LATE_SCORE_TOLERANCE = Decimal("0.2")
 CONVICTIONS = ("low", "medium", "high")
 MARKETS = ("crypto", "us_equity", "tw_equity")
 
@@ -272,6 +281,35 @@ def _is_mature(call: dict[str, Any], now: datetime) -> bool:
     return now >= stamp
 
 
+def _scoring_lateness(
+    call: dict[str, Any], now: datetime, *, breached: bool
+) -> tuple[int, bool]:
+    """How late this scoring run is, and whether the stated window still holds.
+
+    An invalidation breach is an event, not a deadline: it is scored whenever
+    price crosses the level, so it is never "late". A horizon call is different
+    — scored days after it matured, it measures a window the thesis never
+    claimed, and that must be visible instead of quietly counted.
+    """
+    if breached:
+        return 0, True
+    try:
+        matured = datetime.fromisoformat(str(call.get("matures_at")))
+    except (TypeError, ValueError):
+        return 0, True
+    matured = matured if matured.tzinfo else matured.replace(tzinfo=UTC)
+    late_days = max((now - matured).total_seconds() / 86400, 0)
+    horizon = call.get("horizon_days")
+    try:
+        horizon_days = Decimal(str(int(horizon)))
+    except (TypeError, ValueError):
+        return int(late_days), True
+    if horizon_days <= 0:
+        return int(late_days), True
+    honored = Decimal(str(late_days)) / horizon_days <= LATE_SCORE_TOLERANCE
+    return int(late_days), honored
+
+
 def score_calls(
     state: dict[str, Any],
     marks: dict[str, Decimal | None],
@@ -301,12 +339,15 @@ def score_calls(
             continue  # still running, thesis intact
         favor = _favor_pct(stance, ref, price)
         realized = (price / ref - 1) * 100
+        late_days, window_honored = _scoring_lateness(call, now, breached=breached)
         call["status"] = "scored"
         call["scored_at"] = now.isoformat(timespec="seconds")
         call["score_price"] = str(price)
         call["realized_pct"] = f"{realized:.2f}"
         call["favor_pct"] = f"{favor:.2f}" if favor is not None else None
         call["outcome"] = _outcome(stance, favor, breached, realized)
+        call["scored_late_days"] = late_days
+        call["window_honored"] = window_honored
         scored.append(call)
     return normalize_research_ledger_state(ledger), scored
 
@@ -385,9 +426,13 @@ def _scorecard(scored: list[dict[str, Any]]) -> dict[str, Any]:
     """
     directional = [c for c in scored if str(c.get("stance")) != "size_down"]
     sizing = [c for c in scored if str(c.get("stance")) == "size_down"]
-    decided = [c for c in directional if c.get("outcome") in DECIDED_OUTCOMES]
+    # A call scored long after it matured measured a different window than its
+    # thesis stated; counting it would put a number on something never claimed.
+    timely = [c for c in directional if c.get("window_honored", True)]
+    stale = [c for c in directional if not c.get("window_honored", True)]
+    decided = [c for c in timely if c.get("outcome") in DECIDED_OUTCOMES]
     wins = sum(1 for c in decided if c.get("outcome") == "worked")
-    favors = [_decimal(c.get("favor_pct")) for c in directional]
+    favors = [_decimal(c.get("favor_pct")) for c in timely]
     favors = [f for f in favors if f is not None]
     by_stance: dict[str, dict[str, int]] = {}
     for c in scored:
@@ -401,6 +446,14 @@ def _scorecard(scored: list[dict[str, Any]]) -> dict[str, Any]:
         "hit_rate_pct": f"{(wins / len(decided) * 100):.1f}" if decided else None,
         "avg_favor_pct": f"{(sum(favors) / len(favors)):.2f}" if favors else None,
         "by_stance": by_stance,
+        "stale_scored_count": len(stale),
+        "stale_note": (
+            "calls scored more than "
+            f"{LATE_SCORE_TOLERANCE * 100:.0f}% of their horizon late are excluded "
+            "from hit_rate_pct: scoring reads the price at the moment it runs, so a "
+            "late score measures a window the thesis never claimed. A non-zero count "
+            "means rounds were missed, not that the calls were bad."
+        ),
         "sizing": {
             "scored_count": len(sizing),
             "risk_realized_count": sum(1 for c in sizing if c.get("outcome") == "risk_realized"),

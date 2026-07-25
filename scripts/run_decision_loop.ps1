@@ -20,33 +20,57 @@ if (-not $listening) {
 
 # 2) One headless agent run of the full loop.
 $prompt = @'
-Run one full paper decision cycle against the local Otto terminal at
+Run one full Otto decision round against the local terminal at
 http://127.0.0.1:8765 (paper-only; live execution is structurally disabled).
+The point of the round is the journaled judgment ledger, not activity.
 
-Position discipline (adopted 2026-07-24 after the TW book lost to 0050 on
-an oversized single name): no single position above 40% of its book's
-equity; resize oversized positions in staged tranches of at most ~10% of
-book equity per run; new positions at most 10% of book equity per entry;
-on books without stop orders (TW) selling IS the risk tool — dose it in
-proportion to the stated concern, token trims are not discipline.
+1. GET /api/market/sessions. If all_equity_closed is true, keep the round
+   lean: skip quote/news churn and only do steps 2-3.
+2. GET /api/research/ledger?refresh=true and act on needs_review FIRST. Each
+   flagged call drifted from its reference price, is closing on its
+   invalidation, or is near the end of its horizon. Re-examine the thesis: say
+   plainly that it still holds, or record a NEW call that supersedes it. Never
+   rewrite an existing call - it scores on the thesis it was written with.
+3. POST /api/research/score {"refresh":true}. Scoring reads the price at the
+   moment it runs, so a call scored long after it matured is marked
+   window_honored=false and kept out of the hit rate. If stale_scored_count is
+   above zero, say so: it means rounds were missed, not that the calls failed.
+4. GET /api/research/scan?refresh=true. owned_without_call lists the owner's
+   real positions with no journaled view - that is the highest-priority gap and
+   must be closed. Otherwise work down the movers.
+5. For a name worth a view, POST /api/news/packet {"symbols":[..],
+   "refresh":true} for context. Yahoo only returns stories it itself relates to
+   a symbol, and it cannot resolve Taiwan listings at all, so an empty result
+   means no company news was found - never substitute an index headline for a
+   single-name catalyst. With a real thesis, POST /api/research/call
+   (stance/thesis/conviction/invalidation/horizon_days). Without one, record
+   nothing and say so.
+   Use stance "size_down" with weight_pct/cap_pct when a position exceeds 40%
+   of its book: that is a risk view, carries no directional claim, and is
+   excluded from the hit rate by design.
+6. Paper books: GET /api/equity/summary?refresh=true, /api/equity/tw/summary
+   ?refresh=true and the crypto summary. Enforce the discipline - single
+   position <=40% of the book, staged trims <=10% of the book per round, new
+   entries <=10%. Validate a repeated signal with POST
+   /api/backtest/walk-forward before sizing up. Every order carries a rationale
+   prefixed "loop YYYY-MM-DD:" showing the weight arithmetic, then POST the
+   three orders/process endpoints so resting orders can fill.
+7. POST /api/paper/snapshot then GET /api/paper/history?limit=30 and report
+   each book against its benchmark.
 
-1. POST /api/crypto/refresh {"view":"summary"} and read the crypto book.
-2. GET /api/equity/summary?refresh=true and /api/equity/tw/summary?refresh=true;
-   compute each position's weight against the 40% cap.
-3. POST /api/news/packet with the symbols the three books hold.
-4. Judge from what you actually read plus the discipline rules; every order
-   carries a rationale prefixed "loop YYYY-MM-DD#N:" that shows the weight
-   arithmetic. Then POST /api/crypto/orders/process,
-   /api/equity/orders/process, and /api/equity/tw/orders/process so
-   resting orders can fill.
-5. POST /api/paper/snapshot {"refresh":true,"note":"loop YYYY-MM-DD#N"}.
-6. GET /api/paper/history?limit=30 and report each book's window change vs
-   the benchmarks. If any data or behavior problem appears, fix it in the
-   same run instead of only reporting it.
+If a data or behavior problem appears, fix it in the same run - with tests and
+a local commit in D:\Otto - instead of only reporting it. Do NOT push to the
+public mirror and do NOT create or change scheduled tasks: an unattended run
+has nobody reviewing it, so anything that leaves this machine waits for the
+owner. Name what is waiting at the end of the round.
 '@
 
 claude -p $prompt --max-turns 40
 
-# --- One-time registration (owner runs this once, at their own decision): ---
-# schtasks /Create /TN "OttoDecisionLoop" /SC DAILY /ST 09:23 /TR `
-#   "powershell -NoProfile -ExecutionPolicy Bypass -File D:\Otto\scripts\run_decision_loop.ps1"
+# --- One-time registration. The owner authorizes this; the script never
+# registers itself, because a standing scheduled task is a persistent change
+# to their machine. Without it nothing runs between chat sessions: the
+# in-session scheduler dies with the process, which is how 2026-07-23/24
+# silently produced no rounds at all.
+#
+# schtasks /Create /TN "OttoDecisionLoop" /SC DAILY /ST 11:07 /TR "powershell -NoProfile -ExecutionPolicy Bypass -File D:\Otto\scripts\run_decision_loop.ps1"
