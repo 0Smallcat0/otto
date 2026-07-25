@@ -214,6 +214,7 @@ from otto.local_terminal.research_ledger import (
     research_scan_payload,
     score_calls,
 )
+from otto.local_terminal.twse_company import tw_company_facts_payload
 from otto.local_terminal.yahoo_news import collect_yahoo_news
 from otto.local_terminal.forum import (
     ForumError,
@@ -3335,6 +3336,20 @@ def create_app(frontend_dist: Path | None = None) -> FastAPI:
         state = STORE.read_research_ledger_state()
         marks = _research_marks(_open_call_symbols(state), refresh=refresh)
         return research_ledger_payload(state, marks, limit=limit)
+
+    @app.get("/api/research/tw-facts")
+    def tw_company_facts(symbols: str = "") -> dict[str, Any]:
+        # Company-level ground for a TW judgment: the exchange's own valuation
+        # plus the day's material announcements. Yahoo cannot resolve TW
+        # listings, and a call on the owner's largest holding once had to be
+        # recorded as "no view" for want of exactly this.
+        requested = [part for part in str(symbols or "").replace(";", ",").split(",") if part]
+        if not requested:
+            state = STORE.read_research_ledger_state()
+            requested = [
+                symbol for symbol in _open_call_symbols(state) if symbol.endswith(".TW")
+            ]
+        return tw_company_facts_payload(requested)
 
     @app.get("/api/market/sessions")
     def market_sessions() -> dict[str, Any]:

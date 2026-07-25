@@ -176,6 +176,7 @@ ROUTE_CONTRACTS: tuple[RouteAgentContract, ...] = (
             "research_calls_score",
             "research_ledger_read",
             "research_scan",
+            "tw_company_facts",
             "market_sessions",
             "crypto_submit_paper_order",
             "crypto_process_paper_orders",
@@ -2359,6 +2360,41 @@ ACTION_CONTRACTS: tuple[AgentActionContract, ...] = (
         False,
         "local_research_ledger_read_only",
         (),
+    ),
+    AgentActionContract(
+        "tw_company_facts",
+        "paper",
+        "Company-level valuation and material announcements for TW listings",
+        "GET",
+        "/api/research/tw-facts",
+        (
+            "optional ?symbols=2834.TW,2330.TW (comma separated, bare codes accepted); "
+            "with no argument it covers the TW symbols that currently have an open "
+            "research call. Official TWSE public OpenAPI, no key"
+        ),
+        (
+            "companies",
+            "companies[].symbol",
+            "companies[].valuation",
+            "companies[].announcements",
+            "valuation_covered_count",
+            "announcement_total",
+            "note",
+            "safety",
+        ),
+        (
+            "read-only; valuation is the exchange's own P/E, dividend yield and P/B "
+            "for the latest session, and an empty announcements list means the "
+            "company filed nothing that day — a fact about the day, not missing "
+            "data, and never to be replaced with index-level news. Listed (上市) "
+            "companies only; OTC listings are not in this feed"
+        ),
+        False,
+        False,
+        False,
+        False,
+        "public_read_only_market_data",
+        ("provider_unavailable",),
     ),
     AgentActionContract(
         "market_sessions",
