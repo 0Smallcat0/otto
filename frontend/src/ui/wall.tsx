@@ -560,7 +560,41 @@ interface ResearchCall {
   cap_pct?: string | null;
   needs_review?: boolean;
   review_reasons?: string[];
+  outcome?: string | null;
+  score_price?: string | null;
+  realized_pct?: string | null;
+  window_honored?: boolean;
 }
+
+interface Scorecard {
+  scored_count?: number;
+  decided_count?: number;
+  win_count?: number;
+  hit_rate_pct?: string | null;
+  avg_favor_pct?: string | null;
+  stale_scored_count?: number;
+  sizing?: { scored_count?: number; risk_realized_count?: number };
+}
+
+const OUTCOME_LABEL: Record<string, string> = {
+  worked: "說對了",
+  failed: "看錯了",
+  flat: "沒動(不算分)",
+  moved: "走掉了",
+  invalidated: "被打臉出場",
+  risk_realized: "風險真的發生",
+  risk_not_realized: "風險沒發生"
+};
+
+const OUTCOME_CLASS: Record<string, string> = {
+  worked: "ft-up",
+  failed: "ft-down",
+  invalidated: "ft-down",
+  moved: "ft-down",
+  flat: "ft-dim",
+  risk_realized: "ft-down",
+  risk_not_realized: "ft-dim"
+};
 
 const STANCE_LABEL: Record<string, string> = {
   accumulate: "可加碼",
@@ -588,13 +622,21 @@ const STANCE_CLASS: Record<string, string> = {
 export function JudgmentBoard() {
   const { t } = useT();
   const [calls, setCalls] = useState<ResearchCall[]>([]);
+  const [scored, setScored] = useState<ResearchCall[]>([]);
+  const [card, setCard] = useState<Scorecard | null>(null);
   const [open, setOpen] = useState<string | null>(null);
   useEffect(() => {
     let alive = true;
     const load = () =>
-      void getJson<{ open_calls?: ResearchCall[] }>("/api/research/ledger").then((data) => {
+      void getJson<{
+        open_calls?: ResearchCall[];
+        scored_calls?: ResearchCall[];
+        scorecard?: Scorecard;
+      }>("/api/research/ledger").then((data) => {
         if (!alive || !data) return;
         setCalls(Array.isArray(data.open_calls) ? data.open_calls : []);
+        setScored(Array.isArray(data.scored_calls) ? data.scored_calls : []);
+        setCard(data.scorecard ?? null);
       });
     load();
     const timer = setInterval(load, 60_000);
@@ -603,7 +645,7 @@ export function JudgmentBoard() {
       clearInterval(timer);
     };
   }, []);
-  if (!calls.length) return null;
+  if (!calls.length && !scored.length) return null;
   // A concentration warning and a directional view answer different questions,
   // so they stopped sharing a table: crammed into one grid the "失效" column
   // held a price for six rows and "63.50% / 40.00%" for a seventh, and the same
@@ -726,8 +768,62 @@ export function JudgmentBoard() {
           </tbody>
         </table>
       </div>
+      {scored.length > 0 ? (
+        <>
+          <div className="ft-card-h" style={{ marginTop: 12 }}>
+            <span>{t("已驗收")}</span>
+            <span className="s" style={{ marginLeft: 10 }}>
+              {card?.hit_rate_pct
+                ? `${t("命中率")} ${card.hit_rate_pct}% (${card.win_count}/${card.decided_count})`
+                : t("還沒有可計分的判斷")}
+              {card?.avg_favor_pct ? ` · ${t("平均")} ${card.avg_favor_pct}%` : ""}
+              {card?.sizing?.scored_count
+                ? ` · ${t("集中度警示")} ${card.sizing.scored_count} ${t("則,其中風險發生")} ${card.sizing.risk_realized_count}`
+                : ""}
+              {card?.stale_scored_count
+                ? ` · ${card.stale_scored_count} ${t("則因延遲計分不列入")}`
+                : ""}
+            </span>
+          </div>
+          <div className="ft-pos">
+            <table>
+              <thead>
+                <tr>
+                  <th scope="col">{t("標的")}</th>
+                  <th scope="col">{t("我的看法")}</th>
+                  <th scope="col">{t("結果")}</th>
+                  <th scope="col">{t("記錄時")}</th>
+                  <th scope="col">{t("結算價")}</th>
+                  <th scope="col">{t("價格變動")}</th>
+                </tr>
+              </thead>
+              <tbody>
+                {scored.slice(-12).reverse().map((call) => (
+                  <tr key={call.call_id}>
+                    <td>{call.symbol}{call.name ? <small> {call.name}</small> : null}</td>
+                    <td className={STANCE_CLASS[call.stance] ?? "ft-dim"}>
+                      {t(STANCE_LABEL[call.stance] ?? call.stance)}
+                    </td>
+                    <td className={OUTCOME_CLASS[call.outcome ?? ""] ?? "ft-dim"}>
+                      {t(OUTCOME_LABEL[call.outcome ?? ""] ?? call.outcome ?? "—")}
+                      {call.window_honored === false ? (
+                        <small className="ft-dim"> {t("(延遲計分)")}</small>
+                      ) : null}
+                    </td>
+                    <td className="ft-faint">{call.ref_price}</td>
+                    <td>{call.score_price ?? "—"}</td>
+                    <td className={pct(Number.parseFloat(String(call.realized_pct ?? ""))).cls}>
+                      {call.realized_pct ? `${call.realized_pct}%` : "—"}
+                    </td>
+                  </tr>
+                ))}
+              </tbody>
+            </table>
+          </div>
+        </>
+      ) : null}
       <div className="ft-note s">
-        {t("驗收日到、或價格走到「算我看錯」的位置,就用當下真實價格結算。集中度提醒只看風險有沒有發生,不算方向對錯。這是分析,不是叫你買賣。")}
+        {t("驗收日到、或價格走到「算我看錯」的位置,就用當下真實價格結算。集中度提醒只看風險有沒有發生,不算方向對錯;延遲太久才計分的也不列入命中率,因為量到的區間已經不是當初說的那段。這是分析,不是叫你買賣。")}
       </div>
     </div>
   );
