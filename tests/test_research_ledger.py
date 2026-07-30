@@ -113,6 +113,67 @@ def test_invalidation_breach_closes_early_even_before_horizon() -> None:
     assert scored[0]["outcome"] == "invalidated"
 
 
+def test_a_hold_settles_when_it_breaks_the_level_it_named() -> None:
+    """The real 00982A case: struck 20.09, named 19.5, traded 19.45, settled nothing.
+
+    Holds were exempt from the breach check on the reasoning that holding has
+    no single side. Every hold written here named a one-sided level and the
+    wall renders them as 跌破 X, inferring the side from where the level sits
+    against the struck price. Only the scorer disagreed, so the call would
+    have drifted to its 08-27 horizon and scored on whatever price happened to
+    be there (2026-07-29).
+    """
+    st, call = _record(
+        default_research_ledger_state(), stance="hold", ref_price="20.09", invalidation="19.5"
+    )
+    assert call["matures_at"] > datetime.now(tz=UTC).isoformat()  # not matured
+
+    st, scored = score_calls(st, {"2330.TW": Decimal("19.45")})
+
+    assert len(scored) == 1
+    assert scored[0]["outcome"] == "invalidated"
+
+
+def test_a_hold_whose_level_sits_above_it_breaks_upward() -> None:
+    """The side is read from the data, not assumed to be downward."""
+    st, _ = _record(
+        default_research_ledger_state(), stance="hold", ref_price="100", invalidation="110"
+    )
+
+    intact = score_calls(st, {"2330.TW": Decimal("109")})[1]
+    breached = score_calls(st, {"2330.TW": Decimal("111")})[1]
+
+    assert intact == []
+    assert breached[0]["outcome"] == "invalidated"
+
+
+def test_a_hold_above_its_floor_keeps_running() -> None:
+    st, _ = _record(
+        default_research_ledger_state(), stance="hold", ref_price="20.09", invalidation="19.5"
+    )
+
+    st, scored = score_calls(st, {"2330.TW": Decimal("19.55")})
+
+    assert scored == []
+    assert st["calls"][0]["status"] == "open"
+
+
+def test_a_sizing_call_is_never_settled_by_a_level() -> None:
+    """size_down makes no directional claim, so no price can prove it wrong."""
+    st, _ = _record(
+        default_research_ledger_state(),
+        stance="size_down",
+        ref_price="18",
+        invalidation="16",
+        weight_pct="63.5",
+    )
+
+    st, scored = score_calls(st, {"2330.TW": Decimal("15")})
+
+    assert scored == []
+    assert st["calls"][0]["status"] == "open"
+
+
 def test_unmatured_intact_call_stays_open_and_no_mark_never_graded() -> None:
     st, _ = _record(default_research_ledger_state(), ref_price="100", invalidation="80")
     # not matured, invalidation not breached → stays open
@@ -248,6 +309,59 @@ def test_size_down_is_scored_on_risk_not_direction() -> None:
     assert scored[0]["outcome"] == "risk_not_realized"
 
 
+def test_an_open_call_carries_the_live_book_weight_beside_the_struck_one() -> None:
+    """The board printed a 07-25 weight in the present tense.
+
+    2834 was 63.5% of the book when the warning was written and 66.85% four days
+    later — the concentration had grown, which is exactly the case the warning
+    exists for, and the wall said 63.5% as if nothing had moved. Same shape as
+    ref_price vs mark_price (2026-07-29 dogfood).
+    """
+    st, _ = _record(
+        default_research_ledger_state(),
+        stance="size_down",
+        ref_price="18.0",
+        weight_pct="63.5",
+        cap_pct="40",
+    )
+    payload = research_ledger_payload(st, weights={"2330.TW": Decimal("66.85")})
+    row = payload["open_calls"][0]
+    assert row["weight_pct"] == "63.50"  # what it weighed when struck, untouched
+    assert row["mark_weight_pct"] == "66.85"  # what it weighs now
+
+    # no live weight (symbol not in the book, or the book cannot be priced):
+    # the field is absent, so the wall can say "at entry" instead of guessing
+    assert research_ledger_payload(st)["open_calls"][0]["mark_weight_pct"] is None
+
+
+def test_a_concentration_that_grew_is_flagged_for_review() -> None:
+    """A sizing call had no review path at all until its horizon ran out.
+
+    It has no invalidation and no entry band, so every price-based rule skips
+    it — 2834 drifted from 63.5% to 67.2% of the book with nothing flagged. A
+    warning whose risk got worse is the case most worth re-reading; a position
+    shrinking back toward the cap is the warning working, so only growth flags
+    (2026-07-29, owner asked for the rule).
+    """
+    st, _ = _record(
+        default_research_ledger_state(),
+        stance="size_down",
+        ref_price="18.0",
+        weight_pct="63.5",
+        cap_pct="40",
+    )
+
+    def reasons(weight: str | None) -> list[str]:
+        weights = {"2330.TW": Decimal(weight)} if weight else None
+        return research_ledger_payload(st, weights=weights)["open_calls"][0]["review_reasons"]
+
+    grew = reasons("67.24")  # +5.9% — past REVIEW_DRIFT_PCT
+    assert any("grew to 67.24%" in r for r in grew)
+    assert not reasons("65.0")  # +2.4% — the book breathing, not a worse risk
+    assert not reasons("40.0")  # shrank back to the cap: the warning worked
+    assert not reasons(None)  # no live weight: nothing to compare, no flag
+
+
 def test_sizing_calls_are_excluded_from_the_directional_hit_rate() -> None:
     st = default_research_ledger_state()
     st, directional = _record(st, ref_price="100")  # accumulate
@@ -281,6 +395,66 @@ def test_open_call_flags_approaching_invalidation() -> None:
     reasons = " ".join(payload["open_calls"][0]["review_reasons"])
     assert "invalidation" in reasons
     assert payload["needs_review_count"] == 1
+
+
+def test_open_call_flags_an_entry_band_the_market_has_left() -> None:
+    """The real 0050 case: 97.15 against a 98-101 band, flagged by nothing.
+
+    Drift was 4.3% and the price still sat 33% of the way from its
+    invalidation — under both thresholds — so a call whose only actionable
+    instruction had been void for days would have scored untouched
+    (2026-07-28).
+    """
+    st, _ = _record(
+        default_research_ledger_state(),
+        stance="accumulate",
+        ref_price="101.5",
+        invalidation="95",
+        entry_low="98",
+        entry_high="101",
+    )
+
+    inside = research_ledger_payload(st, {"2330.TW": Decimal("99")})
+    assert inside["needs_review_count"] == 0
+
+    below = research_ledger_payload(st, {"2330.TW": Decimal("97.15")})
+    assert "below its 98 entry" in " ".join(below["open_calls"][0]["review_reasons"])
+
+    # Running away above the ceiling voids the staged entry just as surely.
+    above = research_ledger_payload(st, {"2330.TW": Decimal("104")})
+    assert "ran past its 101 entry" in " ".join(above["open_calls"][0]["review_reasons"])
+
+
+def test_a_hold_is_not_flagged_forever_for_a_pullback_that_never_came() -> None:
+    """AAPL: hold, do not chase, look for a pullback to 320-328. It went to 337.
+
+    The view did not go stale — the conditional entry simply never triggered.
+    And unlike drift, invalidation proximity and elapsed horizon, a passed band
+    never un-passes, so the flag would have sat amber for the twenty-six days
+    to maturity. A warning that can never be resolved stops being read
+    (2026-07-28).
+    """
+    st, _ = _record(
+        default_research_ledger_state(),
+        stance="hold",
+        ref_price="331.67",
+        invalidation="315",
+        entry_low="320",
+        entry_high="328",
+    )
+
+    payload = research_ledger_payload(st, {"2330.TW": Decimal("336.91")})
+
+    assert payload["needs_review_count"] == 0
+
+
+def test_a_call_with_no_entry_band_is_not_flagged_for_one() -> None:
+    """Most calls name no band; inventing a breach for them would be noise."""
+    st, _ = _record(default_research_ledger_state(), ref_price="100")
+
+    payload = research_ledger_payload(st, {"2330.TW": Decimal("100.5")})
+
+    assert payload["needs_review_count"] == 0
 
 
 def test_open_call_flags_nearly_elapsed_horizon() -> None:
@@ -383,3 +557,98 @@ def test_supersede_refuses_unknown_or_closed_targets() -> None:
     st, _ = _record(st, ref_price="100", supersedes=first["call_id"])
     with pytest.raises(ResearchLedgerError, match="superseded, not open"):
         _record(st, ref_price="100", supersedes=first["call_id"])
+
+
+def test_a_hold_that_lost_less_than_the_index_is_not_the_same_as_losing() -> None:
+    """The scorecard said 0.0% hit rate and could not say whether that beat owning the index.
+
+    2330 was graded a pure loss at -6.58% over a window the TW market fell
+    further; a hold that loses less than the alternative is not a failure, and
+    the owner's question is "did you beat the market", which a hit rate cannot
+    answer (2026-07-30).
+    """
+    st, call = _record(
+        default_research_ledger_state(),
+        stance="hold",
+        ref_price="2355",
+        benchmark_price="100",  # 0050.TW at strike
+    )
+    assert call["benchmark_symbol"] == "0050.TW"
+    assert call["benchmark_ref_price"] == "100"
+
+    # the call fell 6.58%; the index fell 10% over the same window
+    st, scored = score_calls(
+        _mature(st), {"2330.TW": Decimal("2200"), "0050.TW": Decimal("90")}
+    )
+    row = scored[0]
+    assert row["realized_pct"] == "-6.58"  # still a loss in absolute terms
+    assert row["benchmark_pct"] == "-10.00"
+    assert row["excess_pct"] == "3.42"  # and still ahead of owning the index
+    assert row["beat_benchmark"] is True
+
+    card = research_ledger_payload(st)["scorecard"]["vs_benchmark"]
+    assert card["judged_count"] == 1 and card["beat_count"] == 1
+    assert card["beat_rate_pct"] == "100.0"
+    assert card["unmeasured_count"] == 0
+
+
+def test_an_avoid_beats_the_market_by_lagging_it() -> None:
+    # "stay out of this" wins when the thing avoided underperformed. Scoring it
+    # by the same >0 rule as a buy would grade every correct avoid as a miss.
+    st, _ = _record(
+        default_research_ledger_state(),
+        stance="avoid",
+        ref_price="100",
+        benchmark_price="100",
+    )
+    st, scored = score_calls(
+        _mature(st), {"2330.TW": Decimal("90"), "0050.TW": Decimal("105")}
+    )
+    assert scored[0]["excess_pct"] == "-15.00"
+    assert scored[0]["beat_benchmark"] is True
+
+
+def test_a_window_with_no_benchmark_is_unmeasured_not_a_draw() -> None:
+    # Calls struck before the benchmark existed carry no strike level. Scoring
+    # them as 0% excess would report "matched the market" about a window nobody
+    # measured — and would dilute the beat rate with fiction.
+    st, call = _record(default_research_ledger_state(), stance="hold", ref_price="100")
+    assert call["benchmark_ref_price"] is None
+    st, scored = score_calls(
+        _mature(st), {"2330.TW": Decimal("110"), "0050.TW": Decimal("100")}
+    )
+    assert scored[0]["excess_pct"] is None
+    assert scored[0]["beat_benchmark"] is None
+    card = research_ledger_payload(st)["scorecard"]["vs_benchmark"]
+    assert card["judged_count"] == 0 and card["unmeasured_count"] == 1
+    assert card["beat_rate_pct"] is None  # no rate invented from nothing
+
+
+def test_the_benchmark_cannot_outperform_itself() -> None:
+    # 0050 is the TW benchmark. A call on it gets an excess of zero by
+    # construction; calling that a win or a loss would be arithmetic, not skill.
+    st, _ = _record(
+        default_research_ledger_state(),
+        symbol="0050.TW",
+        stance="avoid",
+        ref_price="100",
+        benchmark_price="100",
+    )
+    st, scored = score_calls(_mature(st), {"0050.TW": Decimal("90")})
+    assert scored[0]["excess_pct"] == "0.00"
+    assert scored[0]["beat_benchmark"] is None
+
+
+def test_a_sizing_warning_makes_no_claim_about_relative_return() -> None:
+    st, _ = _record(
+        default_research_ledger_state(),
+        stance="size_down",
+        ref_price="100",
+        weight_pct="63.5",
+        benchmark_price="100",
+    )
+    st, scored = score_calls(
+        _mature(st), {"2330.TW": Decimal("85"), "0050.TW": Decimal("100")}
+    )
+    assert scored[0]["excess_pct"] == "-15.00"  # the fact is still recorded
+    assert scored[0]["beat_benchmark"] is None  # but no verdict is invented

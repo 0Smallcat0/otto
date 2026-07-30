@@ -177,6 +177,7 @@ ROUTE_CONTRACTS: tuple[RouteAgentContract, ...] = (
             "research_ledger_read",
             "research_scan",
             "tw_company_facts",
+            "tw_valuation_screen",
             "market_sessions",
             "crypto_submit_paper_order",
             "crypto_process_paper_orders",
@@ -2280,6 +2281,9 @@ ACTION_CONTRACTS: tuple[AgentActionContract, ...] = (
         ),
         (
             "scored",
+            # newly_scored_count is this run; scored_count is the ledger's
+            # lifetime total and is not evidence that this run closed anything.
+            "newly_scored_count",
             "scored_count",
             "scorecard",
             "scorecard.hit_rate_pct",
@@ -2388,6 +2392,47 @@ ACTION_CONTRACTS: tuple[AgentActionContract, ...] = (
             "company filed nothing that day — a fact about the day, not missing "
             "data, and never to be replaced with index-level news. Listed (上市) "
             "companies only; OTC listings are not in this feed"
+        ),
+        False,
+        False,
+        False,
+        False,
+        "public_read_only_market_data",
+        ("provider_unavailable",),
+    ),
+    AgentActionContract(
+        "tw_valuation_screen",
+        "paper",
+        "Rank every TW listing on the exchange's own valuation table",
+        "GET",
+        "/api/research/tw-screen",
+        (
+            "optional ?sort=dividend_yield_pct|pe_ratio|pb_ratio (yield ranks highest "
+            "first, the multiples lowest first), ?max_pe=, ?max_pb=, "
+            "?min_dividend_yield_pct=, ?limit= (1-30). Same TWSE OpenAPI fetch "
+            "tw_company_facts already makes, ranked over all 上市 listings instead "
+            "of a list of codes the caller already knew to name"
+        ),
+        (
+            "rows",
+            "rows[].code",
+            "rows[].pe_ratio",
+            "rows[].dividend_yield_pct",
+            "rows[].pb_ratio",
+            "screened_count",
+            "match_count",
+            "excluded_missing_count",
+            "note",
+            "safety",
+        ),
+        (
+            "read-only; TRAILING exchange figures — the yield is what was paid and "
+            "the P/E is on reported earnings — so a low multiple is a question, not "
+            "a buy signal, and Taiwan's low-P/B high-yield names are dominated by "
+            "property developers whose payouts come from lumpy land sales. A listing "
+            "whose ranked field the exchange did not publish is excluded and counted "
+            "in excluded_missing_count, never sorted as if it were zero. Listed (上市) "
+            "only; OTC listings are not in this feed"
         ),
         False,
         False,

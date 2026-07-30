@@ -99,6 +99,8 @@ export interface CryptoSlice {
     cash?: string;
     equity?: string;
   };
+  /** Cost basis only — no mark. Marks come from `market.rows`, or from
+   *  /api/crypto/summary, which is a different payload than this one. */
   positions?: { symbol: string; quantity: string; avg_price: string; realized_pnl?: string }[];
   orders?: { order_id?: string; status?: string }[];
   history?: { created_at?: string; status?: string; side?: string; order_type?: string; symbol?: string }[];
@@ -132,6 +134,8 @@ export interface NewsItem {
   held_symbols?: string[];
   /** Names with a live judgment that this headline mentions. */
   watched_symbols?: string[];
+  /** What the headline is worth to the reader: mine | tw | global | noise. */
+  relevance?: string;
 }
 
 export interface NewsSlice {
@@ -217,6 +221,92 @@ export function pct(value: unknown): { text: string; cls: string } {
 
 export function quotePct(row: Quoteish): { text: string; cls: string } {
   return pct(row.change_percent ?? row.percent_change ?? row.chg_pct);
+}
+
+/** Whether a candle series has fallen behind the market it claims to draw.
+ *
+ *  The chart refreshed itself only when the cache was empty, so a series that
+ *  existed was treated as a series that was current: 00982A drew a last bar of
+ *  23.83 from three weeks earlier while the stock traded at 20.09, a 16% gap
+ *  on the owner's own holding (2026-07-28).
+ *
+ *  Four days of slack — a weekend plus a holiday on either side of it — so a
+ *  Monday morning does not accuse Friday's close of being stale.
+ */
+export function staleCandles(lastCloseAt?: string, now: Date = new Date()): boolean {
+  if (!lastCloseAt) return false;
+  const closed = new Date(`${lastCloseAt.slice(0, 10)}T00:00:00Z`);
+  if (Number.isNaN(closed.getTime())) return false;
+  const today = new Date(`${now.toISOString().slice(0, 10)}T00:00:00Z`);
+  return (today.getTime() - closed.getTime()) / 86_400_000 > 4;
+}
+
+/** Headlines ordered for the wall's ten-row strip: his money first, junk last.
+ *
+ *  Freshness alone put none of the four stories touching his holdings in the
+ *  top ten of a 120-item feed, while the receipt lottery made it purely by
+ *  being minutes newer (2026-07-27 dogfood). Nothing is dropped — noise sinks
+ *  and stays readable on the news page under its own count.
+ *
+ *  Exported so it can be tested: the bug lived in the ordering, not in the
+ *  markup, and the ordering was buried inside the component.
+ */
+export function rankHeadlines<T extends { relevance?: string; age_minutes?: number }>(
+  items: readonly T[]
+): T[] {
+  const rank = (item: T) => (item.relevance === "mine" ? 0 : item.relevance === "noise" ? 2 : 1);
+  return [...items].sort(
+    (a, b) => rank(a) - rank(b) || (a.age_minutes ?? 9e9) - (b.age_minutes ?? 9e9)
+  );
+}
+
+/** "MM/DD" of the session a quote belongs to, or "" when the row won't say.
+ *
+ *  Fetch age answers "is the cache being refreshed"; it does not answer "is
+ *  this price current", and on a Monday the two diverge by three days. Every
+ *  free tier spells its session differently — TWSE a ROC date (1150724),
+ *  Finnhub epoch seconds at the close, Twelve Data an ISO date — so read all
+ *  three here rather than in each page. Epoch is read in UTC on purpose: local
+ *  getters in UTC+8 rolled Friday's US close onto Saturday and stamped the
+ *  rows with a day the market was shut.
+ */
+export function sessionStamp(row?: Quoteish): string {
+  const raw = row as unknown as Record<string, unknown> | undefined;
+  const roc = String(raw?.date ?? "");
+  if (roc.length >= 7) return `${roc.slice(3, 5)}/${roc.slice(5, 7)}`;
+  const day = String(raw?.latest_trading_day ?? "").trim();
+  if (!day) return "";
+  if (/^\d{4}-\d{2}-\d{2}/.test(day)) return `${day.slice(5, 7)}/${day.slice(8, 10)}`;
+  if (!/^\d{9,}$/.test(day)) return "";
+  const at = new Date(Number(day) * 1000);
+  if (Number.isNaN(at.getTime())) return "";
+  return `${String(at.getUTCMonth() + 1).padStart(2, "0")}/${String(at.getUTCDate()).padStart(2, "0")}`;
+}
+
+/** The session a whole quote group can honestly claim, and whether it is mixed.
+ *
+ *  A group is not one session. TWSE publishes its daily file per symbol, so
+ *  on 2026-07-28 the same five rows carried two dates: 2330 and 2317 had the
+ *  day's close, while 0050, 00982A and 2834 still held 07/27. Stamping the
+ *  group from rows[0] certified three stale rows as today — 0050 had fallen
+ *  4.24% and the wall showed +0.15% under a header saying it was today's
+ *  close. Over-claiming freshness is worse than not claiming it, which is
+ *  what the header did before it existed.
+ *
+ *  So: the oldest session present, never the newest. Nothing is certified
+ *  fresher than it is, and `mixed` lets the caller say some rows are newer.
+ */
+export function sessionSpan(rows: readonly Quoteish[]): { stamp: string; mixed: boolean } {
+  const stamps = rows.map((row) => sessionStamp(row)).filter(Boolean);
+  if (stamps.length === 0) return { stamp: "", mixed: false };
+  const distinct = [...new Set(stamps)].sort();
+  // MM/DD compares correctly inside one year. Across a year boundary the
+  // December date is the older one even though it sorts last, so pick it.
+  const spansNewYear = distinct[0].startsWith("01") && distinct[distinct.length - 1].startsWith("12");
+  return {
+    stamp: spansNewYear ? distinct[distinct.length - 1] : distinct[0],
+    mixed: distinct.length > 1
+  };
 }
 
 /** "3分前 / 2小時前" — a quote wall must never pass off old numbers as current. */

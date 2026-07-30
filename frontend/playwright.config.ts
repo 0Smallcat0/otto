@@ -4,6 +4,9 @@ const stateRoot = `.omx/playwright-state-${Date.now()}`;
 
 export default defineConfig({
   testDir: "./tests",
+  // tests/unit is vitest's. Without this Playwright loads those files, calls
+  // its own describe on them and dies before running a single browser test.
+  testMatch: "**/*.spec.ts",
   timeout: 30_000,
   expect: {
     timeout: 10_000

@@ -611,6 +611,55 @@ def test_provider_registry_exposes_entry_gate_and_error_states(tmp_path: Path) -
         assert "secret" not in str(provider["health"]).lower()
 
 
+def test_provider_summary_accounts_for_every_provider(tmp_path: Path) -> None:
+    """Every provider lands in exactly one counted bucket.
+
+    The summary used to hand-list the states it counted, and was written
+    before "retired" existed. When stooq's endpoint closed and the state was
+    added to the catalogue, the counts quietly stopped summing to the number
+    of providers — one was in the registry, in the payload, and in no total
+    on the system page (2026-07-27 dogfood).
+    """
+    payload = providers_payload(LocalStateStore(root=tmp_path))
+    summary = payload["summary"]
+
+    for state in ERROR_STATES:
+        assert state in summary, f"{state} is in the catalogue but not counted"
+    counted = summary["active"] + sum(summary[state] for state in ERROR_STATES)
+    assert counted == summary["provider_count"]
+    assert summary["uncategorised"] == 0
+
+
+def test_broken_counts_only_a_real_loss_of_service(tmp_path: Path) -> None:
+    """A standby that was never needed is not a fault, and neither is a
+    superseded source that names its successor.
+
+    Counting unavailable + retired put "2 不能用" on the system page when
+    nothing was wrong: coinbase is a fallback used only after Binance and
+    Kraken fail, so it has no cache precisely because they have not, and
+    stooq's retirement message points at Yahoo. False alarms cost the same
+    trust as silence does (2026-07-27).
+    """
+    payload = providers_payload(LocalStateStore(root=tmp_path))
+    summary = payload["summary"]
+    providers = payload["providers"]
+
+    standby_ids = {
+        provider["provider_id"]
+        for provider in providers
+        if provider["health"]["state"] == "unavailable"
+        and provider["implementation_status"] == "implemented_fallback"
+    }
+    assert summary["standby"] == len(standby_ids)
+    assert summary["superseded"] == summary["retired"]
+    assert summary["broken"] == summary["unavailable"] - summary["standby"] + summary["rate_limited"]
+    # On a fresh root nothing has been fetched, so primaries legitimately have
+    # no cache and broken is expected to be nonzero — the invariant that must
+    # hold is that a fallback never lands in it.
+    assert summary["broken"] >= 0
+    assert summary["standby"] <= summary["unavailable"]
+
+
 def test_provider_cache_marks_binance_cache_as_primary_runtime(tmp_path: Path) -> None:
     store = LocalStateStore(root=tmp_path)
     store.write_market_cache(_live_market_cache())

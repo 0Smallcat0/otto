@@ -20,7 +20,10 @@ import {
   pct,
   quotePct,
   usePoll,
-  activateOnKey
+  activateOnKey,
+  ageLabel,
+  sessionSpan,
+  staleCandles
 } from "./api";
 import { useT } from "./i18n";
 // Same loading shape as the wall — a first fetch in flight must not read as
@@ -77,20 +80,31 @@ function CandleChart({ symbol, market, row }: { symbol: string; market?: string;
   const { t } = useT();
   const [candles, setCandles] = useState<CandleRow[] | null>(null);
   const [timeframe, setTimeframe] = useState("");
+  const [lastClose, setLastClose] = useState("");
   const [fetching, setFetching] = useState(false);
   useEffect(() => {
     let alive = true;
     const load = () =>
-      getJson<{ candles?: CandleRow[]; timeframe?: string }>(`/api/markets/candles/${symbol.replace("/", "")}`);
+      getJson<{ candles?: CandleRow[]; timeframe?: string; last_close_at?: string }>(
+        `/api/markets/candles/${symbol.replace("/", "")}`
+      );
     void (async () => {
       const first = await load();
       if (!alive) return;
-      if (first?.candles?.length) {
+      // A cache that exists is not a cache that is current. This used to
+      // accept any non-empty answer, so 00982A drew a chart whose last bar
+      // was 23.83 from three weeks earlier while the stock traded at 20.09 —
+      // a 16% gap, on the owner's own holding, refreshed by nothing because
+      // the refresh only ran when there was nothing at all (2026-07-28).
+      // Four days of slack absorbs a weekend and a holiday either side.
+      if (first?.candles?.length && !staleCandles(first.last_close_at)) {
         setCandles(first.candles);
         setTimeframe(first.timeframe ?? "");
+        setLastClose(first.last_close_at ?? "");
         return;
       }
-      // No cache yet → fetch it ourselves instead of telling the user to ask.
+      // No cache, or one the market has left behind → fetch it ourselves
+      // instead of telling the user to ask.
       // crypto = public Binance detail (no key); US/FX = one-symbol history
       // pull through the user's stored Twelve Data key. TW has no source yet.
       if (market === "CRYPTO" || market === "US" || market === "FX" || market === "TW") {
@@ -123,8 +137,13 @@ function CandleChart({ symbol, market, row }: { symbol: string; market?: string;
         }
         if (!alive) return;
         setFetching(false);
-        setCandles(result?.candles ?? []);
-        setTimeframe(result?.timeframe ?? "");
+        // If the refresh could not improve on what we had, keep the old bars
+        // and let the header date say how old they are. Replacing a stale
+        // chart with an empty one loses information the reader can still use.
+        const best = result?.candles?.length ? result : first;
+        setCandles(best?.candles ?? []);
+        setTimeframe(best?.timeframe ?? "");
+        setLastClose(best?.last_close_at ?? "");
         return;
       }
       setCandles([]);
@@ -165,7 +184,19 @@ function CandleChart({ symbol, market, row }: { symbol: string; market?: string;
   const y = (value: number) => 8 + (1 - (value - min) / span) * 104;
   return (
     <>
-    {timeframe ? <div className="ft-cap" style={{ marginTop: 6 }}>{timeframe === "1d" ? t("日線") : t("15 分 K")} · {rows.length}</div> : null}
+    {timeframe ? (
+      <div className="ft-cap" style={{ marginTop: 6 }}>
+        {timeframe === "1d" ? t("日線") : t("15 分 K")} · {rows.length}
+        {/* A bar count says nothing about when the last bar closed, so a
+            three-week-old chart looked exactly like a current one. */}
+        {lastClose ? (
+          <span className={staleCandles(lastClose) ? "ft-am" : "ft-dim"}>
+            {" "}· {t("最後")} {lastClose.slice(5, 10)}
+            {staleCandles(lastClose) ? ` · ${t("來源未更新")}` : ""}
+          </span>
+        ) : null}
+      </div>
+    ) : null}
     <svg width="100%" height="130" viewBox={`0 0 ${width} 130`} preserveAspectRatio="none"
       style={{ background: "var(--bg)", border: "1px solid var(--line)", margin: "6px 0" }}>
       {rows.map((row, index) => {
@@ -292,7 +323,7 @@ function QuoteDetailRow({ row, market, name }: { row: Quoteish; market: string; 
     它活在新聞速覽引用、對話問答與未來的日曆警示裡。) */
 
 export function MarketsPage({ heading, markets }: { heading: ReactNode; markets: MarketsSlice | null }) {
-  const { t } = useT();
+  const { t, lang } = useT();
   const { data: watchlist } = usePoll<WatchlistSlice>("/api/markets/watchlist", 60_000);
   const research = markets?.research_summary;
   const wanted = watchlist?.groups ?? {};
@@ -303,10 +334,34 @@ export function MarketsPage({ heading, markets }: { heading: ReactNode; markets:
   };
   // Crypto lives on its own page now (owner call): 行情 = 綜合市場(美股/台股/匯率),
   // 加密行情獨立,不在此重複。
+  // Each source ages differently — Finnhub intraday, TWSE a daily close that
+  // can be three days back on a Monday, Twelve Data its own cadence. The wall
+  // says so per group; this page computed these labels and then threw them
+  // away, flattening everything into one undated table where Friday's close
+  // read exactly like a live price (2026-07-27 dogfood).
+  // The stamp has to be the session the price belongs to, never when we
+  // fetched it. Fetch age says the cache is being refreshed; it says nothing
+  // about the market being open. On a Monday morning "Finnhub · 3分前" sat
+  // above Friday's US close, and TWSE rows were three days old with no mark
+  // at all. Each source spells its session differently, so read all three:
+  // TWSE a ROC date (1150724), Finnhub epoch seconds, Twelve Data ISO.
+  const stamp = (rows: Quoteish[]): string => {
+    const { stamp: session, mixed } = sessionSpan(rows);
+    if (session) {
+      const suffix = mixed ? ` · ${t("部分較新")}` : "";
+      return ` · ${t("資料日")} ${session} ${t("收盤")}${suffix}`;
+    }
+    // No session field: say how old the fetch is rather than claim a date.
+    const age = ageLabel(rows[0]?.retrieved_at, lang);
+    return age.text ? ` · ${t("抓取")} ${age.text}` : ` · ${t("延遲")}`;
+  };
+  const usRows = order(wanted.us, research?.finnhub_quotes?.rows ?? []);
+  const twRows = order(wanted.tw, research?.twse_quotes?.rows ?? []);
+  const fxRows = order(wanted.fx, (research?.twelve_data_quotes?.rows ?? []).filter((row) => row.symbol.includes("/")));
   const groups: Array<{ market: string; label: string; rows: Quoteish[] }> = [
-    { market: "US", label: "Finnhub", rows: order(wanted.us, research?.finnhub_quotes?.rows ?? []) },
-    { market: "TW", label: `TWSE · ${t("延遲")}`, rows: order(wanted.tw, research?.twse_quotes?.rows ?? []) },
-    { market: "FX", label: "Twelve Data", rows: order(wanted.fx, (research?.twelve_data_quotes?.rows ?? []).filter((row) => row.symbol.includes("/"))) }
+    { market: "US", label: `Finnhub${stamp(usRows)}`, rows: usRows },
+    { market: "TW", label: `TWSE${stamp(twRows)}`, rows: twRows },
+    { market: "FX", label: `Twelve Data${stamp(fxRows)}`, rows: fxRows }
   ];
   const total = groups.reduce((count, group) => count + group.rows.length, 0);
   // 今日焦點 — strongest/weakest across everything watched, straight from the
@@ -323,7 +378,10 @@ export function MarketsPage({ heading, markets }: { heading: ReactNode; markets:
       {heading}
       {best && worst && best !== worst ? (
         <div className="ft-stat">
-          {t("今日焦點")}: {t("最強")} <b className="ft-up">{best.row.symbol} +{best.pct.toFixed(2)}%</b>
+          {/* Not 今日: this ranks each row's own session change, and those
+              sessions are not the same day — a TWSE close from Friday sits
+              beside a Finnhub print from last night. */}
+          {t("監看焦點")}: {t("最強")} <b className="ft-up">{best.row.symbol} +{best.pct.toFixed(2)}%</b>
           {" · "}{t("最弱")} <b className="ft-down">{worst.row.symbol} {worst.pct.toFixed(2)}%</b>
           {" · "}<span className="ft-dim">{movers.length} {t("檔監看中")}</span>
         </div>
@@ -333,11 +391,16 @@ export function MarketsPage({ heading, markets }: { heading: ReactNode; markets:
         <Empty>{t("尚無報價快取——在對話請 AI 刷新公開行情。")}</Empty>
       ) : (
         <Table quote cols={["", t("代號"), t("名稱"), t("市場"), t("價格"), t("漲跌")]}>
-          {groups.flatMap((group) =>
-            group.rows.map((row) => (
-              <QuoteDetailRow key={`${group.market}-${row.symbol}`} row={row} market={group.market} />
-            ))
-          )}
+          {groups
+            .filter((group) => group.rows.length > 0)
+            .flatMap((group) => [
+              <tr key={`hdr-${group.market}`}>
+                <td colSpan={6} className="ft-qgrp">{group.label}</td>
+              </tr>,
+              ...group.rows.map((row) => (
+                <QuoteDetailRow key={`${group.market}-${row.symbol}`} row={row} market={group.market} />
+              ))
+            ])}
         </Table>
       )}
     </div>
@@ -452,6 +515,16 @@ export function PaperPage({ heading, crypto }: { heading: ReactNode; crypto: Cry
   const orders = (crypto?.orders ?? []) as Record<string, string>[];
   const history = ((crypto?.history ?? []) as Record<string, string>[]).slice(0, 30);
   const account = crypto?.account;
+  const positions = crypto?.positions ?? [];
+  // /api/crypto carries cost basis but no mark — the marked view lives on
+  // /api/crypto/summary. Resolve against the quote board this slice already
+  // ships, the same way the wall's book banner does, so the table cannot show
+  // a cost price where a current price belongs.
+  const marketRows = crypto?.market?.rows ?? [];
+  const lastPrice = (symbol: string): number => {
+    const parsed = Number.parseFloat(marketRows.find((row) => row.symbol === symbol)?.price ?? "");
+    return Number.isFinite(parsed) ? parsed : NaN;
+  };
   return (
     <div className="ft-page" data-testid="workspace-paper">
       {heading}
@@ -462,6 +535,34 @@ export function PaperPage({ heading, crypto }: { heading: ReactNode; crypto: Cry
       <div className="ft-stat">
         {t("權益")} <b>{num(account?.equity)}</b> {account?.quote_asset ?? "USDT"} · {t("現金")} <b>{num(account?.cash)}</b> · {t("起始")} {num(account?.initial_cash, 0)}
       </div>
+      {/* The two equity books list what they hold; this one showed only its
+          equity, then jumped to orders. The gap between equity and cash was
+          real positions the page never named, on the page whose whole job is
+          showing the paper books (2026-07-27 dogfood). */}
+      {positions.length === 0 ? (
+        <div className="ft-note">{t("此帳本無持倉")}</div>
+      ) : (
+        <Table cols={[t("代號"), t("數量"), t("成本"), t("現價"), t("未實現")]}>
+          {positions.map((position) => {
+            const price = lastPrice(position.symbol);
+            const avg = Number.parseFloat(String(position.avg_price ?? ""));
+            const view = pct(
+              Number.isFinite(price) && Number.isFinite(avg) && avg > 0
+                ? ((price - avg) / avg) * 100
+                : NaN
+            );
+            return (
+              <tr key={position.symbol}>
+                <td>{position.symbol}</td>
+                <td>{fmt(position.quantity)}</td>
+                <td>{num(position.avg_price)}</td>
+                <td>{Number.isFinite(price) ? num(price) : "—"}</td>
+                <td className={view.cls}>{view.text}</td>
+              </tr>
+            );
+          })}
+        </Table>
+      )}
       <div className="ft-h2">{t("掛單")}</div>
       {orders.filter((order) => order.status === "WORKING").length === 0 ? (
         <div className="ft-note">{t("無掛單")}</div>
@@ -716,7 +817,7 @@ export function SettingsPage({ heading }: { heading: ReactNode }) {
   const { t } = useT();
   const backups = usePoll<{ summary?: { protected_file_count?: number; backup_file_count?: number }; rows?: { backup_count?: number }[] }>("/api/local-state/backups", 60_000);
   const secrets = usePoll<{ stored_provider_ids?: string[]; eligible_provider_ids?: string[] }>("/api/local-secrets/status", 120_000);
-  const providers = usePoll<{ summary?: { provider_count?: number; implemented_count?: number; active?: number; stale_cache?: number; key_required?: number } }>("/api/providers", 60_000);
+  const providers = usePoll<{ summary?: { provider_count?: number; implemented_count?: number; active?: number; stale_cache?: number; key_required?: number; broken?: number; superseded?: number } }>("/api/providers", 60_000);
   const stored = secrets.data?.stored_provider_ids?.length ?? 0;
   const eligible = secrets.data?.eligible_provider_ids?.length ?? 0;
   const backupSummary = backups.data?.summary;
@@ -727,6 +828,16 @@ export function SettingsPage({ heading }: { heading: ReactNode }) {
   const activeProviders = provSummary?.active ?? 0;
   const staleCache = provSummary?.stale_cache ?? 0;
   const keyRequired = provSummary?.key_required ?? 0;
+  // The line reported active / stale / key-required and stopped, so a source
+  // that had genuinely stopped serving could never reach the screen, and the
+  // counts shown did not add up to the catalog (2026-07-27 dogfood).
+  //
+  // Only a real loss of service is worth alarming about. A fallback adapter
+  // with no cache is a standby that has not been needed, and a retired source
+  // whose message names its successor has been replaced — the first version of
+  // this line called both 不能用 and cried wolf about two non-problems.
+  const broken = provSummary?.broken ?? 0;
+  const superseded = provSummary?.superseded ?? 0;
   const implemented = provSummary?.implemented_count ?? 0;
   const catalog = provSummary?.provider_count ?? 0;
   return (
@@ -738,7 +849,10 @@ export function SettingsPage({ heading }: { heading: ReactNode }) {
         <span className="ft-up">●</span> {t("安全閘門")}: {t("實盤交易")}/{t("外部執行")}/{t("憑證明文讀取")} {t("全部")} <b className="ft-down">{t("關")}</b>({t("後端鎖定")})<br />
         <span className="ft-up">●</span> {t("資料 Keys")}: <b>{stored}/{eligible}</b> {t("已接")}<br />
         <span className={withBak > 0 ? "ft-up" : "ft-dim"}>●</span> {t("狀態備份")}: <b>{backupSummary?.protected_file_count ?? "—"}</b> {t("檔受保護")} · <b>{withBak}</b> {t("檔已有還原點")}<br />
-        <span className={activeProviders > 0 ? "ft-up" : "ft-dim"}>●</span> {t("資料源")}: <b>{activeProviders}</b> {t("活躍")} · <b>{staleCache}</b> {t("快取偏舊")} · <b>{keyRequired}</b> {t("待接 key")} <span className="ft-faint">({implemented} {t("家已實作")} / {catalog} {t("目錄")})</span>
+        <span className={broken > 0 ? "ft-down" : activeProviders > 0 ? "ft-up" : "ft-dim"}>●</span> {t("資料源")}: <b>{activeProviders}</b> {t("活躍")} · <b>{staleCache}</b> {t("快取偏舊")} · <b>{keyRequired}</b> {t("待接 key")}
+        {broken > 0 ? <> · <b className="ft-down">{broken}</b> <span className="ft-down">{t("不能用")}</span></> : null}
+        {superseded > 0 ? <> · <b className="ft-faint">{superseded}</b> <span className="ft-faint">{t("已由後繼來源取代")}</span></> : null}
+        {" "}<span className="ft-faint">({implemented} {t("家已實作")} / {catalog} {t("目錄")})</span>
       </div>
       <div className="ft-h2" style={{ marginTop: 8 }}>{t("可以改什麼(對 AI 說的例句)")}</div>
       <Table cols={[t("可改項"), t("例句")]}>

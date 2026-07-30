@@ -15,6 +15,26 @@ def test_health_payload_exposes_local_foundation_state() -> None:
     assert payload["live_execution"] == "disabled"
 
 
+def test_health_payload_names_the_instance_answering() -> None:
+    """Two backends on one port are indistinguishable without these.
+
+    A stale instance from an earlier session kept the port and served a whole
+    review round; the second process lost the bind and died silently. Whoever
+    is reading the terminal — person or agent — has to be able to say which
+    state directory the numbers came from before claiming they checked it.
+    """
+    import os
+    from pathlib import Path
+
+    from otto.local_terminal.server import STORE
+
+    payload = health_payload()
+
+    assert payload["pid"] == os.getpid()
+    assert Path(payload["data_root"]) == STORE.root
+    assert Path(payload["data_root"]).is_absolute()
+
+
 def test_shell_contract_payload_preserves_phase0_contracts() -> None:
     payload = shell_contract_payload()
 

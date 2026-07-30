@@ -52,3 +52,12 @@ jobs:
 
       - name: Type check + build
         run: npm run build
+
+      # The rendering rules the wall and the readers decide by. Five defects
+      # shipped because the backend computed a qualifying fact and the render
+      # step dropped it — nothing failed, since the API was right and only the
+      # screen was wrong. The Playwright suite runs against a fresh terminal
+      # with no positions, no judgments and no quote cache, so it cannot see
+      # any of them.
+      - name: Unit tests
+        run: npm run unit

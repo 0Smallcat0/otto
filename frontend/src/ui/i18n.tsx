@@ -99,6 +99,10 @@ const EN: Record<string, string> = {
   "資料源建置中": "data source pending",
   "開 →": "open →",
   "開報告 →": "open report →",
+  "資料": "DATA",
+  "合成資料": "synthetic",
+  "過期快取": "stale cache",
+  "標「合成資料」的 run 是在抓不到市場資料時,用本機生成的 K 線跑的——那個報酬不是市場結果,不能當績效看。": "Runs marked \"synthetic\" were computed on locally generated candles because market data could not be fetched. That return is not a market result and must not be read as performance.",
   "開簡報 →": "open brief →",
   "FRED 發布日曆將在 M27-S6 接上(同一把本地 key)。": "The FRED release calendar lands in M27-S6 (same local key).",
   "目前可在對話問我「下次 CPI 什麼時候」。": "For now, ask the AI \"when is the next CPI\" in the conversation.",
@@ -187,7 +191,7 @@ const EN: Record<string, string> = {
   "摘要": "SUMMARY",
 
   // readers
-  "← 回任務牆": "← back to the wall",
+  "← 返回": "← back",
   "讀取": "Loading ",
   "中…": "…",
   "回測報告": "Backtest report",
@@ -260,7 +264,8 @@ const EN: Record<string, string> = {
   "未實現(毛)": "UNREALIZED (GROSS)",
   "淨(估)": "net est.",
   "15 分 K": "15m candles",
-  "今日焦點": "TODAY'S MOVERS",
+  "監看焦點": "WATCHLIST MOVERS",
+  "抓取": "fetched",
   "最強": "best",
   "最弱": "worst",
   "檔監看中": "symbols watched",
@@ -296,6 +301,11 @@ const EN: Record<string, string> = {
   "檔受保護": "files protected",
   "檔已有還原點": "with restore points",
   "資料源": "data sources",
+  "不能用": "not working",
+  "已由後繼來源取代": "replaced by a successor",
+  "部分較新": "some rows newer",
+  "最後": "last",
+  "來源未更新": "source has not updated",
   "即時": "live",
   "快取": "cached",
   "待接 key": "need a key",
@@ -392,7 +402,87 @@ const EN: Record<string, string> = {
   "介面改英文/亮色": "switch to English / light theme",
   "今天你做了什麼?": "what did you do today?",
   "下次 CPI 什麼時候?": "when is the next CPI?",
-  "這檔為什麼跌?幫我查": "why is this one down? dig into it"
+  "這檔為什麼跌?幫我查": "why is this one down? dig into it",
+
+  // ── Judgment board ────────────────────────────────────────────────────────
+  // The board is what the whole loop exists to produce, and in EN it rendered
+  // entirely in Chinese: every string was wrapped in t(), none had an entry
+  // (2026-07-27 dogfood, 61 keys missing across three files).
+  "AI 判斷": "AI JUDGMENTS",
+  "則進行中": "open",
+  "到期用真實價格驗收": "scored at the real price on the review date",
+  "集中度提醒": "CONCENTRATION",
+  // Composed: "{symbol} {name} {佔你帳本} {weight}% {,超過建議上限} {cap}%".
+  // The JSX puts no space before this second fragment because the Chinese
+  // starts with a full-width comma, which must not be preceded by one. An
+  // English word does need the space, so it is carried inside the string —
+  // rendering "63.5%of your book" otherwise.
+  // Present vs past tense is load-bearing here: "is now" is the live weight,
+  // "was" is the weight the warning was struck at and may no longer hold.
+  "現佔你帳本": "is now",
+  "記錄時佔你帳本": "was",
+  ",超過建議上限": " of your book — over the suggested cap of",
+  "(點開看完整理由)": "(open for the full reasoning)",
+  "我的看法": "MY VIEW",
+  "記錄時": "AT ENTRY",
+  "現在": "NOW",
+  "什麼情況算看錯": "WRONG IF",
+  "驗收日": "REVIEW",
+  "該重想": "rethink",
+  "漲過": "above",
+  "跌破": "below",
+  "已驗收": "SCORED",
+  "命中率": "hit rate",
+  "還沒有可計分的判斷": "no judgment has matured yet",
+  "平均": "avg",
+  "集中度警示": "sizing calls",
+  "則,其中風險發生": "scored, risk realised in",
+  "則因延遲計分不列入": "excluded as scored late",
+  "結果": "OUTCOME",
+  "結算價": "AT SCORING",
+  "價格變動": "MOVE",
+  "(延遲計分)": "(scored late)",
+  "驗收日到、或價格走到「算我看錯」的位置,就用當下真實價格結算。集中度提醒只看風險有沒有發生,不算方向對錯;延遲太久才計分的也不列入命中率,因為量到的區間已經不是當初說的那段。這是分析,不是叫你買賣。":
+    "A call is settled at the real market price when its review date arrives, or earlier if the price reaches the level that would prove it wrong. Concentration warnings only ask whether the risk showed up — they make no directional claim and never count toward the hit rate. A call scored long after it matured is excluded too, because the window measured is no longer the one the thesis claimed. This is analysis, not a recommendation to trade.",
+  // Stance / conviction / outcome labels reach t() through a lookup table, so
+  // they are invisible to a grep for t("…") — they were missing for the same
+  // reason nobody noticed the board was untranslated.
+  "可加碼": "accumulate",
+  "宜減碼": "reduce",
+  "先避開": "avoid",
+  "續抱觀望": "hold",
+  "降集中度": "size down",
+  "低信心": "low conviction",
+  "中信心": "medium conviction",
+  "高信心": "high conviction",
+  "說對了": "right",
+  "看錯了": "wrong",
+  "沒動(不算分)": "flat (not scored)",
+  "走掉了": "moved away",
+  "被打臉出場": "invalidated",
+  "風險真的發生": "risk realised",
+  "風險沒發生": "risk did not",
+
+  // ── Paper books ───────────────────────────────────────────────────────────
+  "AI 的紙上交易帳本(模擬,非實盤;實盤閘門由後端鎖定)。三本各自獨立計價,不換匯。":
+    "The AI's paper books (simulated, never live; live execution is locked at the backend). Each book is priced in its own currency — nothing is converted.",
+  "台股紙上帳(TWD)": "TW EQUITY PAPER BOOK (TWD)",
+  "美股紙上帳(USD)": "US EQUITY PAPER BOOK (USD)",
+  "加密紙上帳(USDT)": "CRYPTO PAPER BOOK (USDT)",
+  "讀不到這本帳": "Cannot read this book",
+  "損益": "P&L",
+  "已實現": "REALISED",
+  "理由": "RATIONALE",
+
+  // ── News ──────────────────────────────────────────────────────────────────
+  "我的持股": "my holdings",
+  "追蹤中": "watching",
+  "今天沒有直接提到你持股或追蹤標的的新聞——這是事實,不是漏抓。":
+    "Nothing in today's feed names a position you hold or a symbol you are watching. That is the finding, not a gap in collection.",
+  "另收起": "Folded away",
+  "則沒有投資內容的(開獎號碼、論壇板塊頁之類)。要看就跟 AI 說「把收起來的新聞也show出來」。":
+    "items with no investment content (lottery draws, forum board pages). To see them, tell the AI to show the folded headlines.",
+  "顯示": "showing"
 };
 
 interface LangState {

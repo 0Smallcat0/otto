@@ -206,6 +206,7 @@ from otto.local_terminal.paper_history import (
 )
 from otto.local_terminal.market_calendar import market_sessions_payload
 from otto.local_terminal.research_ledger import (
+    BENCHMARK_BY_MARKET,
     DEFAULT_UNIVERSE,
     THESIS_MAX_CHARS,
     ResearchLedgerError,
@@ -214,7 +215,11 @@ from otto.local_terminal.research_ledger import (
     research_scan_payload,
     score_calls,
 )
-from otto.local_terminal.twse_company import tw_company_facts_payload
+from otto.local_terminal.twse_company import (
+    TwseCompanyError,
+    tw_company_facts_payload,
+    tw_valuation_screen_payload,
+)
 from otto.local_terminal.yahoo_news import collect_yahoo_news
 from otto.local_terminal.forum import (
     ForumError,
@@ -1274,15 +1279,71 @@ def _owner_holdings_universe(state: dict[str, Any]) -> dict[str, tuple[str, str]
         if not isinstance(position, dict) or str(position.get("asset_class")) == "Crypto":
             continue
         bare = str(position.get("symbol") or "").strip().upper()
-        if not bare:
+        yahoo_symbol = _holding_quote_symbol(bare)
+        if not yahoo_symbol:
             continue
-        yahoo_symbol = bare
-        if "." not in bare and bare[0].isdigit():
-            yahoo_symbol = f"{bare}.TW"
         market = "tw_equity" if yahoo_symbol.endswith(".TW") else "us_equity"
         name = str(position.get("name") or bare)
         universe[yahoo_symbol] = (market, name)
     return universe
+
+
+def _holding_quote_symbol(symbol: Any) -> str:
+    """A book position's bare code as the quote symbol the ledger keys calls by.
+
+    Numeric TW listing codes get .TW; everything else is already a quote symbol.
+    Shared so the research universe and the live book weights cannot key the
+    same holding two different ways.
+    """
+    bare = str(symbol or "").strip().upper()
+    if not bare:
+        return ""
+    if "." not in bare and bare[0].isdigit():
+        return f"{bare}.TW"
+    return bare
+
+
+def _reference_security_names(symbols: list[str]) -> dict[str, list[str]]:
+    """Official security names for a symbol, from local reference caches.
+
+    Nasdaq Trader directory covers US listings, the TWSE daily quote cache
+    carries Chinese names for .TW codes — both already on disk, so callers
+    improve without a hand-curated alias table (2026-07-22 owner fix-it round:
+    disclosing 'keyword-only' was not a substitute for matching better).
+
+    Shared by the news matcher and the research ledger so a symbol cannot be
+    labelled one way on the news page and left bare on the judgment board.
+    """
+    wanted = [str(symbol).strip().upper() for symbol in symbols if str(symbol).strip()]
+    if not wanted:
+        return {}
+    names: dict[str, list[str]] = {}
+    directory = STORE.read_nasdaq_trader_symbol_directory_cache()
+    rows = directory.get("symbols") if isinstance(directory, dict) else []
+    by_symbol = {
+        str(row.get("symbol", "")).upper(): str(row.get("name", ""))
+        for row in rows or []
+        if isinstance(row, dict) and row.get("symbol") and row.get("name")
+    }
+    for symbol in wanted:
+        found: list[str] = []
+        root = symbol.split(".")[0]
+        if symbol.endswith(".TW"):
+            quote_cache = STORE.read_twse_quote_cache(root)
+            quotes = quote_cache.get("quotes") if isinstance(quote_cache, dict) else []
+            for row in quotes or []:
+                if isinstance(row, dict) and str(row.get("symbol", "")) == root:
+                    name = str(row.get("name", "")).strip()
+                    if name:
+                        found.append(name)
+                    break
+        else:
+            name = by_symbol.get(root, "")
+            if name:
+                found.append(name)
+        if found:
+            names[symbol] = found
+    return names
 
 
 def _portfolio_equity_price_rows(state: dict[str, Any]) -> list[dict[str, Any]]:
@@ -1340,23 +1401,71 @@ def _moex_quote_snapshot_payload_from_store(
     return payload
 
 
+def _cached_closes_for(symbol: str) -> list[tuple[str, str]]:
+    """(iso_date, close) pairs from every local cache that holds this symbol.
+
+    Two caches can carry a TW daily close and they age independently. The
+    history candles are written when charts are refreshed; the Yahoo quote
+    snapshot is rewritten every time the judgment board marks a position, so
+    in practice it is the fresher of the two — on 2026-07-28 the candles were
+    three weeks old while Yahoo already held the day's close.
+    """
+    closes: list[tuple[str, str, str, dict[str, str]]] = []
+    history = STORE.read_history_cache(symbol)
+    candles = history.get("candles") if isinstance(history.get("candles"), list) else []
+    if candles and isinstance(candles[-1], dict):
+        last = candles[-1]
+        # A candle is a whole bar, so the session's high and low come with it.
+        bar = {
+            field: str(last.get(field) or "")
+            for field in ("open", "high", "low", "volume")
+            if last.get(field)
+        }
+        closes.append(
+            (
+                str(last.get("closed_at") or "")[:10],
+                str(last.get("close") or ""),
+                "history_close_overlay",
+                bar,
+            )
+        )
+    # The lookup endpoint caches per Yahoo symbol, which for TW is <code>.TW.
+    yahoo = STORE.read_yahoo_quote_cache(f"{symbol}.TW")
+    quotes = yahoo.get("quotes") if isinstance(yahoo.get("quotes"), list) else []
+    if quotes and isinstance(quotes[0], dict):
+        first = quotes[0]
+        # No bar: Yahoo's chart metadata is not internally consistent here —
+        # 0050 came back with open 101.45 (the PREVIOUS close) above a high of
+        # 98.35. A close we can trust does not make the rest of the row usable.
+        closes.append(
+            (
+                str(first.get("date") or "")[:10],
+                str(first.get("close") or first.get("price") or ""),
+                "yahoo_quote_overlay",
+                {},
+            )
+        )
+    return [row for row in closes if row[0] and row[1]]
+
+
 def _apply_history_close_overlay(rows: list[Any]) -> None:
     """Prefer the freshest daily close we hold for TW quote rows.
 
-    TWSE's free STOCK_DAY_ALL file can lag the per-stock history by one
-    session (00982A showed 07/06's 25.28 while history held 07/07's 24.09).
+    TWSE's free STOCK_DAY_ALL file publishes per symbol, so one group can hold
+    two sessions at once: on 2026-07-28 it had the day's close for 2330 and
+    2317 while 0050, 00982A and 2834 still showed 07/27 — the owner's two
+    actual holdings among them, on a day the index fell 4.7%. 0050 read
+    +0.15% on a session it lost 4.24%.
+
     Money-adjacent numbers must use the newest close available, everywhere.
     """
     for row in rows:
         if not isinstance(row, dict):
             continue
-        history = STORE.read_history_cache(str(row.get("symbol") or ""))
-        candles = history.get("candles") if isinstance(history.get("candles"), list) else []
-        if not candles or not isinstance(candles[-1], dict):
+        available = _cached_closes_for(str(row.get("symbol") or ""))
+        if not available:
             continue
-        last = candles[-1]
-        history_date = str(last.get("closed_at") or "")[:10]
-        close = str(last.get("close") or "")
+        history_date, close, basis, bar = max(available)
         roc = str(row.get("date") or "")
         # Fail closed: an unparseable row date means we can't prove the history
         # is fresher, so leave the live quote alone rather than blind-overwriting.
@@ -1368,6 +1477,14 @@ def _apply_history_close_overlay(rows: list[Any]) -> None:
         previous = str(row.get("close") or row.get("price") or "")
         row["price"] = close
         row["close"] = close
+        # The rest of the row still describes the SUPERSEDED session. Left in
+        # place beside the new date it produces an impossible bar: 0050 showed
+        # a low of 100.05 under a close of 97.15 (2026-07-28). Take the new
+        # session's own figures where the winning source carries them, and
+        # blank the ones it cannot vouch for rather than keeping yesterday's.
+        for field in ("open", "high", "low", "volume", "value", "transaction_count"):
+            if field in row:
+                row[field] = bar.get(field, "")
         # Recompute change WITH the new price, or clear it — never leave a new
         # price paired with the old row's stale change figures.
         try:
@@ -1380,7 +1497,7 @@ def _apply_history_close_overlay(rows: list[Any]) -> None:
         except ValueError:
             row["change"] = row["change_percent"] = ""
         row["date"] = f"{int(history_date[:4]) - 1911}{history_date[5:7]}{history_date[8:10]}"
-        row["price_basis"] = "history_close_overlay"
+        row["price_basis"] = basis
 
 
 def _overlay_book_position_prices(book: Any) -> None:
@@ -2125,6 +2242,9 @@ class ResearchCallUpdate(BaseModel):
     # ref_price is normally fetched live at record time; accept an override so a
     # call can be reconstructed in tests or from an explicit mark.
     ref_price: str | float | int | None = Field(default=None)
+    # The market's level at strike time, fetched live like ref_price; accept an
+    # override so a call can be reconstructed from an explicit index level.
+    benchmark_price: str | float | int | None = Field(default=None)
     entry_low: str | float | int | None = Field(default=None)
     entry_high: str | float | int | None = Field(default=None)
     invalidation: str | float | int | None = Field(default=None)
@@ -2448,7 +2568,30 @@ def _package_version() -> str:
         return "0.0.0+unknown"
 
 
+def _newest_source_mtime() -> float:
+    """Newest mtime across this package's own Python sources."""
+    newest = 0.0
+    for path in Path(__file__).parent.glob("*.py"):
+        try:
+            newest = max(newest, path.stat().st_mtime)
+        except OSError:
+            continue
+    return newest
+
+
+# Captured once, when this module is imported: the running process serves the
+# code as it was at this instant and nothing reloads it.
+_SOURCE_MTIME_AT_IMPORT = _newest_source_mtime()
+
+
 def health_payload() -> dict[str, Any]:
+    # data_root and pid are here because a second instance is invisible without
+    # them. The state root moves with OTTO_STATE_ROOT and with which checkout
+    # started the process, so two backends can disagree about every number the
+    # terminal reports while both answer on the same port — the loser of the
+    # port race just dies quietly. An agent that cannot name the state it is
+    # about to mutate cannot honestly claim it verified anything (2026-07-27:
+    # a stale instance from an earlier session served a whole review round).
     return {
         "app": APP_NAME,
         "mode": "local",
@@ -2457,6 +2600,16 @@ def health_payload() -> dict[str, Any]:
         "route_count": len(SHELL_ROUTES),
         "menu_count": len(GLOBAL_MENUS),
         "live_execution": "disabled",
+        "data_root": str(STORE.root),
+        "pid": os.getpid(),
+        # There is no reloader: a backend keeps serving whatever it imported
+        # until it is restarted. Twice in one session a change was made, the
+        # endpoint was called, the old answer came back, and time went into
+        # debugging code that was never running. Comparing the newest source
+        # mtime against the one captured at import turns that into a fact the
+        # caller can read instead of a mistake it has to remember not to make.
+        "source_stale": _newest_source_mtime() > _SOURCE_MTIME_AT_IMPORT,
+        "restart_hint": "python -m otto.local_terminal",
     }
 
 
@@ -2571,6 +2724,28 @@ def create_app(frontend_dist: Path | None = None) -> FastAPI:
             return append_agent_activity_event(STORE.root, update.model_dump())
         except AgentActivityError as exc:
             raise HTTPException(status_code=400, detail=str(exc)) from exc
+
+    def _journal_activity(action_id: str, summary: str) -> None:
+        """Record a judgment write on the activity feed the owner reads.
+
+        The feed is a journal the operating agent keeps by hand, so nine calls
+        recorded on 07-24/25 left the wall reading "閒置 · 今日 0 動作" with its
+        newest entry from 07-10 (2026-07-27 dogfood). That is a factual claim
+        about what the AI did, and it was wrong. Writes that change the ledger
+        now log themselves rather than depending on the agent remembering.
+
+        Never raises: a missing journal line must not cost the owner a recorded
+        judgment, which is the thing he actually came for.
+        """
+        with contextlib.suppress(AgentActivityError, OSError, ValueError):
+            append_agent_activity_event(
+                STORE.root,
+                {
+                    "action_id": action_id,
+                    "state": "succeeded",
+                    "summary": summary,
+                },
+            )
 
     @app.get("/api/command-center")
     def command_center() -> dict[str, Any]:
@@ -2698,7 +2873,7 @@ def create_app(frontend_dist: Path | None = None) -> FastAPI:
         ]
         if not held and not watched:
             return
-        names = _news_symbol_names([*held, *watched])
+        names = _reference_security_names([*held, *watched])
         terms = {
             symbol: symbol_terms(symbol, tuple(names.get(symbol, ())))
             for symbol in [*held, *watched]
@@ -3435,14 +3610,40 @@ def create_app(frontend_dist: Path | None = None) -> FastAPI:
                 marks[sym] = None
         return marks
 
-    def _open_call_symbols(state: dict[str, Any]) -> list[str]:
-        return sorted(
-            {
-                str(c.get("symbol", "")).upper()
-                for c in state.get("calls", [])
-                if isinstance(c, dict) and c.get("status") == "open"
-            }
+    def _owner_position_weights(*, refresh: bool) -> dict[str, Decimal | None]:
+        """Each holding's live share of the book, keyed by quote symbol.
+
+        A sizing call stores the weight it was struck at. The risk it warns
+        about is the weight now — and a concentration that grew since the
+        warning is the case the owner most needs to see, so the board reads the
+        live number from the same priced book the portfolio page shows.
+        """
+        payload = _portfolio_payload_with_prices(
+            STORE.read_portfolio_state(), refresh=refresh
         )
+        weights: dict[str, Decimal | None] = {}
+        for position in payload.get("positions") or []:
+            if not isinstance(position, dict):
+                continue
+            symbol = _holding_quote_symbol(position.get("symbol"))
+            if not symbol:
+                continue
+            try:
+                weights[symbol] = Decimal(str(position.get("weight_pct")))
+            except (ArithmeticError, ValueError, TypeError):
+                weights[symbol] = None
+        return weights
+
+    def _open_call_symbols(state: dict[str, Any]) -> list[str]:
+        # The benchmarks ride along: scoring needs the index level for the same
+        # instant as the call's mark, and fetching it in a second pass would
+        # compare two different moments.
+        symbols = {
+            str(c.get("symbol", "")).upper()
+            for c in state.get("calls", [])
+            if isinstance(c, dict) and c.get("status") == "open"
+        }
+        return sorted(symbols | set(BENCHMARK_BY_MARKET.values()))
 
     @app.post("/api/research/call")
     def submit_research_call(update: ResearchCallUpdate) -> dict[str, Any]:
@@ -3452,11 +3653,35 @@ def create_app(frontend_dist: Path | None = None) -> FastAPI:
         if payload.get("ref_price") is None:
             mark = _research_marks([symbol], refresh=update.refresh).get(symbol)
             payload["ref_price"] = str(mark) if mark is not None else None
+        # record_call falls back to the curated DEFAULT_UNIVERSE label, which by
+        # design carries liquid well-known names only — so the symbols that lose
+        # their label are exactly the owner's own holdings. The reference caches
+        # already hold those names and the news page already renders them, so a
+        # blank row on the judgment board was a drop, not missing data. Fill only
+        # when nothing else names it: this can turn blank into a name, never
+        # relabel a call that already has one.
+        if not payload.get("name") and symbol not in DEFAULT_UNIVERSE:
+            resolved = _reference_security_names([symbol]).get(symbol) or []
+            if resolved:
+                payload["name"] = resolved[0]
+        # The market's level right now, so scoring can later say whether the
+        # judgment beat owning the index. It cannot be recovered afterwards from
+        # a live quote, so a missed fetch here means that call is permanently
+        # unmeasured against its benchmark — recorded as such, never guessed.
+        market = payload.get("market") or DEFAULT_UNIVERSE.get(symbol, (None,))[0]
+        benchmark = BENCHMARK_BY_MARKET.get(str(market or ""))
+        if benchmark and payload.get("benchmark_price") is None:
+            level = _research_marks([benchmark], refresh=update.refresh).get(benchmark)
+            payload["benchmark_price"] = str(level) if level is not None else None
         try:
             state, call = record_call(STORE.read_research_ledger_state(), payload)
         except ResearchLedgerError as exc:
             raise HTTPException(status_code=400, detail=str(exc)) from exc
         STORE.write_research_ledger_state(state)
+        _journal_activity(
+            "research_call_record",
+            f"{call['symbol']} {call['stance']}｜{str(call.get('thesis') or '')[:90]}",
+        )
         return {"call": call, "read_action": "research_ledger"}
 
     @app.post("/api/research/score")
@@ -3465,17 +3690,39 @@ def create_app(frontend_dist: Path | None = None) -> FastAPI:
         marks = _research_marks(_open_call_symbols(state), refresh=update.refresh)
         state, scored = score_calls(state, marks)
         STORE.write_research_ledger_state(state)
+        if scored:
+            _journal_activity(
+                "research_calls_score",
+                "結算 "
+                + "、".join(
+                    f"{row.get('symbol')} {row.get('outcome')}" for row in scored[:4]
+                )
+                + (f" 等 {len(scored)} 筆" if len(scored) > 4 else ""),
+            )
         return {
             "scored": scored,
-            "scored_count": len(scored),
-            **research_ledger_payload(state, marks),
+            # NOT "scored_count": the ledger payload spread below owns that key
+            # and means "calls in scored status, ever". Naming this run's count
+            # the same silently handed back the lifetime total, so a run that
+            # settled nothing reported the two calls settled yesterday — which
+            # is how an operator ends up telling the owner a call closed when
+            # the market never touched it (2026-07-29).
+            "newly_scored_count": len(scored),
+            **research_ledger_payload(
+                state, marks, weights=_owner_position_weights(refresh=update.refresh)
+            ),
         }
 
     @app.get("/api/research/ledger")
     def read_research_ledger(refresh: bool = False, limit: int | None = None) -> dict[str, Any]:
         state = STORE.read_research_ledger_state()
         marks = _research_marks(_open_call_symbols(state), refresh=refresh)
-        return research_ledger_payload(state, marks, limit=limit)
+        return research_ledger_payload(
+            state,
+            marks,
+            weights=_owner_position_weights(refresh=refresh),
+            limit=limit,
+        )
 
     @app.get("/api/research/tw-facts")
     def tw_company_facts(symbols: str = "") -> dict[str, Any]:
@@ -3490,6 +3737,28 @@ def create_app(frontend_dist: Path | None = None) -> FastAPI:
                 symbol for symbol in _open_call_symbols(state) if symbol.endswith(".TW")
             ]
         return tw_company_facts_payload(requested)
+
+    @app.get("/api/research/tw-screen")
+    def tw_valuation_screen(
+        sort: str = "dividend_yield_pct",
+        max_pe: float | None = None,
+        max_pb: float | None = None,
+        min_dividend_yield_pct: float | None = None,
+        limit: int = 20,
+    ) -> dict[str, Any]:
+        # tw-facts answers "what is 2834 worth"; nothing answered "what is worth
+        # owning". Every judgment in the ledger so far was hold or avoid on a
+        # name already known, because finding a name required already having it.
+        try:
+            return tw_valuation_screen_payload(
+                sort=sort,
+                max_pe=max_pe,
+                max_pb=max_pb,
+                min_dividend_yield_pct=min_dividend_yield_pct,
+                limit=limit,
+            )
+        except TwseCompanyError as exc:
+            raise HTTPException(status_code=400, detail=str(exc)) from exc
 
     @app.get("/api/market/sessions")
     def market_sessions() -> dict[str, Any]:
@@ -4529,46 +4798,6 @@ def create_app(frontend_dist: Path | None = None) -> FastAPI:
         payload = _news_payload_from_store(refresh=False)
         return _public_news_payload(_attach_news_research_brief_index(payload))
 
-    def _news_symbol_names(symbols: list[str]) -> dict[str, list[str]]:
-        """Official security names for matching, from local reference caches.
-
-        Nasdaq Trader directory covers US listings, the TWSE daily quote cache
-        carries Chinese names for .TW codes — both already on disk, so the
-        matcher improves without a hand-curated alias table (2026-07-22 owner
-        fix-it round: disclosing 'keyword-only' was not a substitute for
-        matching better).
-        """
-        wanted = [str(symbol).strip().upper() for symbol in symbols if str(symbol).strip()]
-        if not wanted:
-            return {}
-        names: dict[str, list[str]] = {}
-        directory = STORE.read_nasdaq_trader_symbol_directory_cache()
-        rows = directory.get("symbols") if isinstance(directory, dict) else []
-        by_symbol = {
-            str(row.get("symbol", "")).upper(): str(row.get("name", ""))
-            for row in rows or []
-            if isinstance(row, dict) and row.get("symbol") and row.get("name")
-        }
-        for symbol in wanted:
-            found: list[str] = []
-            root = symbol.split(".")[0]
-            if symbol.endswith(".TW"):
-                quote_cache = STORE.read_twse_quote_cache(root)
-                quotes = quote_cache.get("quotes") if isinstance(quote_cache, dict) else []
-                for row in quotes or []:
-                    if isinstance(row, dict) and str(row.get("symbol", "")) == root:
-                        name = str(row.get("name", "")).strip()
-                        if name:
-                            found.append(name)
-                        break
-            else:
-                name = by_symbol.get(root, "")
-                if name:
-                    found.append(name)
-            if found:
-                names[symbol] = found
-        return names
-
     @app.post("/api/news/packet")
     def news_packet(update: NewsPacketUpdate) -> dict[str, Any]:
         payload = _news_payload_from_store(refresh=update.refresh)
@@ -4584,7 +4813,7 @@ def create_app(frontend_dist: Path | None = None) -> FastAPI:
             news_digest_payload(STORE.read_news_digest_state()),
             symbols=update.symbols,
             limit=update.limit,
-            symbol_names=_news_symbol_names(update.symbols),
+            symbol_names=_reference_security_names(update.symbols),
         )
 
     @app.post("/api/news/refresh")

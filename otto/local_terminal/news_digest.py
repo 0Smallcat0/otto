@@ -13,6 +13,8 @@ import copy
 from datetime import UTC, datetime
 from typing import Any
 
+from otto.local_terminal.news_packet import is_news_noise, is_not_a_headline
+
 MAX_DIGEST_ENTRIES = 200
 MAX_ITEMS_PER_WRITE = 50
 MAX_TITLE_CHARS = 200
@@ -150,6 +152,13 @@ def build_live_sections(items: Any) -> list[dict[str, str]]:
         if not isinstance(item, dict):
             continue
         if not str(item.get("title") or "").strip():
+            continue
+        # A category's lead headline is the one line the dashboard shows for it,
+        # so a noise item does not merely take a slot — it becomes what 市場
+        # means today. The receipt lottery led 市場 while the news page folded
+        # the same story away (2026-07-27). Skipped, not deleted: the item stays
+        # in the feed and on the news page under its own count.
+        if is_news_noise(item.get("title")) or is_not_a_headline(item):
             continue
         category = str(item.get("category") or "ALL").upper()
         buckets.setdefault(category, []).append(item)

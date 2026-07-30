@@ -168,7 +168,7 @@ function CapabilitiesDoc({ onBack }: { onBack: () => void }) {
   }
   return (
     <div className="ft-doc-wrap" data-testid="capabilities-doc">
-      <a className="ft-link ft-mono" role="button" tabIndex={0} onClick={onBack} onKeyDown={activateOnKey(onBack)}>{t("← 回任務牆")}</a>
+      <a className="ft-link ft-mono" role="button" tabIndex={0} onClick={onBack} onKeyDown={activateOnKey(onBack)}>{t("← 返回")}</a>
       <div className="ft-doc">
         <h1>{t("AI 能做什麼")}</h1>
         <div className="sub">{t("不用記指令——想做什麼,用你的話說。下面每一句都可以直接用(點一下就複製,貼到對話裡)。")}</div>
@@ -423,7 +423,7 @@ function Shell() {
     // The capabilities page and the artifact reader render *instead of* the
     // workspace, so with either open the sidebar highlighted the new route and
     // then showed the old view — clicking 回測 did nothing until you first
-    // found "← 回任務牆". Navigation now always lands where it says.
+    // found the back link. Navigation now always lands where it says.
     setShowCaps(false);
     setArtifactPath(null);
   };
@@ -502,7 +502,7 @@ function Shell() {
           return (
             <div className="ft-doc-wrap" data-testid="artifact-reader">
               <a className="ft-link ft-mono" role="button" tabIndex={0}
-                onClick={() => setArtifactPath(null)} onKeyDown={activateOnKey(() => setArtifactPath(null))}>{t("← 回任務牆")}</a>
+                onClick={() => setArtifactPath(null)} onKeyDown={activateOnKey(() => setArtifactPath(null))}>{t("← 返回")}</a>
               <div className="ft-doc">
                 <h1>{t("產出位置")}</h1>
                 <div className="sub">{artifactPath}</div>

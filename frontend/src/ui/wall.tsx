@@ -12,6 +12,8 @@ import {
   type NewsSlice,
   type Quoteish,
   ageLabel,
+  rankHeadlines,
+  sessionSpan,
   fmt,
   hhmm,
   isToday,
@@ -282,6 +284,24 @@ export function QuoteMonitor({ markets, crypto, watchlist, settled = true }: {
     if (!age.text) return null;
     return <small className={age.staleMinutes > 60 ? "ft-am" : undefined}> · {age.text}</small>;
   };
+  // Fetch age says the cache is being refreshed, not that the market is open:
+  // "Finnhub · 1天前" sat above a price that was two sessions old. Prefer the
+  // session the quote belongs to, and fall back to fetch age only when the
+  // row won't name one.
+  // Read the whole group, not rows[0]: TWSE publishes per symbol, so 2330 can
+  // carry today's close while 0050 still holds yesterday's. Stamping from the
+  // first row certified three stale rows as today's, on a session where 0050
+  // had actually fallen 4.24% and the wall read +0.15% (2026-07-28, undoing
+  // the same week's group-header commit).
+  const Session = ({ rows, iso }: { rows: Quoteish[]; iso?: string }) => {
+    const { stamp, mixed } = sessionSpan(rows);
+    if (!stamp) return <Freshness iso={iso} />;
+    return (
+      <small className={mixed ? "ft-am" : undefined}>
+        {" "}· {t("資料日")} {stamp} {t("收盤")}{mixed ? ` · ${t("部分較新")}` : ""}
+      </small>
+    );
+  };
   const research = markets?.research_summary;
   const groups = watchlist?.groups ?? {};
   const pick = (wanted: string[] | undefined, rows: Quoteish[], fallback: number): Quoteish[] => {
@@ -317,24 +337,19 @@ export function QuoteMonitor({ markets, crypto, watchlist, settled = true }: {
       ) : null}
       {usRows.length > 0 ? (
         <>
-          <div className="ft-qgrp">{t("美股")} <small>· Finnhub</small><Freshness iso={usRows[0]?.retrieved_at} /></div>
+          <div className="ft-qgrp">{t("美股")} <small>· Finnhub</small><Session rows={usRows} iso={usRows[0]?.retrieved_at} /></div>
           {usRows.map((row) => <QuoteRow key={`u-${row.symbol}`} row={row} />)}
         </>
       ) : null}
       {twRows.length > 0 ? (
         <>
-          <div className="ft-qgrp">{t("台股")} <small>· {(() => {
-            // TWSE free data is the DAILY close — show the trading date, not
-            // when we fetched it (25.28 was 07/06's close, not "now").
-            const roc = String((twRows[0] as unknown as Record<string, unknown>)?.date ?? "");
-            return roc.length >= 7 ? `${t("資料日")} ${roc.slice(3, 5)}/${roc.slice(5, 7)} ${t("收盤")}` : t("延遲");
-          })()}</small></div>
+          <div className="ft-qgrp">{t("台股")} <small>· TWSE</small><Session rows={twRows} /></div>
           {twRows.map((row) => <QuoteRow key={`t-${row.symbol}`} row={row} label={row.name} />)}
         </>
       ) : null}
       {fxRows.length > 0 ? (
         <>
-          <div className="ft-qgrp">FX <small>· Twelve Data</small><Freshness iso={fxRows[0]?.retrieved_at} /></div>
+          <div className="ft-qgrp">FX <small>· Twelve Data</small><Session rows={fxRows} iso={fxRows[0]?.retrieved_at} /></div>
           {fxRows.map((row) => <QuoteRow key={`f-${row.symbol}`} row={row} />)}
         </>
       ) : null}
@@ -486,9 +501,7 @@ export function Headlines({ news, digest, settled = true }: {
   settled?: boolean;
 }) {
   const { t, lang } = useT();
-  const items = [...(news?.items ?? [])]
-    .sort((a, b) => (a.age_minutes ?? 9e9) - (b.age_minutes ?? 9e9))
-    .slice(0, 10);
+  const items = rankHeadlines(news?.items ?? []).slice(0, 10);
   const digestItems = digest?.items ?? {};
   const watchTerms = (news?.layout?.watch_terms ?? []).map((term) => term.toLowerCase()).filter(Boolean);
   const starred = (title?: string) =>
@@ -557,6 +570,7 @@ interface ResearchCall {
   invalidation?: string | null;
   matures_at: string;
   weight_pct?: string | null;
+  mark_weight_pct?: string | null;
   cap_pct?: string | null;
   needs_review?: boolean;
   review_reasons?: string[];
@@ -697,11 +711,37 @@ export function JudgmentBoard() {
           <div>
             <b className="ft-down">{t("集中度提醒")}</b>{" "}
             {call.symbol}
-            {call.name ? ` ${call.name}` : ""} {t("佔你帳本")}{" "}
-            <b className="ft-down">{trimPct(call.weight_pct)}%</b>
+            {call.name ? ` ${call.name}` : ""}
+            {/* The directional table has carried this flag from the start; the
+                sizing banner is a different block and never showed it, so the
+                first review reason a sizing call can raise would have fired in
+                the payload and reached nobody. */}
+            {call.needs_review ? (
+              <small className="ft-down"> ⟳{t("該重想")}</small>
+            ) : null}{" "}
+            {/* weight_pct is what the position weighed when the warning was
+                written. Printing it in the present tense hid a concentration
+                that had since grown — which is exactly the case the warning
+                exists for. Lead with the live weight; say so when there isn't
+                one, rather than passing a stale number off as current. */}
+            {call.mark_weight_pct ? t("現佔你帳本") : t("記錄時佔你帳本")}{" "}
+            <b className="ft-down">
+              {trimPct(call.mark_weight_pct ?? call.weight_pct)}%
+            </b>
             {t(",超過建議上限")} {trimPct(call.cap_pct)}%
+            {call.mark_weight_pct ? (
+              <span className="s">
+                {" "}
+                ({t("記錄時")} {trimPct(call.weight_pct)}%)
+              </span>
+            ) : null}
           </div>
           <div className="s">
+            {open === call.call_id && call.review_reasons?.length ? (
+              <div className="ft-down">
+                {t("該重想")}: {call.review_reasons.join(" · ")}
+              </div>
+            ) : null}
             {open === call.call_id
               ? call.thesis
               : `${call.thesis.slice(0, 46)}… ${t("(點開看完整理由)")}`}

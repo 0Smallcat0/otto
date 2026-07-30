@@ -72,3 +72,20 @@ through the MCP tool surface.
 ## Status log
 
 - 2026-07-10: plan created; Phase 1 started.
+- 2026-07-10: Phase 1 done — harness + otto-core-v1 (20 tasks), smoke 20/20 red
+  baselines, pilot results claude-sonnet-5 20/20, claude-haiku-4-5 19/20
+  (route-inventory task blew its 8-turn budget), avg 6.5–6.8 turns; EVAL.md
+  committed.
+- 2026-07-10: Phase 3 re-scoped — Sharpe/Sortino/profit-factor/overfit flags
+  already existed in `_risk_metrics` (no code change needed); shipped the
+  walk-forward methodology study instead (docs/research/).
+- 2026-07-10: Phase 4 done — ARCHITECTURE.md, ADR-0002..0004, CHANGELOG,
+  version 1.0.0, CI Linux lane (3 governance truths skip via dpapi_available
+  marker; enumerated by simulating no-DPAPI across the suite).
+- 2026-07-10: Phase 2 done — EN/dark screenshot wall + real-agent demo GIF
+  (unscripted haiku run captured live; caption numbers verified against the
+  run's summary.json).
+- 2026-07-10: Phase 5 — public mirror overlay (M28 paths + stale markets.py
+  catch-up), README front door (GIF, measured-operability table, architecture
+  links), 475 tests green on the export, committed 99298d2 + tag v1.0.0.
+  Not done: nothing outstanding for M28.

@@ -3273,6 +3273,11 @@ def _twse_quote_rows(rows: list[Any]) -> list[dict[str, Any]]:
                 "quote_semantics": str(row.get("quote_semantics") or "quote_not_orderable"),
                 "live_action_enabled": bool(row.get("live_action_enabled", False)),
                 "orderable": bool(row.get("orderable", False)),
+                # When a fresher local close overrules the TWSE file, the row
+                # keeps TWSE's source/provider fields but the number is not
+                # theirs. Dropping this on the way through left the row
+                # attributing a Yahoo close to TWSE (2026-07-28).
+                "price_basis": str(row.get("price_basis") or ""),
             }
         )
     return normalized
