@@ -228,8 +228,67 @@ def _int(value: Any) -> int:
 # ── relevance buckets ────────────────────────────────────────────────────────
 # Sources that write for a Taiwanese investor, in a language he reads.
 TW_NATIVE_SOURCES = ("鉅亨", "中央社", "經濟日報", "工商時報", "自由財經", "MoneyDJ")
-# Finance-shaped headlines with no investment content.
-NEWS_NOISE_PATTERNS = ("統一發票", "開獎", "中獎", "樂透", "威力彩", "發票號碼", "今彩")
+# Finance-shaped headlines with no investment content. Every pattern names a
+# specific game or draw, because the generic verbs do not belong to lotteries:
+# 開獎 is idiomatic for an earnings reveal ("微軟、Meta、蘋果下周開獎" is a real
+# 2026-07-27 headline) and 中獎 turns up in metaphor. Bare verbs were burying
+# legitimate previews; only the game names discriminate.
+NEWS_NOISE_PATTERNS = (
+    "統一發票",
+    "發票號碼",
+    "樂透",
+    "威力彩",
+    "今彩",
+    "雙贏彩",
+    "星彩",
+    "樂合彩",
+    "運動彩券",
+)
+
+
+def is_news_noise(title: Any) -> bool:
+    """Whether a headline is finance-shaped with no investment content.
+
+    Split out of `news_relevance` because the relevance bucket is only reachable
+    once an item has been tagged against holdings, and the roll-up that picks
+    one lead headline per category runs on the raw feed. Without a predicate
+    both paths can share, the 市場 section led with the national receipt lottery
+    while the news page — filtering the same feed correctly — folded it away
+    (2026-07-27 dogfood).
+    """
+    text = str(title or "")
+    return any(pattern in text for pattern in NEWS_NOISE_PATTERNS)
+
+
+# Scraped page titles arrive as site breadcrumbs, not sentences. A leading
+# separator means the segment before it was empty — the crawler captured a
+# <title> like "_ 狮头股份 ( 600539 ) 股吧 _ 东方财富网股吧", which is a forum
+# board's landing page, not a story about anything.
+_TITLE_SEPARATORS = ("_", "|", "-", "–", "—", "»", "·")
+# Board/forum section markers: the page is a place to post, not an article.
+_FORUM_MARKERS = ("股吧", "论坛", "論壇", "贴吧", "message board")
+
+
+def is_not_a_headline(item: dict[str, Any]) -> bool:
+    """Whether a feed row is a page rather than a story.
+
+    GDELT returns metadata-only hits, and some of them are site furniture:
+    three 东方财富 forum landing pages were the entire 國際與其他 section on
+    2026-07-27, outranking 33 real stories purely by being freshest. They are
+    finance-shaped with nothing to read, which is what the noise bucket is
+    for — the reader can still open the fold and see them.
+
+    Deliberately narrow. A leading separator is mechanical evidence the title
+    was scraped furniture; a forum marker names the page type outright. Neither
+    guesses at whether a real story is interesting.
+    """
+    title = str(item.get("title") or "").strip()
+    if not title:
+        return True
+    if title[0] in _TITLE_SEPARATORS:
+        return True
+    lowered = title.lower()
+    return any(marker in lowered for marker in _FORUM_MARKERS)
 
 
 def news_relevance(item: dict[str, Any]) -> str:
@@ -246,8 +305,9 @@ def news_relevance(item: dict[str, Any]) -> str:
     """
     if item.get("held_symbols") or item.get("watched_symbols"):
         return "mine"
-    title = str(item.get("title", ""))
-    if any(pattern in title for pattern in NEWS_NOISE_PATTERNS):
+    if is_not_a_headline(item):
+        return "noise"
+    if is_news_noise(item.get("title", "")):
         return "noise"
     source = str(item.get("source", ""))
     if any(native in source for native in TW_NATIVE_SOURCES):

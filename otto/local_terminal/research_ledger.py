@@ -70,6 +70,23 @@ LATE_SCORE_TOLERANCE = Decimal("0.2")
 CONVICTIONS = ("low", "medium", "high")
 MARKETS = ("crypto", "us_equity", "tw_equity")
 
+# "Did the judgment beat owning the market" is the question the owner actually
+# asked, and a hit rate cannot answer it: 2330 was graded a pure loss at -6.58%
+# over a window the index fell further, while a hold that loses less than the
+# alternative is not a failure. Same three symbols the paper books already
+# benchmark against, so one convention covers both ledgers.
+BENCHMARK_BY_MARKET: dict[str, str] = {
+    "tw_equity": "0050.TW",
+    "us_equity": "SPY",
+    "crypto": "BTC-USD",
+}
+
+# Whether beating the benchmark means outrunning it or lagging it. A call that
+# means to own something wins by outperforming; one that means to stay out wins
+# when the thing it avoided lagged the market. size_down is absent on purpose:
+# a concentration warning makes no claim about relative return.
+_BENCHMARK_WIN_ABOVE = {"accumulate": True, "hold": True, "reduce": False, "avoid": False}
+
 # Self-sourced universe: the terminal decides what to look at, so the owner is
 # never asked to feed tickers. Yahoo-style symbols throughout (crypto as -USD)
 # so a single quote path prices every entry. Liquid, well-known names only.
@@ -206,6 +223,11 @@ def record_call(state: dict[str, Any], payload: dict[str, Any]) -> tuple[dict[st
     evidence = payload.get("evidence")
     evidence = evidence if isinstance(evidence, dict) else None
 
+    benchmark_symbol = BENCHMARK_BY_MARKET.get(market)
+    benchmark_ref = _decimal(payload.get("benchmark_price"))
+    if benchmark_ref is not None and benchmark_ref <= 0:
+        benchmark_ref = None
+
     now = datetime.now(tz=UTC)
     call = {
         "call_id": f"call-{uuid4().hex[:12]}",
@@ -226,11 +248,21 @@ def record_call(state: dict[str, Any], payload: dict[str, Any]) -> tuple[dict[st
         "matures_at": (now + timedelta(days=horizon_days)).isoformat(timespec="seconds"),
         "evidence": evidence,
         "supersedes": supersedes or None,
+        # The market's price at the same instant, so scoring can answer "did
+        # this beat owning the index" rather than only "did it go up". It has
+        # to be stamped now: a benchmark level for a past date cannot be
+        # recovered from a live quote later.
+        "benchmark_symbol": benchmark_symbol,
+        "benchmark_ref_price": str(benchmark_ref) if benchmark_ref is not None else None,
         "status": "open",
         "scored_at": None,
         "score_price": None,
         "realized_pct": None,
         "favor_pct": None,
+        "benchmark_score_price": None,
+        "benchmark_pct": None,
+        "excess_pct": None,
+        "beat_benchmark": None,
         "outcome": None,
     }
     if superseded is not None:
@@ -263,14 +295,42 @@ def _favor_pct(stance: str, ref: Decimal, price: Decimal) -> Decimal | None:
     return abs(raw)  # hold
 
 
-def _invalidation_breached(stance: str, invalidation: Decimal | None, price: Decimal) -> bool:
+def _invalidation_breached(
+    stance: str,
+    invalidation: Decimal | None,
+    price: Decimal,
+    ref_price: Decimal | None = None,
+) -> bool:
+    """Whether the market has crossed the level the call named as "I was wrong".
+
+    A hold used to be exempt, on the reasoning that holding has no single
+    side. In practice every hold written here named a one-sided level —
+    00982A below 19.5, 2330 below 2200, AAPL below 315 — and the wall renders
+    them as 跌破 X, inferring the side from where the level sits against the
+    price it was struck at. Only the scorer disagreed, so on 2026-07-29 the
+    00982A hold traded through the 19.5 it had named and the ledger settled
+    nothing: the call would have drifted to its 08-27 horizon and scored on
+    whatever price happened to be there, measuring a window its thesis never
+    claimed. A promise shown on screen has to be kept by the engine.
+
+    The side comes from the same inference the UI already makes, so no new
+    field and no disagreement between what is displayed and what is scored.
+    """
     if invalidation is None:
         return False
     if stance == "accumulate":
         return price <= invalidation  # fell through the stop
     if stance in ("reduce", "avoid"):
         return price >= invalidation  # rose through the level it "wouldn't"
-    return False  # hold / size_down have no single-sided invalidation here
+    if stance == "hold":
+        if ref_price is None:
+            return False  # nothing to infer the side from — never guess
+        if invalidation < ref_price:
+            return price <= invalidation  # a floor: falling through it is the miss
+        if invalidation > ref_price:
+            return price >= invalidation  # a ceiling
+        return False  # struck exactly at its own invalidation: no side to read
+    return False  # size_down is scored on realised risk, not on a level
 
 
 def _outcome(
@@ -337,6 +397,32 @@ def _scoring_lateness(
     return int(late_days), honored
 
 
+def _score_against_benchmark(
+    call: dict[str, Any], marks: dict[str, Decimal | None], realized: Decimal
+) -> None:
+    """Measure the call against owning the market over the same window.
+
+    Everything stays None unless both benchmark prices are real: a window with
+    no benchmark is reported unmeasured, never scored as if the market had been
+    flat. A call ON the benchmark itself gets its excess (zero by construction)
+    but no beat_benchmark verdict — 0050 cannot outperform 0050.
+    """
+    symbol = str(call.get("benchmark_symbol") or "")
+    bench_ref = _decimal(call.get("benchmark_ref_price"))
+    bench_now = marks.get(symbol) if symbol else None
+    if not symbol or bench_ref is None or bench_ref <= 0 or bench_now is None or bench_now <= 0:
+        return
+    bench_pct = (bench_now / bench_ref - 1) * 100
+    excess = realized - bench_pct
+    call["benchmark_score_price"] = str(bench_now)
+    call["benchmark_pct"] = f"{bench_pct:.2f}"
+    call["excess_pct"] = f"{excess:.2f}"
+    win_above = _BENCHMARK_WIN_ABOVE.get(str(call.get("stance")))
+    if win_above is None or str(call.get("symbol")) == symbol:
+        return
+    call["beat_benchmark"] = excess > 0 if win_above else excess < 0
+
+
 def score_calls(
     state: dict[str, Any],
     marks: dict[str, Decimal | None],
@@ -361,7 +447,7 @@ def score_calls(
             continue
         stance = str(call.get("stance"))
         invalidation = _decimal(call.get("invalidation"))
-        breached = _invalidation_breached(stance, invalidation, price)
+        breached = _invalidation_breached(stance, invalidation, price, ref)
         if not breached and not _is_mature(call, now):
             continue  # still running, thesis intact
         favor = _favor_pct(stance, ref, price)
@@ -375,11 +461,17 @@ def score_calls(
         call["outcome"] = _outcome(stance, favor, breached, realized)
         call["scored_late_days"] = late_days
         call["window_honored"] = window_honored
+        _score_against_benchmark(call, marks, realized)
         scored.append(call)
     return normalize_research_ledger_state(ledger), scored
 
 
-def _review_reasons(call: dict[str, Any], price: Decimal | None, now: datetime) -> list[str]:
+def _review_reasons(
+    call: dict[str, Any],
+    price: Decimal | None,
+    now: datetime,
+    weight: Decimal | None = None,
+) -> list[str]:
     """Why an open call deserves a fresh look before its horizon runs out.
 
     A view recorded once and never revisited quietly rots: the price it was
@@ -404,6 +496,43 @@ def _review_reasons(call: dict[str, Any], price: Decimal | None, now: datetime) 
                     stance, invalidation, price
                 ):
                     reasons.append(f"within {left:.0f}% of its invalidation at {invalidation}")
+    # A call that means to transact names the band it would transact in. Once
+    # the market leaves it the instruction is void, and none of the rules above
+    # notice: 0050 sat at 97.15 against a 98-101 accumulate band for days at
+    # 4.3% drift and 33% of its invalidation span, under both thresholds, and
+    # would have scored on an instruction nobody could have followed.
+    #
+    # Only for stances that intend to act. On a hold or an avoid the band is a
+    # conditional "if it comes back to here" — AAPL said hold, do not chase,
+    # look for a pullback to 320-328, and the pullback never came. Nothing
+    # about that view went stale, but unlike drift, invalidation proximity and
+    # elapsed horizon, a passed band never un-passes: the flag would have sat
+    # amber for the twenty-six days to maturity, which is how a warning stops
+    # being read (2026-07-28, narrowing the rule shipped the round before).
+    # A sizing call names the weight it was struck at; the risk it warns about
+    # is the weight now. 2834 was 63.5% of the book when the warning was written
+    # and 67.2% four days later — the concentration moved further from the cap
+    # while nothing flagged it, and none of the rules above can see it: a sizing
+    # call has no invalidation and no entry band, so only the horizon could ever
+    # fire. Growth only: a position shrinking back toward the cap is the warning
+    # working, not a reason to re-examine it. Same REVIEW_DRIFT_PCT as the price
+    # rule, so "drifted materially from where it was struck" means one thing on
+    # this board.
+    if str(call.get("stance")) == "size_down":
+        struck_weight = _decimal(call.get("weight_pct"))
+        if weight is not None and struck_weight is not None and struck_weight > 0:
+            growth = (weight / struck_weight - 1) * 100
+            if growth >= REVIEW_DRIFT_PCT:
+                reasons.append(
+                    f"the position grew to {weight:.2f}% of the book, {growth:.1f}% "
+                    f"above the {struck_weight}% the warning was struck at"
+                )
+    low, high = _decimal(call.get("entry_low")), _decimal(call.get("entry_high"))
+    if price is not None and str(call.get("stance")) in ("accumulate", "reduce"):
+        if low is not None and price < low:
+            reasons.append(f"price {price} is below its {low} entry, so the staged entry is void")
+        elif high is not None and price > high:
+            reasons.append(f"price {price} ran past its {high} entry, so the staged entry is void")
     matures_at, as_of = call.get("matures_at"), call.get("as_of")
     try:
         end = datetime.fromisoformat(str(matures_at))
@@ -421,12 +550,21 @@ def _review_reasons(call: dict[str, Any], price: Decimal | None, now: datetime) 
 
 
 def _open_view(
-    call: dict[str, Any], price: Decimal | None, now: datetime | None = None
+    call: dict[str, Any],
+    price: Decimal | None,
+    now: datetime | None = None,
+    weight: Decimal | None = None,
 ) -> dict[str, Any]:
     row = dict(call)
-    reasons = _review_reasons(call, price, now or datetime.now(tz=UTC))
+    reasons = _review_reasons(call, price, now or datetime.now(tz=UTC), weight)
     row["needs_review"] = bool(reasons)
     row["review_reasons"] = reasons
+    # A sizing call's weight_pct is what the position weighed when the warning
+    # was written; the risk it warns about is what the position weighs now. The
+    # board showed only the first, in the present tense, so a concentration that
+    # had grown since read as if it had not moved. Same shape as ref_price vs
+    # mark_price, for the one stance that makes a claim about size.
+    row["mark_weight_pct"] = f"{weight:.2f}" if weight is not None else None
     ref = _decimal(call.get("ref_price"))
     if price is not None and ref is not None and ref > 0:
         favor = _favor_pct(str(call.get("stance")), ref, price)
@@ -441,6 +579,38 @@ def _open_view(
 
 
 DECIDED_OUTCOMES = ("worked", "failed", "invalidated", "moved")
+
+
+def _benchmark_scorecard(timely: list[dict[str, Any]]) -> dict[str, Any]:
+    """Did the judgments beat owning the index — the question a hit rate can't answer.
+
+    Only calls carrying a verdict count. A call struck before the benchmark was
+    stamped, or one whose benchmark quote was missing at scoring, is unmeasured
+    and counted as such rather than scored as a draw; a call on the benchmark
+    itself is excluded because 0050 cannot outperform 0050. avg_excess_pct is
+    the plain average of (instrument return - index return), so a negative
+    average on a book of avoid calls is the point, not a failure — read it with
+    beat_count, which already knows which direction each stance wins in.
+    """
+    judged = [c for c in timely if c.get("beat_benchmark") is not None]
+    excesses = [_decimal(c.get("excess_pct")) for c in timely]
+    excesses = [e for e in excesses if e is not None]
+    beat = sum(1 for c in judged if c.get("beat_benchmark"))
+    return {
+        "symbols": BENCHMARK_BY_MARKET,
+        "judged_count": len(judged),
+        "beat_count": beat,
+        "beat_rate_pct": f"{(beat / len(judged) * 100):.1f}" if judged else None,
+        "avg_excess_pct": f"{(sum(excesses) / len(excesses)):.2f}" if excesses else None,
+        "unmeasured_count": len(timely) - len(judged),
+        "note": (
+            "excess_pct is the instrument's return minus its market's return "
+            "over the same window. A call that means to own something beats the "
+            "benchmark by outrunning it; one that means to stay out beats it "
+            "when the thing avoided lagged. Calls with no benchmark on both ends "
+            "are counted in unmeasured_count, never scored as a draw."
+        ),
+    }
 
 
 def _scorecard(scored: list[dict[str, Any]]) -> dict[str, Any]:
@@ -473,6 +643,7 @@ def _scorecard(scored: list[dict[str, Any]]) -> dict[str, Any]:
         "hit_rate_pct": f"{(wins / len(decided) * 100):.1f}" if decided else None,
         "avg_favor_pct": f"{(sum(favors) / len(favors)):.2f}" if favors else None,
         "by_stance": by_stance,
+        "vs_benchmark": _benchmark_scorecard(timely),
         "stale_scored_count": len(stale),
         "stale_note": (
             "calls scored more than "
@@ -592,11 +763,13 @@ def research_ledger_payload(
     state: dict[str, Any],
     marks: dict[str, Decimal | None] | None = None,
     *,
+    weights: dict[str, Decimal | None] | None = None,
     limit: int | None = None,
 ) -> dict[str, Any]:
     ledger = normalize_research_ledger_state(state)
     calls = ledger["calls"]
     marks = marks or {}
+    weights = weights or {}
     open_calls = [c for c in calls if c.get("status") == "open"]
     scored_calls = [c for c in calls if c.get("status") == "scored"]
     superseded_calls = [c for c in calls if c.get("status") == "superseded"]
@@ -606,16 +779,25 @@ def research_ledger_payload(
     else:
         scored_view = scored_calls
     now = datetime.now(tz=UTC)
-    open_view = [_open_view(c, marks.get(str(c.get("symbol", ""))), now) for c in open_calls]
+    open_view = [
+        _open_view(
+            c,
+            marks.get(str(c.get("symbol", ""))),
+            now,
+            weights.get(str(c.get("symbol", ""))),
+        )
+        for c in open_calls
+    ]
     to_review = [row["symbol"] for row in open_view if row["needs_review"]]
     return {
         "needs_review_count": len(to_review),
         "needs_review": to_review,
         "review_note": (
             "these open calls drifted from the price they were struck at, are "
-            "closing on their invalidation, or are near the end of their horizon — "
-            "re-examine the thesis rather than letting it score untouched; a flag "
-            "means think again, not that the call is wrong"
+            "closing on their invalidation, have left the entry band they named, "
+            "or are near the end of their horizon — re-examine the thesis rather "
+            "than letting it score untouched; a flag means think again, not that "
+            "the call is wrong"
         ),
         "as_of": datetime.now(tz=UTC).isoformat(timespec="seconds"),
         "call_count_total": len(calls),

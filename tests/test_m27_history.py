@@ -119,6 +119,92 @@ def test_tw_quote_rows_prefer_freshest_history_close(tmp_path, monkeypatch) -> N
     assert stale[0]["price"] == "23.00"
 
 
+def test_tw_quote_rows_take_the_yahoo_close_when_it_is_the_freshest(tmp_path, monkeypatch) -> None:
+    """The candles are not the only local cache that can be ahead of TWSE.
+
+    TWSE publishes STOCK_DAY_ALL per symbol, so one group carries two sessions
+    at once. On 2026-07-28 the owner's two holdings were among the laggards
+    while 2330 had the day's close, and the candle cache was three weeks old —
+    so only the Yahoo snapshot, rewritten every time the judgment board marks
+    a position, held the current number. 0050 read +0.15% on a session it lost
+    4.24%.
+    """
+    store = LocalStateStore(root=tmp_path)
+    monkeypatch.setattr(server, "STORE", store)
+    store.write_history_cache("0050", {
+        "symbol": "0050",
+        "candles": [{"open": "106", "high": "107", "low": "105", "close": "106.20", "closed_at": "2026-07-07"}],
+    })
+    store.write_yahoo_quote_cache({
+        "status": {"symbol": "0050.TW"},
+        "quotes": [{"symbol": "0050.TW", "date": "2026-07-28", "close": "97.15", "price": "97.15"}],
+    })
+    rows = [{
+        "symbol": "0050", "price": "101.45", "close": "101.45", "date": "1150727",
+        "open": "101.30", "high": "101.60", "low": "100.05", "volume": "109612623",
+        "change_percent": "0.15",
+    }]
+
+    server._apply_history_close_overlay(rows)
+
+    assert rows[0]["price"] == "97.15"
+    assert rows[0]["date"] == "1150728"
+    assert rows[0]["change_percent"] == "-4.24"
+    # Attribution follows the number, or the row credits TWSE for a Yahoo close.
+    assert rows[0]["price_basis"] == "yahoo_quote_overlay"
+    # The rest of the row described the superseded session. Left in place it
+    # produced an impossible bar — a low of 100.05 under a close of 97.15.
+    assert rows[0]["low"] == ""
+    assert rows[0]["high"] == ""
+    assert rows[0]["open"] == ""
+    assert rows[0]["volume"] == ""
+
+
+def test_tw_quote_rows_keep_the_candle_close_when_it_is_the_newer_one(tmp_path, monkeypatch) -> None:
+    """Whichever cache is ahead wins — the fix must not just always pick Yahoo."""
+    store = LocalStateStore(root=tmp_path)
+    monkeypatch.setattr(server, "STORE", store)
+    store.write_history_cache("2330", {
+        "symbol": "2330",
+        "candles": [{"open": "2300", "high": "2310", "low": "2270", "close": "2280", "closed_at": "2026-07-28"}],
+    })
+    store.write_yahoo_quote_cache({
+        "status": {"symbol": "2330.TW"},
+        "quotes": [{"symbol": "2330.TW", "date": "2026-07-24", "close": "2355", "price": "2355"}],
+    })
+    rows = [{
+        "symbol": "2330", "price": "2350", "close": "2350", "date": "1150724",
+        "open": "2360", "high": "2380", "low": "2340",
+    }]
+
+    server._apply_history_close_overlay(rows)
+
+    assert rows[0]["price"] == "2280"
+    assert rows[0]["price_basis"] == "history_close_overlay"
+    # A candle is a whole bar, so the new session's own high and low come with
+    # it — blanking them here would discard figures we can actually vouch for.
+    assert rows[0]["high"] == "2310"
+    assert rows[0]["low"] == "2270"
+    assert rows[0]["open"] == "2300"
+
+
+def test_tw_quote_rows_ignore_a_yahoo_cache_older_than_the_row(tmp_path, monkeypatch) -> None:
+    """Fail closed: a stale snapshot must never drag a current row backwards."""
+    store = LocalStateStore(root=tmp_path)
+    monkeypatch.setattr(server, "STORE", store)
+    store.write_yahoo_quote_cache({
+        "status": {"symbol": "2834.TW"},
+        "quotes": [{"symbol": "2834.TW", "date": "2026-07-20", "close": "17.00", "price": "17.00"}],
+    })
+    rows = [{"symbol": "2834", "price": "18.10", "close": "18.10", "date": "1150728", "low": "17.95"}]
+
+    server._apply_history_close_overlay(rows)
+
+    assert rows[0]["price"] == "18.10"
+    assert rows[0]["low"] == "17.95"
+    assert "price_basis" not in rows[0]
+
+
 def test_book_position_prices_overlay_uses_freshest_close(tmp_path, monkeypatch) -> None:
     """With no live quote, the book falls back to the freshest close we hold.
 

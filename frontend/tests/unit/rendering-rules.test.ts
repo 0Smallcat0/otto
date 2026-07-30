@@ -1,0 +1,180 @@
+import { describe, expect, it } from "vitest";
+
+import { rankHeadlines, sessionSpan, sessionStamp, staleCandles } from "../../src/ui/api";
+import { runProvenance } from "../../src/ui/readers";
+
+// Five defects fixed on 2026-07-27 were all the same shape: the backend had
+// computed the qualifying fact, put it in the payload, and the render step
+// dropped it. Nothing failed — the API was right and only the screen was
+// wrong. The Playwright suite runs against a deliberately fresh terminal with
+// no positions, no judgments and no quote cache, so it cannot see any of it.
+// These are the guards for the decisions themselves.
+
+describe("rankHeadlines", () => {
+  it("puts his holdings above anything merely fresher", () => {
+    const feed = [
+      { id: "lottery", relevance: "noise", age_minutes: 1 },
+      { id: "wire", relevance: "global", age_minutes: 5 },
+      { id: "his", relevance: "mine", age_minutes: 600 },
+      { id: "tw", relevance: "tw", age_minutes: 30 }
+    ];
+
+    // In the live feed 4 of 120 items were "mine" and freshness alone put
+    // none of them in the top ten.
+    expect(rankHeadlines(feed).map((item) => item.id)).toEqual(["his", "wire", "tw", "lottery"]);
+  });
+
+  it("sinks noise without dropping it", () => {
+    const feed = [
+      { id: "lottery", relevance: "noise", age_minutes: 1 },
+      { id: "forum", relevance: "noise", age_minutes: 2 }
+    ];
+
+    expect(rankHeadlines(feed)).toHaveLength(2);
+  });
+
+  it("treats an untagged item as ordinary rather than as junk", () => {
+    const feed = [
+      { id: "noise", relevance: "noise", age_minutes: 1 },
+      { id: "untagged", age_minutes: 90 }
+    ];
+
+    expect(rankHeadlines(feed)[0].id).toBe("untagged");
+  });
+
+  it("does not mutate the caller's array", () => {
+    const feed = [
+      { id: "a", relevance: "noise", age_minutes: 1 },
+      { id: "b", relevance: "mine", age_minutes: 2 }
+    ];
+    rankHeadlines(feed);
+
+    expect(feed.map((item) => item.id)).toEqual(["a", "b"]);
+  });
+});
+
+describe("sessionStamp", () => {
+  it("reads a TWSE ROC date", () => {
+    expect(sessionStamp({ symbol: "2834", date: "1150724" })).toBe("07/24");
+  });
+
+  it("reads Finnhub epoch seconds in UTC, not local time", () => {
+    // 1784923200 is Friday 2026-07-24 20:00Z, the US close. Local getters in
+    // UTC+8 rolled it to Saturday 07/25 and stamped the rows with a day the
+    // market was shut — caught on screen, invisible in the payload.
+    expect(sessionStamp({ symbol: "AAPL", latest_trading_day: "1784923200" })).toBe("07/24");
+  });
+
+  it("reads an ISO trading day without going through a timezone", () => {
+    expect(sessionStamp({ symbol: "EUR/USD", latest_trading_day: "2026-07-26" })).toBe("07/26");
+  });
+
+  it("says nothing rather than guessing when the row names no session", () => {
+    // Crypto never closes, so there is no session to name and the caller
+    // falls back to fetch age. Returning a wrong date here would be worse
+    // than returning none.
+    expect(sessionStamp({ symbol: "BTCUSDT", retrieved_at: "2026-07-27T00:00:00Z" })).toBe("");
+    expect(sessionStamp(undefined)).toBe("");
+    expect(sessionStamp({ symbol: "X", latest_trading_day: "not a date" })).toBe("");
+  });
+});
+
+describe("sessionSpan", () => {
+  it("never certifies a group as fresher than its oldest row", () => {
+    // TWSE publishes its daily file per symbol. On 2026-07-28 the same five
+    // rows carried two dates, and stamping the group from rows[0] put three
+    // rows holding 07/27 prices under a header reading 07/28 — on a session
+    // where 0050 had fallen 4.24% and the wall showed +0.15%.
+    const rows = [
+      { symbol: "2330", date: "1150728" },
+      { symbol: "0050", date: "1150727" },
+      { symbol: "00982A", date: "1150727" }
+    ];
+
+    expect(sessionSpan(rows)).toEqual({ stamp: "07/27", mixed: true });
+  });
+
+  it("does not cry mixed when the group agrees", () => {
+    const rows = [
+      { symbol: "2330", date: "1150728" },
+      { symbol: "0050", date: "1150728" }
+    ];
+
+    expect(sessionSpan(rows)).toEqual({ stamp: "07/28", mixed: false });
+  });
+
+  it("picks December over January across a year boundary", () => {
+    const rows = [
+      { symbol: "A", latest_trading_day: "2027-01-02" },
+      { symbol: "B", latest_trading_day: "2026-12-31" }
+    ];
+
+    expect(sessionSpan(rows).stamp).toBe("12/31");
+  });
+
+  it("says nothing when no row names a session", () => {
+    expect(sessionSpan([{ symbol: "BTCUSDT" }])).toEqual({ stamp: "", mixed: false });
+    expect(sessionSpan([])).toEqual({ stamp: "", mixed: false });
+  });
+
+  it("ignores rows with no session rather than treating them as oldest", () => {
+    const rows = [{ symbol: "A", date: "1150728" }, { symbol: "B" }];
+
+    expect(sessionSpan(rows)).toEqual({ stamp: "07/28", mixed: false });
+  });
+});
+
+describe("staleCandles", () => {
+  const now = new Date("2026-07-28T14:00:00Z");
+
+  it("catches the three-week gap that drew a 23.83 bar under a 20.09 price", () => {
+    expect(staleCandles("2026-07-08", now)).toBe(true);
+  });
+
+  it("does not accuse Friday's close on a Monday", () => {
+    // A weekend plus a holiday either side must not read as a dead source.
+    expect(staleCandles("2026-07-24", now)).toBe(false);
+    expect(staleCandles("2026-07-28", now)).toBe(false);
+  });
+
+  it("says nothing when the series names no last close", () => {
+    // Crypto series and anything that omits the field must not be branded
+    // stale on the strength of a missing value.
+    expect(staleCandles(undefined, now)).toBe(false);
+    expect(staleCandles("", now)).toBe(false);
+    expect(staleCandles("not a date", now)).toBe(false);
+  });
+
+  it("reads a full timestamp, not just a bare date", () => {
+    expect(staleCandles("2026-07-08T13:30:00+08:00", now)).toBe(true);
+  });
+});
+
+describe("runProvenance", () => {
+  it("refuses to dress a synthetic run as a result", () => {
+    // Three of eight runs were computed on locally generated candles because
+    // market data could not be fetched, and they were the best-looking rows
+    // in the table, styled exactly like the one live run.
+    const synthetic = runProvenance({ data_state: "offline_fallback" });
+
+    expect(synthetic.trusted).toBe(false);
+    expect(synthetic.label).toBe("合成資料");
+  });
+
+  it("keeps a stale run trusted — an old cache is still real market data", () => {
+    const stale = runProvenance({ data_state: "stale" });
+
+    expect(stale.trusted).toBe(true);
+    expect(stale.label).toBe("過期快取");
+  });
+
+  it("treats an unknown state as trusted but labels it verbatim", () => {
+    // Inventing a reassuring label for a state we do not recognise would be
+    // the same failure as dropping it.
+    expect(runProvenance({ data_state: "something_new" })).toMatchObject({
+      label: "something_new",
+      trusted: true
+    });
+    expect(runProvenance({}).label).toBe("—");
+  });
+});

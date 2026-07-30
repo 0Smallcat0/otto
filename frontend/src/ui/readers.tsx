@@ -11,11 +11,21 @@ import { useT } from "./i18n";
 
 /* ── shared doc chrome ── */
 
+/** Full-page reader chrome.
+ *
+ *  The back link used to read 回任務牆 in every reader, but onBack returns to
+ *  whatever opened it — the backtest index, the news index, whichever route
+ *  was active. Opening a report from 回測 and being told the way out was the
+ *  mission wall was simply false; the click stayed on 回測 (2026-07-27
+ *  dogfood). Naming a destination is not an option either: NewsBriefReader is
+ *  reached both from the news page and from the artifact router, so any name
+ *  would be wrong from one of them. A label that cannot go stale it is.
+ */
 function DocShell({ onBack, children }: { onBack: () => void; children: React.ReactNode }) {
   const { t } = useT();
   return (
     <div className="ft-doc-wrap">
-      <a className="ft-link ft-mono" role="button" tabIndex={0} onClick={onBack} onKeyDown={activateOnKey(onBack)}>{t("← 回任務牆")}</a>
+      <a className="ft-link ft-mono" role="button" tabIndex={0} onClick={onBack} onKeyDown={activateOnKey(onBack)}>{t("← 返回")}</a>
       <div className="ft-doc">{children}</div>
     </div>
   );
@@ -244,6 +254,32 @@ interface RunIndexRow {
   symbol?: string;
   timeframe?: string;
   return_pct?: string | number;
+  /** Provenance of the candles the run was computed on. Never drop these:
+   *  an offline_fallback run is priced off locally generated candles, so its
+   *  return is not a market result at all. */
+  data_state?: string;
+  data_source?: string;
+}
+
+/** How much a run's return is worth, given the candles behind it.
+ *
+ *  Three of eight runs on this machine were `offline_fallback` off
+ *  `local_deterministic_candle_generator` — the provenance the backtester
+ *  writes when real data could not be fetched — and they were the three
+ *  best-looking rows in the table, styled identically to the one live run
+ *  (2026-07-27 dogfood). The number stays visible; what changes is that it
+ *  stops claiming to be performance.
+ */
+export function runProvenance(row: { data_state?: string }): {
+  label: string;
+  cls: string;
+  trusted: boolean;
+} {
+  const state = String(row.data_state ?? "").toLowerCase();
+  if (state === "offline_fallback") return { label: "合成資料", cls: "ft-down", trusted: false };
+  if (state === "stale") return { label: "過期快取", cls: "ft-am", trusted: true };
+  if (state === "live") return { label: "即時", cls: "ft-dim", trusted: true };
+  return { label: state || "—", cls: "ft-dim", trusted: true };
 }
 
 export function BacktestPage({ heading }: { heading: React.ReactNode }) {
@@ -270,17 +306,27 @@ export function BacktestPage({ heading }: { heading: React.ReactNode }) {
       ) : rows.length === 0 ? (
         <div className="ft-empty">{t("尚無回測——在對話請 AI「幫我回測○○」,完成的報告會列在這裡。")}</div>
       ) : (
+        <>
+        {rows.some((row) => !runProvenance(row).trusted) ? (
+          <div className="ft-note ft-down">
+            {t("標「合成資料」的 run 是在抓不到市場資料時,用本機生成的 K 線跑的——那個報酬不是市場結果,不能當績效看。")}
+          </div>
+        ) : null}
         <table className="ft-table">
-          <thead><tr><th scope="col">{t("時間")}</th><th scope="col">{t("策略")}</th><th scope="col">{t("標的")}</th><th scope="col" style={{ textAlign: "right" }}>{t("報酬")}</th><th scope="col"></th></tr></thead>
+          <thead><tr><th scope="col">{t("時間")}</th><th scope="col">{t("策略")}</th><th scope="col">{t("標的")}</th><th scope="col">{t("資料")}</th><th scope="col" style={{ textAlign: "right" }}>{t("報酬")}</th><th scope="col"></th></tr></thead>
           <tbody>
             {rows.map((row) => {
+              const prov = runProvenance(row);
               const ret = pct(row.return_pct);
               return (
                 <tr key={row.run_id}>
                   <td>{runTime(row.run_id)}</td>
                   <td style={{ fontFamily: "var(--sans)" }}>{row.strategy_label ?? row.strategy ?? "—"}</td>
                   <td>{row.symbol ?? "—"}{row.timeframe ? ` · ${row.timeframe}` : ""}</td>
-                  <td className={ret.cls} style={{ textAlign: "right" }}>{ret.text}</td>
+                  <td className={prov.cls} style={{ fontFamily: "var(--sans)" }}>{t(prov.label)}</td>
+                  {/* An untrusted run keeps its number but loses the up/down
+                      colour: green on a synthetic candle reads as a result. */}
+                  <td className={prov.trusted ? ret.cls : "ft-dim"} style={{ textAlign: "right" }}>{ret.text}</td>
                   <td><a className="ft-link" role="button" tabIndex={0}
                     onClick={() => setOpenRun(row.run_id ?? null)}
                     onKeyDown={activateOnKey(() => setOpenRun(row.run_id ?? null))}>{t("開報告 →")}</a></td>
@@ -289,6 +335,7 @@ export function BacktestPage({ heading }: { heading: React.ReactNode }) {
             })}
           </tbody>
         </table>
+        </>
       )}
     </div>
   );
@@ -423,7 +470,7 @@ export function NewsPage({ heading, items, digest }: {
           ) : null}
           {noise.length > 0 ? (
             <div className="ft-note s">
-              {t("另收起")} {noise.length} {t("則與投資無關的(開獎號碼之類)。要看就跟 AI 說「把收起來的新聞也show出來」。")}
+              {t("另收起")} {noise.length} {t("則沒有投資內容的(開獎號碼、論壇板塊頁之類)。要看就跟 AI 說「把收起來的新聞也show出來」。")}
             </div>
           ) : null}
           {/* Thirty untranslated headlines, most of them crypto for someone who

@@ -32,6 +32,7 @@ TWSE_VALUATION_URL = "https://openapi.twse.com.tw/v1/exchangeReport/BWIBBU_ALL"
 TWSE_MATERIAL_NEWS_URL = "https://openapi.twse.com.tw/v1/opendata/t187ap04_L"
 TWSE_USER_AGENT = "Mozilla/5.0 (Windows NT 10.0; Win64; x64)"
 TWSE_MAX_SYMBOLS = 12
+TWSE_SCREEN_MAX_ROWS = 30
 TWSE_SUBJECT_CHARS = 200
 TWSE_DETAIL_CHARS = 600
 
@@ -130,6 +131,103 @@ _FACTS_NOTE = (
     "missing data, and must never be replaced with index-level news. "
     "Listed (上市) companies only; OTC (上櫃) listings are not in this feed."
 )
+
+
+_SCREEN_SORTS = {
+    "dividend_yield_pct": True,  # True = highest first
+    "pe_ratio": False,
+    "pb_ratio": False,
+}
+
+_SCREEN_NOTE = (
+    "Official TWSE public OpenAPI, no key: the exchange's own P/E, dividend "
+    "yield and P/B for the latest session, ranked over every 上市 listing "
+    "rather than a list of codes someone already knew to ask for. These are "
+    "TRAILING figures — the yield is what was paid, the P/E is on reported "
+    "earnings — so a low multiple is a question, not an answer, and a bank "
+    "trading below book may be cheap or may be marking losses nobody has "
+    "taken yet. A listing whose ranked field the exchange did not publish "
+    "(loss-making companies carry no P/E, non-payers no yield) is excluded "
+    "from the ranking and counted in excluded_missing_count, never sorted as "
+    "if the number were zero. OTC (上櫃) listings are not in this feed."
+)
+
+
+def tw_valuation_screen_payload(
+    *,
+    sort: str = "dividend_yield_pct",
+    max_pe: float | None = None,
+    max_pb: float | None = None,
+    min_dividend_yield_pct: float | None = None,
+    limit: int = 20,
+    valuation_fetcher: Any | None = None,
+) -> dict[str, Any]:
+    """Rank every TW listing on the exchange's own valuation table.
+
+    tw_company_facts_payload already fetches this whole table and then keeps
+    only the codes it was handed, so the terminal could answer "what is 2834
+    worth" but never "what is worth owning" — which is the half of the job that
+    finds something the owner did not already hold. Same fetch, nothing new
+    from the network.
+    """
+    if sort not in _SCREEN_SORTS:
+        raise TwseCompanyError(f"sort must be one of {tuple(_SCREEN_SORTS)}")
+    limit = max(1, min(int(limit), TWSE_SCREEN_MAX_ROWS))
+
+    errors: list[str] = []
+    rows: list[dict[str, Any]] = []
+    screened = 0
+    try:
+        for raw in (valuation_fetcher or fetch_twse_valuations)():
+            screened += 1
+            rows.append(_valuation_row(raw))
+    except (TwseCompanyError, OSError, ValueError) as exc:
+        errors.append(f"valuations: {exc.__class__.__name__}")
+
+    def numeric(row: dict[str, Any], key: str) -> float | None:
+        try:
+            return float(row[key]) if row.get(key) is not None else None
+        except (TypeError, ValueError):
+            return None
+
+    ranked: list[dict[str, Any]] = []
+    excluded_missing = 0
+    for row in rows:
+        key_value = numeric(row, sort)
+        if key_value is None:
+            excluded_missing += 1
+            continue
+        pe, pb = numeric(row, "pe_ratio"), numeric(row, "pb_ratio")
+        yld = numeric(row, "dividend_yield_pct")
+        # A filter the exchange cannot answer for this listing excludes it,
+        # rather than passing it through as if the bound were satisfied.
+        if max_pe is not None and (pe is None or pe > max_pe):
+            continue
+        if max_pb is not None and (pb is None or pb > max_pb):
+            continue
+        if min_dividend_yield_pct is not None and (yld is None or yld < min_dividend_yield_pct):
+            continue
+        ranked.append(row)
+    ranked.sort(key=lambda r: float(r[sort]), reverse=_SCREEN_SORTS[sort])
+
+    return {
+        "as_of": datetime.now(tz=UTC).isoformat(timespec="seconds"),
+        "sort": sort,
+        "filters": {
+            "max_pe": max_pe,
+            "max_pb": max_pb,
+            "min_dividend_yield_pct": min_dividend_yield_pct,
+        },
+        "screened_count": screened,
+        "match_count": len(ranked),
+        "excluded_missing_count": excluded_missing,
+        "returned_count": min(len(ranked), limit),
+        "rows": ranked[:limit],
+        "source_errors": errors,
+        "provider_id": TWSE_OPENAPI_PROVIDER_ID,
+        "note": _SCREEN_NOTE,
+        "safety": {"read_only": True, "orderable": False},
+    }
 
 
 def _empty_facts_payload() -> dict[str, Any]:

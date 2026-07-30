@@ -134,3 +134,40 @@ def test_workspace_artifact_paths_stay_repo_local() -> None:
     assert configured_paths == LOCAL_STORAGE_PATHS.values()
     assert all(is_repo_local_path(path) for path in configured_paths)
     assert all((root / path).resolve().is_relative_to(root.resolve()) for path in configured_paths)
+
+
+def test_every_action_route_id_names_a_real_route() -> None:
+    """list_actions discovers an action through its route_id, nothing else.
+
+    A tw_valuation_screen contract looked missing until the route_id was
+    checked; the route's recommended_actions list is editorial and is NOT the
+    discovery mechanism, so a typo'd route_id is what would actually hide an
+    action from every operator (2026-07-30).
+    """
+    from otto.local_terminal.agent_contract import ACTION_CONTRACTS, ROUTE_CONTRACTS
+
+    known = {route.route_id for route in ROUTE_CONTRACTS}
+    orphans = sorted(
+        {a.action_id for a in ACTION_CONTRACTS if a.route_id not in known}
+    )
+    assert not orphans, f"route_id names no route, so list_actions cannot find: {orphans}"
+
+
+def test_health_says_when_the_running_process_is_serving_stale_code(monkeypatch) -> None:
+    """Twice in one session a change was made and the old answer came back.
+
+    There is no reloader, so a backend serves whatever it imported until it is
+    restarted; the endpoint looked wrong and the debugging went into code that
+    was never running. health now compares the newest source mtime against the
+    one captured at import (2026-07-30).
+    """
+    from otto.local_terminal import server
+
+    monkeypatch.setattr(server, "_SOURCE_MTIME_AT_IMPORT", server._newest_source_mtime())
+    assert server.health_payload()["source_stale"] is False
+
+    # a source file edited after this process loaded
+    monkeypatch.setattr(server, "_SOURCE_MTIME_AT_IMPORT", 0.0)
+    payload = server.health_payload()
+    assert payload["source_stale"] is True
+    assert payload["restart_hint"]  # and says what to do about it

@@ -1912,19 +1912,47 @@ def providers_payload(store: Any) -> dict[str, Any]:
     }
     providers = [_provider_with_health(entry, cache_states) for entry in PROVIDER_REGISTRY]
     state_counts = Counter(provider["health"]["state"] for provider in providers)
+    # Derived from ERROR_STATES rather than hand-listed. The hand-listed
+    # version was written before "retired" existed, so when stooq's endpoint
+    # closed and the state was added to the catalogue the summary silently
+    # stopped adding up: 33 counted against 34 providers, with one simply
+    # absent (2026-07-27 dogfood). A new state now cannot be forgotten here.
     summary = {
         "provider_count": len(providers),
         "implemented_count": sum(
             1 for provider in providers if provider["implementation_status"] == "implemented"
         ),
         "active": state_counts.get(CACHE_STATE_ACTIVE, 0),
-        "stale_cache": state_counts.get("stale_cache", 0),
-        "unavailable": state_counts.get("unavailable", 0),
-        "rate_limited": state_counts.get("rate_limited", 0),
-        "key_required": state_counts.get("key_required", 0),
-        "plan_required": state_counts.get("plan_required", 0),
-        "disabled_by_safety": state_counts.get("disabled_by_safety", 0),
+        **{state: state_counts.get(state, 0) for state in ERROR_STATES},
     }
+    # Anything the registry reports that neither the catalogue nor "active"
+    # covers. Nonzero means a provider is in a state nothing on screen can
+    # name, which is worth surfacing rather than rounding away.
+    summary["uncategorised"] = len(providers) - sum(
+        summary[key] for key in (CACHE_STATE_ACTIVE, *ERROR_STATES)
+    )
+    # "Is a capability I rely on going unserved right now?" — not "is any row
+    # in a non-active state", which counts things that are working as designed.
+    #
+    # A first pass at this counted unavailable + retired and put "2 不能用" on
+    # the system page. Both were false alarms. Coinbase is a fallback whose own
+    # entry says it is used only after Binance and Kraken fail; it has no cache
+    # because the primaries have not failed. Stooq is retired with its
+    # successor named in the message — replaced, not broken. Neither is
+    # something the owner can or should act on (2026-07-27 dogfood, correcting
+    # the same day's earlier commit).
+    standby = sum(
+        1
+        for provider in providers
+        if provider["health"]["state"] == "unavailable"
+        and provider["implementation_status"] == "implemented_fallback"
+    )
+    summary["standby"] = standby
+    summary["superseded"] = summary["retired"]
+    # A primary with nothing to serve, or a provider being throttled, is a real
+    # loss of service. plan_required and disabled_by_safety are deliberate — a
+    # tier we do not buy and the live-trading gate — and are reported elsewhere.
+    summary["broken"] = summary["unavailable"] - standby + summary["rate_limited"]
     return {
         "generated_at": _utc_now(),
         "docs_checked_at": DOCS_CHECKED_AT,
