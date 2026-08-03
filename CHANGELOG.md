@@ -2,6 +2,21 @@
 
 ## Unreleased
 
+- Distribution renamed to `otto-terminal` (2026-08-03). Both `otto` and
+  `otto-mcp` are already owned on PyPI by unrelated projects, so the release
+  that the roadmap called "only a publish action away" could never have
+  succeeded. The import package is unchanged — no source moved.
+  - New console script `otto-terminal` (same entry point as `otto-mcp`) so the
+    install line needs no `--from`: `claude mcp add otto -- uvx otto-terminal`.
+    Documenting `uvx otto-mcp` would install a stranger's package.
+  - `/api/health` and MCP `serverInfo` looked up `version("otto")`. On a machine
+    with the unrelated `otto` installed that returns *their* version instead of
+    raising, so the app would have reported a false version rather than falling
+    back. Both now ask for `otto-terminal`.
+  - `server.json` added for the official MCP registry (stdio, PyPI package).
+    Its schema pin is unvalidated — run `mcp-publisher validate` before
+    submitting.
+
 - Owner fix-it round (2026-07-22): disclosed limitations are now fixed
   capabilities, not caveats.
   - News matching uses official security names from local reference caches

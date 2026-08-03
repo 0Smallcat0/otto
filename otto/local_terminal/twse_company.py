@@ -312,3 +312,134 @@ def tw_company_facts_payload(
         "note": _FACTS_NOTE,
         "safety": {"read_only": True, "orderable": False},
     }
+
+
+TWSE_MARGIN_URL = "https://openapi.twse.com.tw/v1/exchangeReport/MI_MARGN"
+
+_MARGIN_NOTE = (
+    "Official TWSE public OpenAPI, no key: yesterday's and today's margin "
+    "(融資) balance for every listed issue. Balances are LOT counts (張), not "
+    "money — TWSE reports the cash figure elsewhere — so the aggregate is a "
+    "crude proxy: a lot of a NT$2000 stock and a lot of a NT$10 stock count "
+    "the same. Read reduced_symbol_count alongside it; that one is "
+    "dimensionless. This measures whether leveraged holders are still being "
+    "forced out, which is the question a price chart cannot answer: on "
+    "2026-07-30 a reduce call was made on the reasoning that three sessions "
+    "closing at the lows meant sellers were still in control, and the next "
+    "session was limit-up across the board. Capitulation and continuation look "
+    "identical in price."
+)
+
+
+def fetch_twse_margin(*, timeout: float = 25.0) -> tuple[list[dict[str, Any]], str]:
+    """Margin rows plus the session they describe, read from Last-Modified.
+
+    The rows say 融資今日餘額 and carry no date. "Today" means the last session
+    TWSE published, which before the afternoon release is yesterday — so a
+    caller reading this at lunchtime gets the previous session labelled today.
+    That is the same shape as every stale-quote defect this terminal has had,
+    so the stamp travels with the data instead of being assumed.
+    """
+    request = Request(
+        TWSE_MARGIN_URL,
+        headers={"User-Agent": TWSE_USER_AGENT, "Accept": "application/json"},
+    )
+    try:
+        with urlopen(request, timeout=timeout) as response:
+            published = str(response.headers.get("Last-Modified") or "")
+            payload = json.loads(response.read().decode("utf-8"))
+    except (TimeoutError, URLError, HTTPError, OSError, ValueError) as exc:
+        raise TwseCompanyError(
+            f"TWSE fetch failed for {TWSE_MARGIN_URL}: {exc.__class__.__name__}"
+        ) from exc
+    if not isinstance(payload, list):
+        raise TwseCompanyError(f"TWSE response for {TWSE_MARGIN_URL} is not a list")
+    return [row for row in payload if isinstance(row, dict)], published
+
+
+def _margin_int(value: Any) -> int | None:
+    text = str(value or "").strip().replace(",", "")
+    if not text:
+        return None
+    try:
+        return int(text)
+    except ValueError:
+        return None
+
+
+def tw_margin_balance_payload(
+    symbols: list[str] | None = None,
+    *,
+    margin_fetcher: Any | None = None,
+) -> dict[str, Any]:
+    """Whether leveraged holders are still being forced out of the TW market.
+
+    A price chart cannot separate capitulation from continuation — both are red
+    candles closing at the low. The margin balance can: forced selling shows up
+    as the balance collapsing, and it stops when the sellers are gone.
+    """
+    wanted = [code for code in (tw_listing_code(s) for s in symbols or []) if code]
+    errors: list[str] = []
+    rows: list[dict[str, Any]] = []
+    published = ""
+    try:
+        rows, published = (margin_fetcher or fetch_twse_margin)()
+    except (TwseCompanyError, OSError, ValueError) as exc:
+        errors.append(f"margin: {exc.__class__.__name__}")
+
+    today_total = prev_total = 0
+    reduced = increased = unchanged = 0
+    unreadable = 0
+    per_symbol: list[dict[str, Any]] = []
+    for row in rows:
+        today = _margin_int(row.get("融資今日餘額"))
+        prev = _margin_int(row.get("融資前日餘額"))
+        if today is None or prev is None:
+            # A blank balance is not a zero balance; counting it as one would
+            # move the aggregate by the whole of that issue's position.
+            unreadable += 1
+            continue
+        today_total += today
+        prev_total += prev
+        if today < prev:
+            reduced += 1
+        elif today > prev:
+            increased += 1
+        else:
+            unchanged += 1
+        code = str(row.get("股票代號", "")).strip()
+        if code in wanted:
+            per_symbol.append(
+                {
+                    "code": code,
+                    "name": str(row.get("股票名稱", "")).strip(),
+                    "margin_lots_today": today,
+                    "margin_lots_prev": prev,
+                    "change_lots": today - prev,
+                    "change_pct": f"{((today / prev - 1) * 100):.2f}" if prev else None,
+                    "short_lots_today": _margin_int(row.get("融券今日餘額")),
+                }
+            )
+
+    change = today_total - prev_total
+    return {
+        "as_of": datetime.now(tz=UTC).isoformat(timespec="seconds"),
+        # The session these balances describe, not the day they were read. The
+        # rows carry no date and say 今日 regardless.
+        "published_at": published or None,
+        "issue_count": len(rows),
+        "priced_issue_count": reduced + increased + unchanged,
+        "unreadable_count": unreadable,
+        "margin_lots_today": today_total,
+        "margin_lots_prev": prev_total,
+        "change_lots": change,
+        "change_pct": f"{((today_total / prev_total - 1) * 100):.2f}" if prev_total else None,
+        "reduced_symbol_count": reduced,
+        "increased_symbol_count": increased,
+        "unchanged_symbol_count": unchanged,
+        "symbols": per_symbol,
+        "source_errors": errors,
+        "provider_id": TWSE_OPENAPI_PROVIDER_ID,
+        "note": _MARGIN_NOTE,
+        "safety": {"read_only": True, "orderable": False},
+    }

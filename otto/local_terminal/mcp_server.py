@@ -41,10 +41,18 @@ from pathlib import Path
 from typing import Any
 
 
+DIST_NAME = "otto-terminal"
+
+
 def _package_version() -> str:
-    """Single-source the version: installed dist metadata, else pyproject."""
+    """Single-source the version: installed dist metadata, else pyproject.
+
+    The distribution is otto-terminal, never `otto`: an unrelated project owns
+    that name on PyPI, so asking for `otto` here would report a stranger's
+    version number on any machine that happens to have it installed.
+    """
     try:
-        return _dist_version("otto")
+        return _dist_version(DIST_NAME)
     except PackageNotFoundError:
         pass
     try:

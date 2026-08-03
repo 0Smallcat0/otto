@@ -11,6 +11,7 @@ from otto.local_terminal.twse_company import (
     TwseCompanyError,
     tw_company_facts_payload,
     tw_listing_code,
+    tw_margin_balance_payload,
     tw_valuation_screen_payload,
 )
 
@@ -176,3 +177,63 @@ def test_the_screen_says_trailing_and_says_it_is_not_a_buy_signal():
     assert "TRAILING" in note
     assert "not an answer" in note  # a low multiple is a question
     assert "上櫃" in note  # coverage stated, not implied
+
+
+_MARGIN_ROWS = [
+    {"股票代號": "2330", "股票名稱": "台積電", "融資前日餘額": "30832",
+     "融資今日餘額": "30664", "融券今日餘額": "1200"},
+    {"股票代號": "0050", "股票名稱": "元大台灣50", "融資前日餘額": "29290",
+     "融資今日餘額": "33974", "融券今日餘額": "40"},
+    {"股票代號": "9999", "股票名稱": "無資料", "融資前日餘額": "",
+     "融資今日餘額": "", "融券今日餘額": ""},
+]
+
+
+def _margin(symbols=None, stamp="Thu, 30 Jul 2026 21:23:21 GMT"):
+    return tw_margin_balance_payload(
+        symbols, margin_fetcher=lambda: (list(_MARGIN_ROWS), stamp)
+    )
+
+
+def test_margin_balance_answers_what_a_price_chart_cannot() -> None:
+    """Capitulation and continuation are the same red candle.
+
+    A reduce call was made on 2026-07-30 reasoning that three sessions closing
+    at the lows meant sellers were still in control; the next session was
+    limit-up across the board. Whether leveraged holders are still being forced
+    out is measurable, and TWSE publishes it daily.
+    """
+    d = _margin(["2330", "0050"])
+    assert d["margin_lots_prev"] == 60122 and d["margin_lots_today"] == 64638
+    assert d["reduced_symbol_count"] == 1  # 2330 fell
+    assert d["increased_symbol_count"] == 1  # 0050 rose
+    rows = {r["code"]: r for r in d["symbols"]}
+    assert rows["2330"]["change_lots"] == -168
+    assert rows["0050"]["change_pct"] == "15.99"
+
+
+def test_a_blank_balance_is_not_a_zero_balance() -> None:
+    # Reading a blank as 0 moves the aggregate by that issue's whole position
+    # and would show a de-leveraging that never happened.
+    d = _margin()
+    assert d["issue_count"] == 3
+    assert d["priced_issue_count"] == 2
+    assert d["unreadable_count"] == 1
+    assert d["margin_lots_today"] == 64638  # the blank row contributed nothing
+
+
+def test_the_balances_say_which_session_they_are() -> None:
+    """The rows say 融資今日餘額 and carry no date at all.
+
+    "Today" is the last session TWSE published; read before the afternoon
+    release it is yesterday's. Presenting that as today is the same defect as
+    every stale quote this terminal has shipped.
+    """
+    assert _margin()["published_at"] == "Thu, 30 Jul 2026 21:23:21 GMT"
+    assert _margin(stamp="")["published_at"] is None  # unknown, never guessed
+
+
+def test_the_note_refuses_to_let_lots_read_as_money() -> None:
+    note = _margin()["note"]
+    assert "LOT counts" in note and "not money" in note
+    assert "reduced_symbol_count" in note  # points at the dimensionless figure
