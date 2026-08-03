@@ -178,6 +178,7 @@ ROUTE_CONTRACTS: tuple[RouteAgentContract, ...] = (
             "research_scan",
             "tw_company_facts",
             "tw_valuation_screen",
+            "tw_margin_balance",
             "market_sessions",
             "crypto_submit_paper_order",
             "crypto_process_paper_orders",
@@ -2392,6 +2393,44 @@ ACTION_CONTRACTS: tuple[AgentActionContract, ...] = (
             "company filed nothing that day — a fact about the day, not missing "
             "data, and never to be replaced with index-level news. Listed (上市) "
             "companies only; OTC listings are not in this feed"
+        ),
+        False,
+        False,
+        False,
+        False,
+        "public_read_only_market_data",
+        ("provider_unavailable",),
+    ),
+    AgentActionContract(
+        "tw_margin_balance",
+        "paper",
+        "Read whether leveraged TW holders are still being forced out",
+        "GET",
+        "/api/research/tw-margin",
+        (
+            "optional ?symbols=2330.TW,0050.TW (comma separated, bare codes "
+            "accepted); with no argument it covers the TW symbols with an open "
+            "research call. Official TWSE MI_MARGN, public, no key"
+        ),
+        (
+            "margin_lots_today",
+            "margin_lots_prev",
+            "change_pct",
+            "reduced_symbol_count",
+            "increased_symbol_count",
+            "published_at",
+            "symbols",
+            "note",
+            "safety",
+        ),
+        (
+            "read-only; balances are LOT counts (張), NOT money — summing them "
+            "across issues is a crude proxy, so read reduced_symbol_count "
+            "beside the aggregate. published_at is the session the balances "
+            "describe: the rows say 融資今日餘額 and carry no date, and before "
+            "the afternoon release 'today' is the previous session. Use this "
+            "when a thesis turns on whether forced selling has exhausted — "
+            "price alone cannot separate capitulation from continuation"
         ),
         False,
         False,

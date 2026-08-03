@@ -218,6 +218,7 @@ from otto.local_terminal.research_ledger import (
 from otto.local_terminal.twse_company import (
     TwseCompanyError,
     tw_company_facts_payload,
+    tw_margin_balance_payload,
     tw_valuation_screen_payload,
 )
 from otto.local_terminal.yahoo_news import collect_yahoo_news
@@ -2554,9 +2555,18 @@ class PortfolioBacktestLinkUpdate(BaseModel):
     artifact_dir: str | None = Field(default=None)
 
 
+# The distribution name, which is NOT the import name. mcp_server keeps its own
+# copy because it is deliberately standalone and imports nothing from this
+# package; test_version_truth pins both to pyproject so the two cannot drift.
+DIST_NAME = "otto-terminal"
+
+
 def _package_version() -> str:
+    # otto-terminal, never "otto": an unrelated project owns that name on PyPI,
+    # so asking for it here reports a stranger's version on any machine that
+    # has it installed.
     try:
-        return version("otto")
+        return version(DIST_NAME)
     except PackageNotFoundError:
         pass
     try:
@@ -3759,6 +3769,21 @@ def create_app(frontend_dist: Path | None = None) -> FastAPI:
             )
         except TwseCompanyError as exc:
             raise HTTPException(status_code=400, detail=str(exc)) from exc
+
+    @app.get("/api/research/tw-margin")
+    def tw_margin_balance(symbols: str = "") -> dict[str, Any]:
+        # Whether leveraged holders are still being forced out. A price chart
+        # cannot answer it — capitulation and continuation are the same red
+        # candle — and a reduce call was made on exactly that confusion the
+        # session before the market went limit-up.
+        requested = [part for part in str(symbols or "").replace(";", ",").split(",") if part]
+        if not requested:
+            state = STORE.read_research_ledger_state()
+            requested = [s for s in _open_call_symbols(state) if s.endswith(".TW")]
+        try:
+            return tw_margin_balance_payload(requested)
+        except TwseCompanyError as exc:
+            raise HTTPException(status_code=502, detail=str(exc)) from exc
 
     @app.get("/api/market/sessions")
     def market_sessions() -> dict[str, Any]:

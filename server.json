@@ -1,0 +1,35 @@
+{
+  "$schema": "https://static.modelcontextprotocol.io/schemas/2025-09-29/server.schema.json",
+  "name": "io.github.0Smallcat0/otto",
+  "description": "Local AI-operated financial terminal: market data, paper trading, backtesting, news and portfolio state behind one safety-gated action contract. Live trading, credential entry and code execution are unreachable through the tool surface.",
+  "version": "1.0.0",
+  "repository": {
+    "url": "https://github.com/0Smallcat0/otto",
+    "source": "github"
+  },
+  "websiteUrl": "https://github.com/0Smallcat0/otto",
+  "packages": [
+    {
+      "registryType": "pypi",
+      "registryBaseUrl": "https://pypi.org",
+      "identifier": "otto-terminal",
+      "version": "1.0.0",
+      "transport": {
+        "type": "stdio"
+      },
+      "environmentVariables": [
+        {
+          "name": "LOCAL_TERMINAL_URL",
+          "description": "Base URL of an already-running Otto backend. Omit to let the MCP server start and manage its own.",
+          "isRequired": false,
+          "default": "http://127.0.0.1:8765"
+        },
+        {
+          "name": "LOCAL_TERMINAL_STATE_ROOT",
+          "description": "Where local state (portfolios, paper books, the judgment ledger) is written. Defaults to the checkout when run from source, otherwise ~/.otto.",
+          "isRequired": false
+        }
+      ]
+    }
+  ]
+}
