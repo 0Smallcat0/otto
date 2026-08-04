@@ -26,12 +26,36 @@ then `uv run otto` → <http://127.0.0.1:8765/>
 
 ## Why this one
 
-**It keeps score.** The agent records dated calls — a stance, the reasoning, the price level
-that would prove it wrong, a horizon — and every call is later graded against the price the
-market actually printed. Calls without reasoning are refused rather than guessed, moves
-inside a flat band don't count as skill, and a call graded long after it matured is excluded
-because it measured a window its thesis never claimed. The hit rate is whatever the market
-says it is.
+**It keeps score, and the score is published even when it is bad.** The agent records dated
+calls — a stance, the reasoning, the price level that would prove it wrong, a horizon — and
+every call is later graded against the price the market actually printed. Calls without
+reasoning are refused rather than guessed, moves inside a flat band don't count as skill,
+and a call graded long after it matured is excluded because it measured a window its thesis
+never claimed.
+
+Here is the entire record so far. It is a small, unflattering sample, and that is the point
+of showing it:
+
+| | |
+|---|---|
+| Calls journaled | 13 (5 still open, 4 withdrawn and never scored) |
+| Hit rate | **0%** — 0 of 4 graded theses held |
+| Beat its index | **2 of 3** measurable calls, average excess **−0.22%** |
+
+Those two lines disagree on purpose, and the disagreement is the reason the second one
+exists. A hold graded a 6.6% loss over a window its index fell 7.9% did worse than nothing
+and better than the alternative; a hit rate can only see the first half. Excess return is
+measured against `0050.TW`, `SPY` or `BTC-USD` over the call's own window, and a call that
+meant to *stay out* beats the index when the thing it avoided lagged — so a negative excess
+is a win for that stance, and the board colours by verdict rather than by sign.
+
+These are one operator's calls on one operator's holdings, so the ledger behind them stays
+on that machine and is not in this repo — what ships is the machinery that produces and
+grades them, and `GET /api/research/ledger` reports the same block for yours. All three
+graded comparisons rest on an index level reconstructed from that session's published close
+rather than stamped live when the call was struck; the ledger marks those, the scorecard
+counts them, and the board flags them, because a weaker measurement that looks identical to
+a strong one is just a lie with extra steps.
 
 **"An AI can operate it" is a benchmark here, not a tagline.** A real headless agent gets 20
 plain-language tasks in hermetic sandboxes, graded programmatically on terminal state and
@@ -49,7 +73,7 @@ through the surface the agent has.
 ## Under the hood
 
 One typed contract (137 actions across 16 routes) is the single source of truth; the MCP
-tools, the UI capability catalog and the eval suite are all derived from it. 680 tests on
+tools, the UI capability catalog and the eval suite are all derived from it. 689 tests on
 Windows + Linux CI.
 
 - [Architecture](docs/architecture/ARCHITECTURE.md) · [ADRs](docs/architecture/)

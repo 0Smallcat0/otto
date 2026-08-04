@@ -81,6 +81,21 @@ BENCHMARK_BY_MARKET: dict[str, str] = {
     "crypto": "BTC-USD",
 }
 
+# How a benchmark level got onto a call. Stamped at strike time from the same
+# live quote path as ref_price, or reconstructed afterwards from the published
+# daily close. The two are not the same measurement and a scorecard that mixes
+# them without saying so is overstating what it knows: a close is the market's
+# level at the end of that session, not at the minute the judgment was struck,
+# and for a call struck on a non-trading day it is the previous session's.
+BENCHMARK_SOURCE_LIVE = "stamped_live"
+BENCHMARK_SOURCE_BACKFILL = "backfill_daily_close"
+# A call ON its own benchmark needs no reconstruction at all: the index leg and
+# the instrument leg are the same instrument at the same instant, so the call's
+# own prices ARE the benchmark's. Taking a daily close here instead would price
+# the two legs off different clocks and manufacture an excess return for a thing
+# against itself — 64,098 (close) against 65,338 (strike) is 1.9% of nothing.
+BENCHMARK_SOURCE_SELF = "same_instrument"
+
 # Whether beating the benchmark means outrunning it or lagging it. A call that
 # means to own something wins by outperforming; one that means to stay out wins
 # when the thing it avoided lagged the market. size_down is absent on purpose:
@@ -254,6 +269,7 @@ def record_call(state: dict[str, Any], payload: dict[str, Any]) -> tuple[dict[st
         # recovered from a live quote later.
         "benchmark_symbol": benchmark_symbol,
         "benchmark_ref_price": str(benchmark_ref) if benchmark_ref is not None else None,
+        "benchmark_ref_source": BENCHMARK_SOURCE_LIVE if benchmark_ref is not None else None,
         "status": "open",
         "scored_at": None,
         "score_price": None,
@@ -466,6 +482,139 @@ def score_calls(
     return normalize_research_ledger_state(ledger), scored
 
 
+def _close_on_or_before(series: dict[str, Any], day: str) -> tuple[str, Decimal] | None:
+    """The last published close up to and including `day`.
+
+    A call struck on a Saturday, or before an exchange holiday, has no close of
+    its own; the level it was actually struck against is the previous session's.
+    Returning the date alongside the price is what lets the caller record which
+    session it really used instead of implying the call's own date.
+    """
+    usable = [(d, _decimal(p)) for d, p in series.items() if d <= day]
+    usable = [(d, p) for d, p in usable if p is not None and p > 0]
+    if not usable:
+        return None
+    return max(usable, key=lambda row: row[0])
+
+
+def backfill_benchmarks(
+    state: dict[str, Any],
+    closes: dict[str, dict[str, Any]],
+) -> tuple[dict[str, Any], dict[str, Any]]:
+    """Reconstruct benchmark levels for calls struck before they were stamped.
+
+    Benchmark stamping shipped on 2026-07-30; every call journaled before it
+    carries no index level on either end, so the question the ledger exists to
+    answer — did this beat owning the market — was structurally unanswerable for
+    the whole existing record. A live quote genuinely cannot recover a past
+    level, which is what the record path warns about, but a published daily
+    close can: it is a fact the exchange printed, not a reconstruction.
+
+    What it will not do: overwrite a level stamped live (that measurement is
+    strictly better), touch a superseded call (withdrawn views are never
+    scored), or leave the result indistinguishable from a live stamp — every
+    filled call carries benchmark_ref_source and the date of the session
+    actually used.
+    """
+    ledger = normalize_research_ledger_state(state)
+    filled: list[dict[str, Any]] = []
+    unfilled: list[dict[str, Any]] = []
+    skipped_stamped = 0
+    skipped_superseded = 0
+    for call in ledger["calls"]:
+        status = str(call.get("status"))
+        if status not in ("open", "scored"):
+            skipped_superseded += 1
+            continue
+        if call.get("benchmark_ref_price") is not None:
+            skipped_stamped += 1
+            continue
+        symbol = call.get("benchmark_symbol") or BENCHMARK_BY_MARKET.get(
+            str(call.get("market") or "")
+        )
+        if symbol is not None and str(call.get("symbol")) == str(symbol):
+            # Identity, not reconstruction. Both legs are already on the call.
+            call["benchmark_symbol"] = symbol
+            call["benchmark_ref_price"] = call.get("ref_price")
+            call["benchmark_ref_source"] = BENCHMARK_SOURCE_SELF
+            realized_self = _decimal(call.get("realized_pct"))
+            score_price = _decimal(call.get("score_price"))
+            if status == "scored" and realized_self is not None and score_price is not None:
+                _score_against_benchmark(call, {symbol: score_price}, realized_self)
+            filled.append(
+                {
+                    "call_id": call.get("call_id"),
+                    "symbol": call.get("symbol"),
+                    "status": status,
+                    "benchmark_symbol": symbol,
+                    "source": BENCHMARK_SOURCE_SELF,
+                    "ref_price": call.get("ref_price"),
+                    "excess_pct": call.get("excess_pct"),
+                    "beat_benchmark": call.get("beat_benchmark"),
+                }
+            )
+            continue
+        series = closes.get(str(symbol or ""))
+        as_of = str(call.get("as_of") or "")[:10]
+        found = _close_on_or_before(series, as_of) if series and as_of else None
+        if symbol is None or found is None:
+            unfilled.append(
+                {
+                    "call_id": call.get("call_id"),
+                    "symbol": call.get("symbol"),
+                    "reason": "no benchmark for market" if symbol is None else "no close at or before as_of",
+                }
+            )
+            continue
+        ref_day, ref_price = found
+        call["benchmark_symbol"] = symbol
+        call["benchmark_ref_price"] = str(ref_price)
+        call["benchmark_ref_source"] = BENCHMARK_SOURCE_BACKFILL
+        call["benchmark_ref_session"] = ref_day
+        row = {
+            "call_id": call.get("call_id"),
+            "symbol": call.get("symbol"),
+            "status": status,
+            "benchmark_symbol": symbol,
+            "ref_session": ref_day,
+            "ref_price": str(ref_price),
+        }
+        realized = _decimal(call.get("realized_pct"))
+        scored_day = str(call.get("scored_at") or "")[:10]
+        if status == "scored" and realized is not None and scored_day:
+            scored_found = _close_on_or_before(series, scored_day)
+            if scored_found is None:
+                row["score_note"] = "no close at or before scored_at; verdict left unmeasured"
+            else:
+                score_day, score_price = scored_found
+                # Same arithmetic the live path uses, fed a historical close
+                # instead of a live mark, so a backfilled verdict and a stamped
+                # one can never disagree about what beating the index means.
+                _score_against_benchmark(call, {symbol: score_price}, realized)
+                call["benchmark_score_session"] = score_day
+                row["score_session"] = score_day
+                row["excess_pct"] = call.get("excess_pct")
+                row["beat_benchmark"] = call.get("beat_benchmark")
+        filled.append(row)
+    report = {
+        "filled_count": len(filled),
+        "filled": filled,
+        "unfilled_count": len(unfilled),
+        "unfilled": unfilled,
+        "skipped_already_stamped": skipped_stamped,
+        "skipped_superseded": skipped_superseded,
+        "source": BENCHMARK_SOURCE_BACKFILL,
+        "note": (
+            "A daily close is the market's level at the end of that session, not "
+            "at the minute the call was struck; a call struck on a non-trading "
+            "day uses the previous session, named in benchmark_ref_session. "
+            "Every filled call is marked so the scorecard can say how much of "
+            "its verdict rests on reconstruction rather than a live stamp."
+        ),
+    }
+    return normalize_research_ledger_state(ledger), report
+
+
 def _review_reasons(
     call: dict[str, Any],
     price: Decimal | None,
@@ -596,6 +745,9 @@ def _benchmark_scorecard(timely: list[dict[str, Any]]) -> dict[str, Any]:
     excesses = [_decimal(c.get("excess_pct")) for c in timely]
     excesses = [e for e in excesses if e is not None]
     beat = sum(1 for c in judged if c.get("beat_benchmark"))
+    backfilled = sum(
+        1 for c in judged if c.get("benchmark_ref_source") == BENCHMARK_SOURCE_BACKFILL
+    )
     return {
         "symbols": BENCHMARK_BY_MARKET,
         "judged_count": len(judged),
@@ -603,12 +755,17 @@ def _benchmark_scorecard(timely: list[dict[str, Any]]) -> dict[str, Any]:
         "beat_rate_pct": f"{(beat / len(judged) * 100):.1f}" if judged else None,
         "avg_excess_pct": f"{(sum(excesses) / len(excesses)):.2f}" if excesses else None,
         "unmeasured_count": len(timely) - len(judged),
+        "backfilled_count": backfilled,
         "note": (
             "excess_pct is the instrument's return minus its market's return "
             "over the same window. A call that means to own something beats the "
             "benchmark by outrunning it; one that means to stay out beats it "
             "when the thing avoided lagged. Calls with no benchmark on both ends "
-            "are counted in unmeasured_count, never scored as a draw."
+            "are counted in unmeasured_count, never scored as a draw. "
+            "backfilled_count is how many of these verdicts rest on a "
+            "reconstructed daily close rather than a level stamped live at "
+            "strike time — a weaker measurement, and read the rate as provisional "
+            "while it is most of the base."
         ),
     }
 

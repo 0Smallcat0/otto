@@ -2,6 +2,34 @@
 
 ## Unreleased
 
+- The judgment ledger can finally answer the question it was built for
+  (2026-08-03). Benchmark stamping shipped 2026-07-30; every call journaled
+  before it carried no index level on either end, so `vs_benchmark` reported the
+  whole existing record as unmeasured — a scorecard that could state a hit rate
+  and not the thing the hit rate cannot say.
+  - `backfill_benchmarks` reconstructs the missing levels from published daily
+    closes. A live quote genuinely cannot recover a past level, which is what
+    the record path warns about; a close the exchange printed can.
+  - Reconstruction is never disguised as a live stamp: filled calls carry
+    `benchmark_ref_source` and the session actually used, the scorecard reports
+    `backfilled_count`, and the board flags each one.
+  - A call struck on a non-trading day takes the previous session, named rather
+    than implied.
+  - A call ON its own benchmark takes both legs from itself. Pricing BTC-USD
+    against BTC-USD's daily close would have compared 65,338 at strike to
+    64,098 at close and manufactured 1.9% of excess return for an instrument
+    against itself, then fed it into `avg_excess_pct`.
+  - Yahoo daily closes round the float64 artefact away: 101.69999694824219 is
+    not a price the exchange published.
+  - **The board now renders it.** The scorecard's benchmark block, `excess_pct`
+    and `beat_benchmark` were computed and dropped at the render step — the same
+    shape as twelve of the last thirteen defects. The scored table gains a VS
+    INDEX column, coloured by the verdict and never by the sign, because a call
+    that meant to stay out wins with a negative excess.
+  - Applied to the real ledger: hit rate stays 0 of 4, and 2 of 3 measurable
+    calls beat their index. The 2330 hold graded a 6.58% loss beat 0050 by
+    1.29 points over the same window.
+
 - Distribution renamed to `otto-terminal` (2026-08-03). Both `otto` and
   `otto-mcp` are already owned on PyPI by unrelated projects, so the release
   that the roadmap called "only a publish action away" could never have

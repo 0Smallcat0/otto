@@ -578,6 +578,10 @@ interface ResearchCall {
   score_price?: string | null;
   realized_pct?: string | null;
   window_honored?: boolean;
+  benchmark_symbol?: string | null;
+  benchmark_ref_source?: string | null;
+  excess_pct?: string | null;
+  beat_benchmark?: boolean | null;
 }
 
 interface Scorecard {
@@ -588,6 +592,14 @@ interface Scorecard {
   avg_favor_pct?: string | null;
   stale_scored_count?: number;
   sizing?: { scored_count?: number; risk_realized_count?: number };
+  vs_benchmark?: {
+    judged_count?: number;
+    beat_count?: number;
+    beat_rate_pct?: string | null;
+    avg_excess_pct?: string | null;
+    unmeasured_count?: number;
+    backfilled_count?: number;
+  };
 }
 
 const OUTCOME_LABEL: Record<string, string> = {
@@ -823,6 +835,13 @@ export function JudgmentBoard() {
               {card?.stale_scored_count
                 ? ` · ${card.stale_scored_count} ${t("則因延遲計分不列入")}`
                 : ""}
+              {card?.vs_benchmark?.beat_rate_pct
+                ? ` · ${t("贏過大盤")} ${card.vs_benchmark.beat_count}/${card.vs_benchmark.judged_count}${
+                    card.vs_benchmark.avg_excess_pct
+                      ? ` (${t("平均超額")} ${card.vs_benchmark.avg_excess_pct}%)`
+                      : ""
+                  }`
+                : ""}
             </span>
           </div>
           <div className="ft-pos">
@@ -835,6 +854,7 @@ export function JudgmentBoard() {
                   <th scope="col">{t("記錄時")}</th>
                   <th scope="col">{t("結算價")}</th>
                   <th scope="col">{t("價格變動")}</th>
+                  <th scope="col">{t("對大盤")}</th>
                 </tr>
               </thead>
               <tbody>
@@ -855,6 +875,36 @@ export function JudgmentBoard() {
                     <td className={pct(Number.parseFloat(String(call.realized_pct ?? ""))).cls}>
                       {call.realized_pct ? `${call.realized_pct}%` : "—"}
                     </td>
+                    {/* Coloured by the verdict, never by the sign: a call that
+                        meant to stay out wins WITH a negative excess, so
+                        painting this red/green off the number would tell the
+                        opposite of the truth for every avoid and reduce. */}
+                    <td
+                      className={
+                        call.beat_benchmark === true
+                          ? "ft-up"
+                          : call.beat_benchmark === false
+                            ? "ft-down"
+                            : "ft-dim"
+                      }
+                    >
+                      {call.excess_pct === null || call.excess_pct === undefined ? (
+                        <span className="ft-dim">{t("沒有基準")}</span>
+                      ) : (
+                        <>
+                          {`${call.excess_pct}%`}
+                          {call.beat_benchmark === null || call.beat_benchmark === undefined ? (
+                            <small className="ft-dim"> {t("(它就是大盤)")}</small>
+                          ) : null}
+                          {call.benchmark_ref_source === "backfill_daily_close" ? (
+                            <small className="ft-faint" title={t("基準價是事後用當日收盤補的,不是記錄當下的即時價")}>
+                              {" "}
+                              {t("*補")}
+                            </small>
+                          ) : null}
+                        </>
+                      )}
+                    </td>
                   </tr>
                 ))}
               </tbody>
@@ -864,6 +914,8 @@ export function JudgmentBoard() {
       ) : null}
       <div className="ft-note s">
         {t("驗收日到、或價格走到「算我看錯」的位置,就用當下真實價格結算。集中度提醒只看風險有沒有發生,不算方向對錯;延遲太久才計分的也不列入命中率,因為量到的區間已經不是當初說的那段。這是分析,不是叫你買賣。")}
+        {" "}
+        {t("「對大盤」是同一段期間內,這檔的報酬減掉它所屬大盤的報酬。想抱住的看法要跑贏大盤才算贏,想避開的看法則是大盤跑贏它才算贏——所以負數不一定是輸,看顏色。標「*補」的基準價是事後用當日收盤補回來的,不是記錄當下的即時價;樣本還很少,這個比率先當參考。")}
       </div>
     </div>
   );

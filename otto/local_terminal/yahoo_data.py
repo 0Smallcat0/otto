@@ -11,7 +11,7 @@ from __future__ import annotations
 
 import json
 from datetime import UTC, datetime
-from decimal import Decimal, InvalidOperation
+from decimal import ROUND_HALF_UP, Decimal, InvalidOperation
 from typing import Any
 from urllib.error import HTTPError, URLError
 from urllib.parse import quote
@@ -193,6 +193,74 @@ def fetch_yahoo_quote_snapshot(*, symbol: str, timeout: float = 6.0) -> dict[str
     if not isinstance(meta, dict):
         raise YahooQuoteError(f"Yahoo chart result for {safe_symbol} has no meta block")
     return meta
+
+
+def fetch_yahoo_daily_closes(
+    *, symbol: str, start: str, end: str, timeout: float = 15.0
+) -> dict[str, str]:
+    """Published daily closes for `symbol`, keyed by session date (UTC).
+
+    Same chart endpoint the live quote uses, asked for a date range instead of
+    today. Only sessions the exchange actually printed appear — weekends and
+    holidays are simply absent rather than carried forward, so a caller asking
+    for a non-trading day has to decide for itself which session it means.
+
+    A bar whose close is null is dropped: Yahoo emits one for the session in
+    progress, and reading it as a real level would put a hole where a price is
+    expected. `start`/`end` are ISO dates, end inclusive.
+    """
+    safe_symbol = _safe_symbol(symbol)
+    if not safe_symbol:
+        raise YahooQuoteError("Yahoo history needs a symbol")
+    period1 = int(datetime.fromisoformat(f"{start}T00:00:00+00:00").timestamp())
+    # End of the requested day, so the last session is inside the window.
+    period2 = int(datetime.fromisoformat(f"{end}T00:00:00+00:00").timestamp()) + 86_400
+    url = (
+        f"{YAHOO_QUOTE_URL}{quote(safe_symbol, safe='^=.-')}"
+        f"?period1={period1}&period2={period2}&interval=1d"
+    )
+    request = Request(url, headers={"User-Agent": YAHOO_USER_AGENT, "Accept": "application/json"})
+    try:
+        with urlopen(request, timeout=timeout) as response:
+            payload = json.loads(response.read().decode("utf-8"))
+    except (TimeoutError, URLError, OSError) as exc:
+        raise YahooQuoteError(f"Yahoo history fetch failed for {safe_symbol}: {exc}") from exc
+    chart = payload.get("chart") if isinstance(payload, dict) else None
+    if not isinstance(chart, dict):
+        raise YahooQuoteError("Yahoo chart response has no chart block")
+    if chart.get("error"):
+        error = chart["error"]
+        description = error.get("description") if isinstance(error, dict) else error
+        raise YahooQuoteError(f"Yahoo chart error for {safe_symbol}: {description}")
+    results = chart.get("result") if isinstance(chart.get("result"), list) else []
+    result = results[0] if results and isinstance(results[0], dict) else {}
+    stamps = result.get("timestamp") if isinstance(result.get("timestamp"), list) else []
+    quotes = result.get("indicators", {}).get("quote") if isinstance(result, dict) else None
+    closes = quotes[0].get("close") if isinstance(quotes, list) and quotes else []
+    closes = closes if isinstance(closes, list) else []
+    out: dict[str, str] = {}
+    for stamp, close in zip(stamps, closes, strict=False):
+        if close is None:
+            continue
+        day = datetime.fromtimestamp(int(stamp), tz=UTC).strftime("%Y-%m-%d")
+        out[day] = _close_text(close)
+    return out
+
+
+def _close_text(close: Any) -> str:
+    """A close as the exchange printed it, not as float64 stored it.
+
+    Yahoo serialises 101.70 as 101.69999694824219. Carrying that into the
+    ledger records eleven digits of precision the exchange never published —
+    false precision reads as a measurement, which is the same defect as a stale
+    quote wearing a live label. Four decimals keep every venue this touches
+    (index points, TWD, BTC) and round the artefact away.
+
+    Formatted with "f" and stripped by hand rather than Decimal.normalize(),
+    which renders 1000 as 1E+3.
+    """
+    value = Decimal(str(close)).quantize(Decimal("0.0001"), rounding=ROUND_HALF_UP)
+    return format(value, "f").rstrip("0").rstrip(".")
 
 
 def normalize_yahoo_quote_snapshot(
