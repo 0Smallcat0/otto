@@ -2,6 +2,33 @@
 
 ## Unreleased
 
+- A dividend stopped reading as a loss (2026-08-04). 台企銀 (2834), a holding of
+  the owner's, closed at 16.90 against an 18.20 previous close. Every surface
+  called it −7.14%, the largest fall in the universe, and sorted it to the top
+  of the research queue on a day the index fell 1.32%. It had gone
+  ex-rights-and-dividend that morning for 1.471029 per share; against TWSE's own
+  16.72 reference price it rose 1.08% and beat the index by 2.4 points.
+  - `twse_corporate_actions` reads TWSE's 除權除息計算結果表 (TWT49U): the
+    pre-event close, the value distributed, and the reference price the exchange
+    opened against. No key, no account. Columns are resolved by TWSE's own
+    `fields` header rather than by position — a reordered column would otherwise
+    be applied as if it were a price.
+  - Scoring measures the holder, not the print. The payout is added to the price
+    before the return AND before the invalidation test: a level written against
+    a pre-payout series is otherwise silently tightened and closes a thesis on a
+    step the thesis never claimed anything about. The 2834 hold struck at 18.00
+    reads −6.11% and invalidated without this, and +2.06% with it — an 8.17
+    point error, on a call that beat the index.
+  - The scan measures the same move against the reference price and says so. The
+    match is made by reversing the quote's own reported change to recover the
+    previous close it was measured from, not by asking whether the ex-date is
+    today: a closed market reports the last session, and the UTC date disagrees
+    with Taipei for eight hours a day.
+  - An unreachable TWSE degrades to the price-only reading rather than refusing
+    to score, and the call then carries no distribution, so nothing is invented.
+  - `score_price` stays the raw print; `distributed_per_share` and
+    `price_only_pct` are recorded beside it so the adjustment is never silent.
+
 - The judgment ledger can finally answer the question it was built for
   (2026-08-03). Benchmark stamping shipped 2026-07-30; every call journaled
   before it carried no index level on either end, so `vs_benchmark` reported the
