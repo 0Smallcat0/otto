@@ -26,6 +26,8 @@ Honesty rules, carried over from the fill/snapshot paths:
 from __future__ import annotations
 
 from datetime import UTC, datetime, timedelta
+
+from otto.local_terminal.twse_corporate_actions import distributed_between, events_by_symbol
 from decimal import Decimal, InvalidOperation
 from typing import Any
 from uuid import uuid4
@@ -444,23 +446,41 @@ def score_calls(
     marks: dict[str, Decimal | None],
     *,
     now: datetime | None = None,
+    ex_events: list[dict[str, Any]] | None = None,
 ) -> tuple[dict[str, Any], list[dict[str, Any]]]:
     """Close every open call that has matured or been invalidated.
 
     `marks` maps symbol→current price. A matured call with no usable mark is
     left open (reported unscored), never graded. An open call whose
     invalidation is breached is closed early even before its horizon.
+
+    `ex_events` are TWSE ex-rights/ex-dividend rows. A holding that pays out
+    part of its value drops by that amount mechanically, so without them the
+    price the holder received back is counted as money they lost: 2834 struck
+    at 18.00 and marked at 16.90 reads −6.11% when the holder is up 2.06%. The
+    payout is added to the price BEFORE the invalidation test too — a level
+    written against a pre-payout series is otherwise silently tightened, and
+    would close a thesis on a step the thesis never claimed anything about.
     """
     ledger = normalize_research_ledger_state(state)
     now = now or datetime.now(tz=UTC)
+    events = ex_events or []
+    today = now.strftime("%Y-%m-%d")
     scored: list[dict[str, Any]] = []
     for call in ledger["calls"]:
         if call.get("status") != "open":
             continue
-        price = marks.get(str(call.get("symbol", "")))
+        symbol = str(call.get("symbol", ""))
+        quoted = marks.get(symbol)
         ref = _decimal(call.get("ref_price"))
-        if price is None or ref is None or ref <= 0 or price <= 0:
+        if quoted is None or ref is None or ref <= 0 or quoted <= 0:
             continue
+        distributed = distributed_between(
+            events, symbol=symbol, after=str(call.get("as_of") or "")[:10], upto=today
+        )
+        # Everything downstream measures the holder's position, not the ticker's
+        # print. They differ by exactly what was paid out.
+        price = quoted + distributed
         stance = str(call.get("stance"))
         invalidation = _decimal(call.get("invalidation"))
         breached = _invalidation_breached(stance, invalidation, price, ref)
@@ -471,7 +491,9 @@ def score_calls(
         late_days, window_honored = _scoring_lateness(call, now, breached=breached)
         call["status"] = "scored"
         call["scored_at"] = now.isoformat(timespec="seconds")
-        call["score_price"] = str(price)
+        call["score_price"] = str(quoted)
+        call["distributed_per_share"] = str(distributed) if distributed else None
+        call["price_only_pct"] = f"{(quoted / ref - 1) * 100:.2f}" if distributed else None
         call["realized_pct"] = f"{realized:.2f}"
         call["favor_pct"] = f"{favor:.2f}" if favor is not None else None
         call["outcome"] = _outcome(stance, favor, breached, realized)
@@ -703,11 +725,25 @@ def _open_view(
     price: Decimal | None,
     now: datetime | None = None,
     weight: Decimal | None = None,
+    distributed: Decimal | None = None,
 ) -> dict[str, Any]:
+    """One open call as the board shows it, priced as the holder experienced it.
+
+    `distributed` is what the instrument has paid out since the call was struck.
+    Without it a payout reads as drift: 2834 struck at 18.00 and printing 16.90
+    showed −6.11% and a "rethink this" flag for a fall nobody suffered, while
+    the holder was up 2.06%. The raw print stays visible as `quote_price` so the
+    row still ties back to the tape.
+    """
     row = dict(call)
+    quoted = price
+    if price is not None and distributed:
+        price = price + distributed
     reasons = _review_reasons(call, price, now or datetime.now(tz=UTC), weight)
     row["needs_review"] = bool(reasons)
     row["review_reasons"] = reasons
+    row["quote_price"] = str(quoted) if quoted is not None and distributed else None
+    row["distributed_per_share"] = str(distributed) if distributed else None
     # A sizing call's weight_pct is what the position weighed when the warning
     # was written; the risk it warns about is what the position weighs now. The
     # board showed only the first, in the present tense, so a concentration that
@@ -835,10 +871,46 @@ def scan_universe(
     return {**DEFAULT_UNIVERSE, **(owned or {})}
 
 
+# A quote's previous close and the ex-event's pre-event close should be the same
+# number; 0.5% absorbs the 2-decimal rounding in a reported change_pct.
+_EX_MATCH_TOLERANCE = Decimal("0.005")
+
+
+def _ex_event_behind_quote(
+    events: list[dict[str, Any]], price: Decimal | None, change: Decimal | None
+) -> dict[str, Any] | None:
+    """The payout this quote's change is measured across, if there is one.
+
+    Matching on "is the ex-date today" looked obvious and is wrong twice over:
+    the session a quote describes is not today when the market is shut, and the
+    UTC date rolls over mid-evening in Taipei so "today" disagrees with the
+    exchange for eight hours a day. So this asks the quote itself. Reverse the
+    reported change to get the previous close it was measured from; if that
+    equals the close TWSE recorded before the payout, the change definitively
+    spans the event. If it does not, the quote has already moved past the
+    ex-date and nothing is adjusted.
+    """
+    if price is None or change is None or price <= 0:
+        return None
+    divisor = 1 + change / 100
+    if divisor <= 0:
+        return None
+    implied_prev_close = price / divisor
+    for event in reversed(events):  # newest first
+        prev_close = _decimal(event.get("prev_close"))
+        reference = _decimal(event.get("reference_price"))
+        if prev_close is None or prev_close <= 0 or reference is None or reference <= 0:
+            continue
+        if abs(implied_prev_close / prev_close - 1) <= _EX_MATCH_TOLERANCE:
+            return event
+    return None
+
+
 def scan_candidates(
     quotes: dict[str, dict[str, Any]] | None,
     open_symbols: tuple[str, ...] | list[str] = (),
     owned: dict[str, tuple[str, str]] | None = None,
+    ex_events: list[dict[str, Any]] | None = None,
 ) -> list[dict[str, Any]]:
     """Rank the research universe: owner's holdings first, then biggest movers.
 
@@ -850,15 +922,34 @@ def scan_candidates(
     owned name with no open call is the loudest gap in the ledger. Rows with no
     usable change sink to the bottom of their group (missing data, not "no
     move").
+
+    `ex_events` correct the one move that is not a move. On its ex-dividend day
+    a quote's change is measured against a previous close that included value
+    the holder has now been paid: 2834 showed −7.14%, the largest fall in the
+    universe, on a day it actually rose 1.08% against the reference price TWSE
+    opened it at. Sorting by move size then puts a payout at the top of the
+    research queue and invites a call on a panic that did not happen.
     """
     quotes = quotes or {}
     open_set = {str(symbol).strip().upper() for symbol in open_symbols}
     owned = owned or {}
+    ex_by_symbol = events_by_symbol(ex_events or [])
     rows: list[dict[str, Any]] = []
     for symbol, (market, name) in scan_universe(owned).items():
         quote = quotes.get(symbol) if isinstance(quotes.get(symbol), dict) else {}
         price = _decimal(quote.get("price"))
         change = _decimal(quote.get("change_pct"))
+        event = _ex_event_behind_quote(ex_by_symbol.get(symbol, []), price, change)
+        ex_note = None
+        if event is not None:
+            reference = _decimal(event["reference_price"])
+            change = (price / reference - 1) * 100  # type: ignore[operator]
+            ex_note = (
+                f"went ex-{event.get('kind') or 'dividend'} on {event.get('ex_date')} "
+                f"for {event.get('value_per_share')} per share; this change is "
+                f"measured against TWSE's {reference} reference price, not the "
+                f"{event.get('prev_close')} close that still held the payout"
+            )
         rows.append(
             {
                 "symbol": symbol,
@@ -869,6 +960,7 @@ def scan_candidates(
                 "currency": quote.get("currency") or None,
                 "has_open_call": symbol in open_set,
                 "owned": symbol in owned,
+                "ex_dividend_today": ex_note,
                 "_abs": abs(change) if change is not None else None,
             }
         )
@@ -888,9 +980,11 @@ def research_scan_payload(
     quotes: dict[str, dict[str, Any]] | None,
     open_symbols: tuple[str, ...] | list[str] = (),
     owned: dict[str, tuple[str, str]] | None = None,
+    ex_events: list[dict[str, Any]] | None = None,
 ) -> dict[str, Any]:
-    candidates = scan_candidates(quotes, open_symbols, owned)
+    candidates = scan_candidates(quotes, open_symbols, owned, ex_events=ex_events)
     priced = [row for row in candidates if row["change_pct"] is not None]
+    ex_today = [row["symbol"] for row in candidates if row.get("ex_dividend_today")]
     uncovered = [
         row["symbol"] for row in candidates if row["owned"] and not row["has_open_call"]
     ]
@@ -900,6 +994,7 @@ def research_scan_payload(
         "owned_count": sum(1 for row in candidates if row["owned"]),
         "owned_without_call": uncovered,
         "priced_count": len(priced),
+        "ex_dividend_today": ex_today,
         "candidates": candidates,
         "quote_source": "yahoo_finance_public_quote_snapshot",
         "record_action": "research_call_record",
@@ -910,7 +1005,11 @@ def research_scan_payload(
             "marks the owner's real positions: they sort first and any listed in "
             "owned_without_call is a holding of his real money with no journaled "
             "view — the highest-priority gap. A null change_pct is missing data, "
-            "not a flat tape; run with refresh=true to fetch current marks."
+            "not a flat tape; run with refresh=true to fetch current marks. "
+            "Symbols in ex_dividend_today paid out today: their change is measured "
+            "against TWSE's reference price, because the previous close still "
+            "contained value the holder has since been handed — the raw quote "
+            "shows a fall that nobody suffered."
         ),
         "safety": {"paper_only": True, "live_execution": "disabled"},
     }
@@ -922,11 +1021,13 @@ def research_ledger_payload(
     *,
     weights: dict[str, Decimal | None] | None = None,
     limit: int | None = None,
+    ex_events: list[dict[str, Any]] | None = None,
 ) -> dict[str, Any]:
     ledger = normalize_research_ledger_state(state)
     calls = ledger["calls"]
     marks = marks or {}
     weights = weights or {}
+    events = ex_events or []
     open_calls = [c for c in calls if c.get("status") == "open"]
     scored_calls = [c for c in calls if c.get("status") == "scored"]
     superseded_calls = [c for c in calls if c.get("status") == "superseded"]
@@ -936,12 +1037,19 @@ def research_ledger_payload(
     else:
         scored_view = scored_calls
     now = datetime.now(tz=UTC)
+    today = now.strftime("%Y-%m-%d")
     open_view = [
         _open_view(
             c,
             marks.get(str(c.get("symbol", ""))),
             now,
             weights.get(str(c.get("symbol", ""))),
+            distributed_between(
+                events,
+                symbol=str(c.get("symbol", "")),
+                after=str(c.get("as_of") or "")[:10],
+                upto=today,
+            ),
         )
         for c in open_calls
     ]

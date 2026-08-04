@@ -566,6 +566,8 @@ interface ResearchCall {
   thesis: string;
   ref_price: string;
   mark_price?: string | null;
+  quote_price?: string | null;
+  distributed_per_share?: string | null;
   unrealized_pct?: string | null;
   invalidation?: string | null;
   matures_at: string;
@@ -795,9 +797,23 @@ export function JudgmentBoard() {
                       <small> {t(CONVICTION_LABEL[call.conviction] ?? call.conviction)}</small>
                     </td>
                     <td className="ft-faint">{call.ref_price}</td>
+                    {/* mark_price is what the holder is worth, not what the
+                        ticker prints: after a payout the two differ by exactly
+                        what was handed over. Showing only the first sends the
+                        reader to a quote page that disagrees with the board. */}
                     <td>
                       {call.mark_price ?? "—"}
                       {view ? <small className={view.cls}> {view.text}</small> : null}
+                      {call.distributed_per_share && call.quote_price ? (
+                        <small
+                          className="ft-faint"
+                          title={`${t("除權息配發")} ${call.distributed_per_share}`}
+                        >
+                          <br />
+                          {t("盤上")} {call.quote_price} + {t("配發")}{" "}
+                          {call.distributed_per_share}
+                        </small>
+                      ) : null}
                     </td>
                     <td className="s">{wrongIf(call)}</td>
                     <td className="s">{String(call.matures_at).slice(5, 10).replace("-", "/")}</td>

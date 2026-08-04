@@ -7,7 +7,7 @@ import json
 import os
 import urllib.error
 from dataclasses import asdict
-from datetime import UTC, datetime
+from datetime import UTC, datetime, timedelta
 from decimal import Decimal
 from importlib.metadata import PackageNotFoundError, version
 from pathlib import Path
@@ -220,6 +220,10 @@ from otto.local_terminal.twse_company import (
     tw_company_facts_payload,
     tw_margin_balance_payload,
     tw_valuation_screen_payload,
+)
+from otto.local_terminal.twse_corporate_actions import (
+    TwseExRightError,
+    fetch_twse_ex_rights,
 )
 from otto.local_terminal.yahoo_news import collect_yahoo_news
 from otto.local_terminal.forum import (
@@ -3655,6 +3659,50 @@ def create_app(frontend_dist: Path | None = None) -> FastAPI:
         }
         return sorted(symbols | set(BENCHMARK_BY_MARKET.values()))
 
+    def _tw_ex_events(state: dict[str, Any]) -> list[dict[str, Any]]:
+        """TWSE payouts covering every open TW call's window.
+
+        A payout inside a call's window is money the holder received, and
+        without it scoring counts it as money they lost — 2834 struck at 18.00
+        and marked at 16.90 grades as a −6.11% failure when the holder is up
+        2.06%. TWSE is best-effort here: if it cannot be reached, scoring falls
+        back to the price-only reading it has always used rather than refusing
+        to score, and the call carries no distribution so nothing is invented.
+        """
+        starts = [
+            str(c.get("as_of") or "")[:10]
+            for c in state.get("calls", [])
+            if isinstance(c, dict)
+            and c.get("status") == "open"
+            and str(c.get("symbol", "")).upper().endswith(".TW")
+        ]
+        starts = [day for day in starts if day]
+        if not starts:
+            return []
+        try:
+            return fetch_twse_ex_rights(
+                start=min(starts), end=datetime.now(tz=UTC).strftime("%Y-%m-%d")
+            )
+        except TwseExRightError:
+            return []
+
+    def _tw_ex_events_today() -> list[dict[str, Any]]:
+        """Payouts dated today, for the scan's change_pct.
+
+        A closed market still shows the last session's move, so this asks for a
+        three-day window and lets scan_candidates match on the session it is
+        actually reporting. Unreachable TWSE degrades to the raw quote rather
+        than an empty scan.
+        """
+        now = datetime.now(tz=UTC)
+        try:
+            return fetch_twse_ex_rights(
+                start=(now - timedelta(days=3)).strftime("%Y-%m-%d"),
+                end=now.strftime("%Y-%m-%d"),
+            )
+        except TwseExRightError:
+            return []
+
     @app.post("/api/research/call")
     def submit_research_call(update: ResearchCallUpdate) -> dict[str, Any]:
         symbol = update.symbol.strip().upper()
@@ -3698,7 +3746,7 @@ def create_app(frontend_dist: Path | None = None) -> FastAPI:
     def score_research_ledger(update: ResearchScoreUpdate) -> dict[str, Any]:
         state = STORE.read_research_ledger_state()
         marks = _research_marks(_open_call_symbols(state), refresh=update.refresh)
-        state, scored = score_calls(state, marks)
+        state, scored = score_calls(state, marks, ex_events=_tw_ex_events(state))
         STORE.write_research_ledger_state(state)
         if scored:
             _journal_activity(
@@ -3719,7 +3767,10 @@ def create_app(frontend_dist: Path | None = None) -> FastAPI:
             # the market never touched it (2026-07-29).
             "newly_scored_count": len(scored),
             **research_ledger_payload(
-                state, marks, weights=_owner_position_weights(refresh=update.refresh)
+                state,
+                marks,
+                weights=_owner_position_weights(refresh=update.refresh),
+                ex_events=_tw_ex_events(state),
             ),
         }
 
@@ -3732,6 +3783,7 @@ def create_app(frontend_dist: Path | None = None) -> FastAPI:
             marks,
             weights=_owner_position_weights(refresh=refresh),
             limit=limit,
+            ex_events=_tw_ex_events(state),
         )
 
     @app.get("/api/research/tw-facts")
@@ -3814,7 +3866,9 @@ def create_app(frontend_dist: Path | None = None) -> FastAPI:
                         "currency": row.get("currency"),
                     }
         state = STORE.read_research_ledger_state()
-        payload = research_scan_payload(quotes, _open_call_symbols(state), owned)
+        payload = research_scan_payload(
+            quotes, _open_call_symbols(state), owned, ex_events=_tw_ex_events_today()
+        )
         # Stamp session state so a closed-market scan cannot be mistaken for a
         # fresh tape — its change_pct is the last session's move.
         payload["market_sessions"] = market_sessions_payload()
