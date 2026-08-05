@@ -81,7 +81,7 @@ through the surface the agent has.
 ## Under the hood
 
 One typed contract (139 actions across 16 routes) is the single source of truth; the MCP
-tools, the UI capability catalog and the eval suite are all derived from it. 753 tests on
+tools, the UI capability catalog and the eval suite are all derived from it. 758 tests on
 Windows + Linux CI.
 
 - [Architecture](docs/architecture/ARCHITECTURE.md) · [ADRs](docs/architecture/)

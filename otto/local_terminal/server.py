@@ -3718,6 +3718,44 @@ def create_app(frontend_dist: Path | None = None) -> FastAPI:
         except TwseExRightError:
             return []
 
+    def _tw_announcements_caught_up() -> dict[str, Any]:
+        """Fold in the session TWSE is serving, if this store has not seen it.
+
+        Every other cache in this terminal can be rebuilt by asking again. This
+        one cannot: TWSE serves exactly one session of t187ap04_L and keeps no
+        history, so a day nobody fetched is a day permanently absent. Measured
+        on 2026-08-06 the store held 2026-08-04 while TWSE was already serving
+        375 filings dated 2026-08-05 — a whole session about to be lost with
+        nothing having failed.
+
+        Leaving that to a scheduled task means it is lost whenever the schedule
+        is not running, which is most of the time. Catching up on the refresh
+        the decision round already makes turns "somebody must remember" into
+        "it happens whenever the terminal is used".
+
+        Only on an explicit refresh, and only when the store is actually behind
+        today, so a burst of reads cannot hammer TWSE. A failure degrades to
+        whatever is already stored — sessions_held then reports the gap
+        honestly, which is the whole reason it exists.
+        """
+        state = STORE.read_tw_announcement_state()
+        held = state.get("fetched_sessions") or []
+        today = datetime.now(tz=UTC).strftime("%Y-%m-%d")
+        if held and max(str(s) for s in held) >= today:
+            return state
+        try:
+            fetched = fetch_twse_announcements()
+        except TwseAnnouncementError:
+            return state
+        state, report = merge_announcements(state, fetched)
+        if report["new_count"]:
+            STORE.write_tw_announcement_state(state)
+            _journal_activity(
+                "tw_announcements_refresh",
+                f"自動補抓 TWSE 重大訊息 +{report['new_count']} 則（累積 {report['stored_count']}）",
+            )
+        return state
+
     def _tw_ex_events_today() -> list[dict[str, Any]]:
         """Payouts dated today, for the scan's change_pct.
 
@@ -4974,8 +5012,12 @@ def create_app(frontend_dist: Path | None = None) -> FastAPI:
         # held two real 鴻海 filings: a store nothing reads is a store that
         # closed nothing.
         tw_symbols = [s for s in (update.symbols or []) if str(s).upper().endswith(".TW")]
+        tw_state = (
+            _tw_announcements_caught_up() if (update.refresh and tw_symbols)
+            else STORE.read_tw_announcement_state()
+        )
         filings = (
-            announcements_for(STORE.read_tw_announcement_state(), tw_symbols, limit=3)["by_symbol"]
+            announcements_for(tw_state, tw_symbols, limit=3)["by_symbol"]
             if tw_symbols
             else {}
         )
