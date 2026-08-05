@@ -2,6 +2,23 @@
 
 ## Unreleased
 
+- The TWSE filing store is now wired into the packet the decision loop reads
+  (2026-08-06). Accumulating those filings closed nothing on its own: asked for
+  context on 2834 and 2317, `/api/news/packet` still returned `matched_count: 0`
+  — eight items comprising a target-price note on an unrelated stock, a lottery
+  draw and three CoinDesk pieces — while the terminal already held two real 鴻海
+  filings it never offered.
+  - A company's own material disclosure leads the packet, above any headline
+    that merely mentions it. Keyword matching over a general feed cannot reach
+    a Taiwan single name; the filing can.
+  - Filings take their slots off the top but headlines keep a floor, so a packet
+    is never all filings and never drops them for a lottery result.
+  - `filings_note` says that an absent filing means nothing about whether the
+    company filed — that answer lives in `tw_announcements_read` and its
+    `sessions_held`.
+  - Live, same call as before: `matched_count` 0 → 2, with the buyback progress
+    note and the 8/12 board meeting on top.
+
 - A benchmark that never ran reported itself as a score of zero (2026-08-05).
   Re-running the agent-operability suite to check the README's headline claim
   still held after four rounds of MCP-surface changes, every task came back

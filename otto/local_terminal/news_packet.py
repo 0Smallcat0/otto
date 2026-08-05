@@ -39,6 +39,10 @@ _NAME_SUFFIX_NOISE = (
 )
 _NAME_MIN_CHARS = 3
 
+# Filings carry no per-item URL in the open dataset; this is where a reader goes
+# to look one up rather than a link that would 404.
+TWSE_FILING_URL = "https://mops.twse.com.tw/mops/web/t05st01"
+
 # Aliases only where the ticker alone would miss obvious coverage. Kept small
 # on purpose: a long guessed table would produce confident wrong matches.
 SYMBOL_ALIASES: dict[str, tuple[str, ...]] = {
@@ -122,8 +126,19 @@ def news_packet_payload(
     symbols: list[str] | None = None,
     limit: int = 8,
     symbol_names: dict[str, list[str]] | None = None,
+    filings: dict[str, list[dict[str, Any]]] | None = None,
 ) -> dict[str, Any]:
-    """Bounded headlines + digest + freshness, tagged against held symbols."""
+    """Bounded headlines + digest + freshness, tagged against held symbols.
+
+    `filings` are the companies' own TWSE material disclosures, keyed by symbol.
+    They lead, unconditionally, because keyword matching over a general news
+    feed cannot reach a Taiwan single name: asked for context on 2834 and 2317,
+    this packet returned eight items — a target-price note on an unrelated
+    stock, a lottery draw, three CoinDesk pieces — and matched_count 0, while
+    the terminal held two real 鴻海 filings it never offered. A company's own
+    announcement of a buyback or a board meeting outranks any headline that
+    merely mentions it.
+    """
     bounded_limit = max(1, min(int(limit or 8), PACKET_MAX_ITEMS))
     held = [str(symbol).strip().upper() for symbol in (symbols or []) if str(symbol).strip()]
     names = symbol_names or {}
@@ -174,8 +189,13 @@ def news_packet_payload(
         scored.append((0 if matched else 1, age_minutes if age_minutes >= 0 else 10**6, item))
 
     scored.sort(key=lambda row: (row[0], row[1]))
-    items = [row[2] for row in scored[:bounded_limit]]
-    matched_total = sum(1 for row in scored if row[0] == 0)
+
+    filing_items = _filing_items(filings or {}, held)
+    # Filings take their slots off the top; headlines fill what is left, so a
+    # packet is never all filings and never drops them for a lottery result.
+    headline_room = max(bounded_limit - len(filing_items), bounded_limit // 2)
+    items = filing_items + [row[2] for row in scored[:headline_room]]
+    matched_total = sum(1 for row in scored if row[0] == 0) + len(filing_items)
     ages = [row[1] for row in scored if row[1] < 10**6]
 
     status = news.get("status") if isinstance(news.get("status"), dict) else {}
@@ -189,6 +209,7 @@ def news_packet_payload(
             "item_count": len(items),
             "available_count": len(scored),
             "matched_count": matched_total,
+            "filing_count": len(filing_items),
             "newest_age_minutes": min(ages) if ages else None,
             "oldest_age_minutes": max(ages) if ages else None,
             "digest_entry_count": len(digest_items) if isinstance(digest_items, dict) else 0,
@@ -201,9 +222,16 @@ def news_packet_payload(
             "refresh_action": "news_refresh",
         },
         "matching": {
-            "mode": "keyword",
+            "mode": "keyword_plus_twse_filings",
             "note": MATCH_MODE_NOTE,
             "terms_by_symbol": terms_by_symbol,
+            "filings_note": (
+                "Items with source 'TWSE 重大訊息' are the company's own material "
+                "disclosure, not a keyword match, and lead the packet. Keyword "
+                "matching over a general feed cannot reach a Taiwan single name, "
+                "so their absence here says nothing about whether the company "
+                "filed — read tw_announcements_read and its sessions_held for that."
+            ),
         },
         "digest": {
             "updated_at": str(digest_payload.get("updated_at") or "not started"),
@@ -216,6 +244,49 @@ def news_packet_payload(
             "mutates_local_state": False,
         },
     }
+
+
+def _filing_items(
+    filings: dict[str, list[dict[str, Any]]], held: list[str]
+) -> list[dict[str, Any]]:
+    """TWSE filings shaped as packet items, newest first.
+
+    Only for symbols that were actually asked about — a packet is scoped to the
+    names its caller named, and dropping the whole store in would be the token
+    bloat this surface already had to be cured of once.
+    """
+    rows: list[tuple[str, dict[str, Any]]] = []
+    for symbol in held:
+        for filing in filings.get(symbol, ())[:3]:
+            if not isinstance(filing, dict):
+                continue
+            subject = str(filing.get("subject") or "").replace("\r\n", " ").replace("\n", " ")
+            if not subject:
+                continue
+            spoken = str(filing.get("spoken_at") or "")
+            rows.append(
+                (
+                    spoken,
+                    {
+                        "item_id": str(filing.get("announcement_id") or "")[:80],
+                        "title": subject[:PACKET_TITLE_CHARS],
+                        "source": "TWSE 重大訊息",
+                        "category": "FILING",
+                        "published_at": spoken,
+                        "url": TWSE_FILING_URL,
+                        "summary": str(filing.get("detail") or "").replace("\n", " ")[
+                            :PACKET_SUMMARY_CHARS
+                        ],
+                        "matched_symbols": [symbol],
+                        "company_name": str(filing.get("name") or ""),
+                        "clause": str(filing.get("clause") or ""),
+                        "alert": False,
+                        "is_company_filing": True,
+                    },
+                )
+            )
+    rows.sort(key=lambda row: row[0], reverse=True)
+    return [row[1] for row in rows]
 
 
 def _int(value: Any) -> int:

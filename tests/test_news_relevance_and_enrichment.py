@@ -9,7 +9,80 @@ from __future__ import annotations
 
 from otto.local_terminal import server
 from otto.local_terminal.news_digest import build_live_sections
-from otto.local_terminal.news_packet import news_relevance
+from otto.local_terminal.news_packet import news_packet_payload, news_relevance
+
+
+FILING_2317 = {
+    "announcement_id": "2317|1150804|171819|x",
+    "symbol": "2317.TW",
+    "name": "鴻海",
+    "subject": "公告本公司提報民國115年第2季財務報告之董事會預計召開日期\r\n為115年8月12日",
+    "clause": "第31款",
+    "spoken_at": "2026-08-04",
+    "detail": "1.董事會召集通知日:115/08/04",
+}
+LOTTERY = {
+    "item_id": "cna-1",
+    "title": "今彩539第115189期　頭獎槓龜",
+    "source": "中央社財經",
+    "summary": "開獎號碼29、22、02、04、25。",
+    "age_minutes": 5,
+}
+
+
+def test_a_taiwan_holding_gets_its_own_filings_not_a_lottery_draw() -> None:
+    """The pain point this packet existed to serve and did not.
+
+    Asked for context on 2834 and 2317 it returned eight items — a target-price
+    note on an unrelated stock, a lottery draw, three CoinDesk pieces — and
+    matched_count 0, while the terminal already held two real 鴻海 filings it
+    never offered. Keyword matching over a general feed cannot reach a Taiwan
+    single name; the company's own disclosure can.
+    """
+    packet = news_packet_payload(
+        {"items": [LOTTERY]},
+        symbols=["2317.TW"],
+        filings={"2317.TW": [FILING_2317]},
+    )
+
+    assert packet["summary"]["matched_count"] == 1
+    assert packet["summary"]["filing_count"] == 1
+    first = packet["items"][0]
+    assert first["source"] == "TWSE 重大訊息"
+    assert first["is_company_filing"] is True
+    assert first["matched_symbols"] == ["2317.TW"]
+    assert "8月12日" in first["title"]
+    # The lottery is still there; it is simply no longer the answer.
+    assert any(item["title"].startswith("今彩539") for item in packet["items"])
+
+
+def test_a_filing_never_crowds_out_every_headline() -> None:
+    """A packet of nothing but filings would trade one blind spot for another."""
+    filings = {"2317.TW": [dict(FILING_2317, announcement_id=f"id{i}") for i in range(3)]}
+    headlines = [dict(LOTTERY, item_id=f"h{i}", age_minutes=i) for i in range(20)]
+
+    packet = news_packet_payload(
+        {"items": headlines}, symbols=["2317.TW"], limit=4, filings=filings
+    )
+
+    kinds = [bool(item.get("is_company_filing")) for item in packet["items"]]
+    assert kinds.count(True) == 3
+    assert kinds.count(False) >= 2, "headlines must keep a floor of slots"
+
+
+def test_no_filings_leaves_the_packet_as_it_was() -> None:
+    packet = news_packet_payload({"items": [LOTTERY]}, symbols=["2317.TW"], filings={})
+
+    assert packet["summary"]["filing_count"] == 0
+    assert packet["summary"]["matched_count"] == 0
+    assert not any(item.get("is_company_filing") for item in packet["items"])
+
+
+def test_an_empty_filing_list_is_not_read_as_the_company_being_quiet() -> None:
+    packet = news_packet_payload({"items": [LOTTERY]}, symbols=["2834.TW"], filings={})
+
+    assert "says nothing about whether the company filed" in packet["matching"]["filings_note"]
+    assert packet["matching"]["mode"] == "keyword_plus_twse_filings"
 
 
 def test_holdings_outrank_every_other_bucket() -> None:
