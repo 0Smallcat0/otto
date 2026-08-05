@@ -2,6 +2,29 @@
 
 ## Unreleased
 
+- A benchmark that never ran reported itself as a score of zero (2026-08-05).
+  Re-running the agent-operability suite to check the README's headline claim
+  still held after four rounds of MCP-surface changes, every task came back
+  failed: `claude-sonnet-5: 0/21 (0%)`. The cause was not the terminal — each
+  task cost $0, used no tokens, lasted 945ms and reported
+  `OAuth access token has expired`. No agent ever reached the terminal.
+  - `summarize` now separates tasks that ran from tasks that errored before
+    starting. `success_rate` is `None`, not `0.0`, when nothing was graded, and
+    a partly-errored run scores only what actually executed rather than letting
+    an authentication bounce dilute the rate.
+  - `--report` refuses to write EVAL.md when any task never ran. Publishing a
+    benchmark from a run whose agents never started is the strongest version of
+    the lie this suite exists to prevent.
+  - The failure reason travels with the non-result, quoted from the agent's own
+    output, so "the terminal could not be operated" and "the agent never
+    reached the terminal" cannot be mistaken for each other.
+  - Same run, after the fix: `no score — 0 of 21 tasks ran`.
+  - `--smoke` was clean throughout: 21/21 tasks still have a sound red baseline,
+    so the harness and the graded checks survived the surface changes.
+  - README numbers corrected: 137 → 139 actions (two added this week and never
+    reflected), and the eval table is now dated and marked as covering the
+    20-task suite it actually measured, rather than presented as current.
+
 - An oversize response is now a map, not a severed string (2026-08-05).
   Truncating serialised JSON at a character count guarantees the tail is
   invalid, and a sweep of the core surface found how widespread that was: **7 of

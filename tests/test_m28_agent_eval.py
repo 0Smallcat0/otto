@@ -27,6 +27,68 @@ def _suite() -> dict:
     return load_suite(DEFAULT_TASKS_FILE)
 
 
+def _row(task_id: str, *, model: str = "m", success: bool, agent_error: bool = False) -> dict:
+    return {
+        "task_id": task_id,
+        "category": "read",
+        "model": model,
+        "success": success,
+        "agent_is_error": agent_error,
+        "num_turns": 1 if agent_error else 6,
+        "duration_ms": 900 if agent_error else 30_000,
+        "answer_excerpt": "OAuth access token has expired." if agent_error else "fine",
+        "checks": [],
+    }
+
+
+def test_a_run_where_no_agent_started_has_no_score() -> None:
+    """0/21 was reported for a run that cost $0 and never reached the terminal.
+
+    An expired login produced 21 rows of success:false, one turn each, and the
+    harness printed "0/21 (0%)". That is a score for a benchmark that never
+    executed — and the README invites strangers to run this, so the first thing
+    a misconfigured reader would learn is that the terminal scores zero.
+    """
+    rows = [_row(f"t{i}", success=False, agent_error=True) for i in range(21)]
+
+    stats = summarize(rows)["models"]["m"]
+
+    assert stats["tasks"] == 21
+    assert stats["graded_tasks"] == 0
+    assert stats["success_rate"] is None, "a run that never happened must not report a rate"
+    assert stats["agent_errors"] == 21
+    assert "never ran" in stats["agent_error_note"]
+    assert "OAuth" in stats["agent_error_note"], "the reason must travel with the non-result"
+
+
+def test_a_partly_errored_run_scores_only_what_ran() -> None:
+    rows = [
+        _row("a", success=True),
+        _row("b", success=False),
+        _row("c", success=False, agent_error=True),
+    ]
+
+    stats = summarize(rows)["models"]["m"]
+
+    assert stats["graded_tasks"] == 2
+    assert stats["passed"] == 1
+    assert stats["success_rate"] == 0.5, "the unrun task must not dilute the rate"
+    assert stats["agent_errors"] == 1
+    # Averages describe the runs that happened, not a 900ms authentication bounce.
+    assert stats["avg_turns"] == 6
+    assert stats["by_category"]["read"]["total"] == 2
+
+
+def test_a_clean_run_is_unaffected() -> None:
+    rows = [_row("a", success=True), _row("b", success=True)]
+
+    stats = summarize(rows)["models"]["m"]
+
+    assert stats["success_rate"] == 1.0
+    assert stats["agent_errors"] == 0
+    assert stats["agent_error_note"] is None
+
+
 def test_core_suite_loads_and_validates() -> None:
     suite = _suite()
     assert suite["suite_id"] == "otto-core-v1"
