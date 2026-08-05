@@ -2,6 +2,26 @@
 
 ## Unreleased
 
+- The wheel carries the dashboard (2026-08-05). It never had: the built UI lived
+  in `frontend/dist`, outside the `otto` package, so every wheel shipped 75
+  Python files and no screen. A `uvx` install got a working MCP server, a
+  working API, nothing at `/`, and a README instructing it to run
+  `npm --prefix frontend install` inside a directory the install does not
+  contain. Nothing failed — the API was right, there was simply no screen.
+  - Vite builds into `otto/local_terminal/ui`, `package-data` ships it, and the
+    server resolves the packaged UI first with `frontend/dist` kept as a
+    fallback so an older checkout does not lose its screen.
+  - The bundle is committed, deliberately. `uvx --from git+https://…` builds the
+    wheel on the user's machine, which has no node, so an uncommitted bundle is
+    an absent one. Committing a build artefact is only honest if it cannot
+    drift, so CI rebuilds it and fails on any diff or untracked file.
+  - `tests/test_packaged_ui.py` pins the three parts to each other: the build
+    writes into the package, packaging ships what it writes, and `index.html`
+    references assets that are actually committed — a half-committed build
+    installs cleanly and then serves a blank page.
+  - Verified by installing the wheel into an empty venv with no checkout and no
+    node: `GET /` returns the dashboard and the referenced bundle serves.
+
 - A dividend stopped reading as a loss (2026-08-04). 台企銀 (2834), a holding of
   the owner's, closed at 16.90 against an 18.20 previous close. Every surface
   called it −7.14%, the largest fall in the universe, and sorted it to the top

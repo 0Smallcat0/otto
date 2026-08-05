@@ -1,0 +1,17 @@
+# The committed dashboard bundle is a build artefact whose entire justification
+# is that it is byte-identical to what `npm --prefix frontend run build` emits.
+# CI proves that by rebuilding and failing on any diff, so line-ending
+# conversion cannot be allowed anywhere near it: with core.autocrlf=true a
+# Windows checkout rewrites these files, and the guard then compares LF output
+# against a CRLF working copy and reports drift that does not exist — or, worse,
+# normalises away a real one. Treated as binary, the bytes committed are the
+# bytes checked out on every platform.
+otto/local_terminal/ui/** -text
+
+# Pinning the output is not enough on its own. vite copies this template into
+# the bundle verbatim, line endings and all, so a CRLF checkout of it produces a
+# CRLF index.html and a byte-different build — 401 bytes on Windows against 389
+# on Linux, for identical source. The guard would then pass on the Linux runner
+# and fire for every Windows contributor. Any build input copied through
+# untouched has to be pinned the same way the output is.
+frontend/index.html -text

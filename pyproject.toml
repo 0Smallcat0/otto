@@ -42,6 +42,12 @@ dev = [
 where = ["."]
 include = ["otto", "otto.*"]
 
+# The built dashboard. Without this the wheel carries 75 Python files and no
+# screen, which is what every `uvx` install got: an API, and a README telling
+# them to build a frontend directory the wheel does not contain.
+[tool.setuptools.package-data]
+"otto.local_terminal" = ["ui/**/*"]
+
 [tool.ruff]
 target-version = "py312"
 line-length = 100
