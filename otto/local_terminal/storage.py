@@ -45,6 +45,10 @@ from otto.local_terminal.research_ledger import (
     default_research_ledger_state,
     normalize_research_ledger_state,
 )
+from otto.local_terminal.twse_announcements import (
+    default_announcement_state,
+    normalize_announcement_state,
+)
 from otto.local_terminal.watchlist import default_watchlist_state, normalize_watchlist_state
 from otto.local_terminal.forum import default_forum_state, normalize_forum_state
 from otto.local_terminal.markets import default_markets_layout, normalize_markets_layout
@@ -170,6 +174,12 @@ class LocalStateStore:
     @property
     def research_ledger_path(self) -> Path:
         return self.root / "artifacts" / "research" / "research_ledger.json"
+
+    @property
+    def tw_announcement_path(self) -> Path:
+        # Accumulated because TWSE serves one session at a time: what is not
+        # kept here cannot be recovered from the endpoint tomorrow.
+        return self.root / "artifacts" / "research" / "tw_announcements.json"
 
     @property
     def portfolio_state_path(self) -> Path:
@@ -1071,6 +1081,17 @@ class LocalStateStore:
             keep_backups=STATE_BACKUP_COUNT,
         )
 
+    def read_tw_announcement_state(self) -> dict[str, Any]:
+        return _read_json(self.tw_announcement_path, default_announcement_state())
+
+    def write_tw_announcement_state(self, payload: dict[str, Any]) -> dict[str, Any]:
+        return _write_json(
+            self.tw_announcement_path,
+            normalize_announcement_state(payload),
+            self.root,
+            keep_backups=STATE_BACKUP_COUNT,
+        )
+
     def write_paper_history_state(self, payload: dict[str, Any]) -> dict[str, Any]:
         return _write_json(
             self.paper_history_path,
@@ -1127,6 +1148,7 @@ class LocalStateStore:
             ("tw_equity_paper_state", self.tw_equity_paper_state_path),
             ("paper_history", self.paper_history_path),
             ("research_ledger", self.research_ledger_path),
+            ("tw_announcements", self.tw_announcement_path),
             ("portfolio_state", self.portfolio_state_path),
             ("watchlist_state", self.watchlist_state_path),
             ("news_digest_state", self.news_digest_state_path),
