@@ -2,6 +2,31 @@
 
 ## Unreleased
 
+- Two things a stranger hits in the first minute (2026-08-05). Setup friction is
+  the most-cited reason people abandon MCP servers before seeing what one does,
+  and "different clients support different protocol versions, so a server might
+  work with one client but completely fail with another" is the most-cited way
+  they break. <https://mbsamuel.substack.com/p/how-can-the-model-context-protocol>
+  <https://dev.to/sky98/the-real-story-what-nobody-tells-you-about-mcp-server-setup-2o3f>
+  - **Protocol version negotiation was a spec violation.** `initialize` echoed
+    whatever version the client asked for, so a client on a version this server
+    does not implement was told yes, never got its chance to disconnect, and hit
+    the mismatch later as some unrelated call misbehaving. The spec: "If the
+    server supports the requested protocol version, it MUST respond with the
+    same version. Otherwise, the server MUST respond with another protocol
+    version it supports." `SUPPORTED_PROTOCOL_VERSIONS` now names the three
+    releases whose wire surface is actually implemented — the common core of
+    inputSchema plus text content, no outputSchema or structuredContent — and
+    anything else gets the latest supported version back.
+  - **The entry point handed strangers the maintainer's backlog.**
+    `terminal_status`, the tool that tells you to call it first, returned this
+    project's milestone tracker: "M23.68 Final non-live completion audit", a
+    mission-ledger path under `docs/planning/`, a do_not_redo count, and a
+    resume_rule pointing at `PROJECT_STATE.md` — files a wheel does not contain.
+    It now answers what a first call should: health, the risk gates, whether
+    this install has anything in it yet, and what to try first, with the fact
+    that nothing needs an API key stated rather than left to be discovered.
+
 - Taiwan single-name filings, accumulated (2026-08-05). Asked for context on the
   owner's two Taiwan holdings, the news layer returned `matched_count: 0`
   against 120 stories, all Federal Reserve orders and CoinDesk. On the only two

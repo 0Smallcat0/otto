@@ -68,7 +68,15 @@ def _package_version() -> str:
 
 SERVER_NAME = "otto"
 SERVER_VERSION = _package_version()
-DEFAULT_PROTOCOL_VERSION = "2025-06-18"
+
+# Every released protocol version whose wire surface this server actually
+# implements. The claim is narrow on purpose: the tool surface is inputSchema
+# plus `content: [{type: "text"}]` and isError, with no outputSchema, no
+# structuredContent, no resources, prompts or logging — the common core of all
+# three, so all three are honest. A version added to this tuple without the
+# features it introduced is the same lie the negotiation bug below produced.
+SUPPORTED_PROTOCOL_VERSIONS = ("2024-11-05", "2025-03-26", "2025-06-18")
+DEFAULT_PROTOCOL_VERSION = SUPPORTED_PROTOCOL_VERSIONS[-1]
 DEFAULT_BASE_URL = os.environ.get("LOCAL_TERMINAL_URL", "http://127.0.0.1:8765")
 MAX_RESULT_CHARS = 40000
 
@@ -159,10 +167,10 @@ TOOLS: list[dict[str, Any]] = [
     {
         "name": "terminal_status",
         "description": (
-            "Situational awareness entry point. Returns terminal health plus the "
-            "Command Center summary: current milestone, goal status, active task, "
-            "risk gates (live/secrets), recovery count, and provider freshness. "
-            "Call this first before operating."
+            "Orientation entry point. Returns terminal health, the risk gates "
+            "(live trading / secrets), whether this install has any positions or "
+            "journaled calls yet, and what is worth doing first. Call this "
+            "before operating."
         ),
         "inputSchema": {"type": "object", "properties": {}, "additionalProperties": False},
     },
@@ -256,19 +264,76 @@ TOOLS: list[dict[str, Any]] = [
 
 
 def _tool_terminal_status(client: TerminalClient, _args: dict[str, Any]) -> Any:
+    """Orient whoever just connected — not this project's own build backlog.
+
+    This used to return the Command Center's milestone tracker: "M23.68 Final
+    non-live completion audit", a mission-ledger path under docs/planning/, a
+    do_not_redo count, and a resume_rule instructing the reader to go and read
+    PROJECT_STATE.md. Someone who has just installed a financial terminal calls
+    this first — the tool description tells them to — and receives the
+    maintainer's development state, pointing at files a wheel does not even
+    contain. Setup friction is the most-cited reason people abandon MCP servers
+    before seeing what one does; handing them somebody else's backlog at the
+    entry point is friction of our own making.
+
+    What a first call should answer: is it alive, what is switched off, is there
+    anything here yet, and what is worth doing next.
+    """
     _, health = client.call("GET", "/api/health")
     _, center = client.call("GET", "/api/command-center")
     summary: dict[str, Any] = {"health": health}
     if isinstance(center, dict):
-        summary["command_center"] = {
-            "current_milestone": center.get("current_milestone"),
-            "mission_ledger": _compact(center.get("mission_ledger")),
-            "final_goal_audit": _compact(center.get("final_goal_audit")),
-            "active_task": center.get("active_task"),
-            "risk_gates": center.get("risk_gates"),
-            "recovery_queue_count": _safe_len(center.get("recovery_queue")),
-        }
+        summary["risk_gates"] = center.get("risk_gates")
+        summary["recovery_queue_count"] = _safe_len(center.get("recovery_queue"))
+    summary["getting_started"] = _getting_started(client)
     return summary
+
+
+def _getting_started(client: TerminalClient) -> dict[str, Any]:
+    """Whether this install has anything in it yet, and what to do about it.
+
+    A fresh install has no positions, no journaled calls and an empty quote
+    cache. Reporting that plainly is the difference between "there is nothing
+    here" and a reader concluding the terminal is broken — and it is the same
+    honesty rule the rest of this codebase runs on: absent data is said out
+    loud, never rendered as a zero.
+    """
+    status, ledger = client.call("GET", "/api/research/ledger")
+    status_p, portfolio = client.call("GET", "/api/portfolio")
+    calls = ledger.get("call_count_total") if isinstance(ledger, dict) else None
+    books = _safe_len(portfolio.get("portfolios")) if isinstance(portfolio, dict) else None
+    fresh = not calls and not books
+    return {
+        "journaled_calls": calls if status == 200 else None,
+        "portfolios": books if status_p == 200 else None,
+        "looks_like_a_fresh_install": fresh,
+        "no_account_needed": (
+            "Public market data, backtests, paper books and the judgment ledger "
+            "all work with no API key and no sign-up. Optional keys only widen "
+            "data coverage; nothing here is gated behind one."
+        ),
+        "try_first": (
+            [
+                "refresh_public_data, then run_action markets_quote_lookup with a "
+                "symbol you care about — TSLA, 2330.TW and BTC-USD all resolve",
+                "run_action research_scan to see the research universe ranked by "
+                "today's move",
+                "list_actions to see everything operable, or open the dashboard at "
+                "the health url",
+            ]
+            if fresh
+            else [
+                "run_action research_ledger_read for the journaled calls and their "
+                "scorecard",
+                "run_action research_scan?refresh=true for today's movers and any "
+                "holding with no journaled view",
+            ]
+        ),
+        "note": (
+            "Live trading, credential entry and code execution are not switched "
+            "off — they are unreachable through this tool surface."
+        ),
+    }
 
 
 def _tool_list_routes(client: TerminalClient, _args: dict[str, Any]) -> Any:
@@ -458,10 +523,22 @@ def handle_request(message: dict[str, Any], client: TerminalClient) -> dict[str,
         requested = None
         if isinstance(message.get("params"), dict):
             requested = message["params"].get("protocolVersion")
+        # The spec: "If the server supports the requested protocol version, it
+        # MUST respond with the same version. Otherwise, the server MUST respond
+        # with another protocol version it supports." This used to echo whatever
+        # was asked for, so a client requesting a version this server does not
+        # implement was told yes and carried on — the client never gets its
+        # chance to disconnect, and the mismatch surfaces later as some
+        # unrelated call behaving strangely. That is the shape of the most
+        # common complaint about MCP servers in the wild: works with one client,
+        # fails inexplicably with another.
+        negotiated = (
+            requested if requested in SUPPORTED_PROTOCOL_VERSIONS else DEFAULT_PROTOCOL_VERSION
+        )
         return _result(
             request_id,
             {
-                "protocolVersion": requested or DEFAULT_PROTOCOL_VERSION,
+                "protocolVersion": negotiated,
                 "capabilities": {"tools": {"listChanged": False}},
                 "serverInfo": {"name": SERVER_NAME, "version": SERVER_VERSION},
                 "instructions": (

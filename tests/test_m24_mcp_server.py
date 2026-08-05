@@ -13,8 +13,9 @@ from typing import Any
 
 from fastapi.testclient import TestClient
 
-from otto.local_terminal import mcp_server
+from otto.local_terminal import mcp_server, server
 from otto.local_terminal.server import create_app
+from otto.local_terminal.storage import LocalStateStore
 
 
 def _make_client() -> mcp_server.TerminalClient:
@@ -56,6 +57,82 @@ def _call_tool(client: mcp_server.TerminalClient, name: str,
     return result, parsed
 
 
+def test_the_entry_point_orients_a_stranger_not_the_maintainer(tmp_path, monkeypatch) -> None:
+    """The first call anyone makes, and what it used to hand them.
+
+    terminal_status told the reader to call it first and then returned this
+    project's own build tracker: "M23.68 Final non-live completion audit", a
+    mission-ledger path under docs/planning/, a do_not_redo count, and a
+    resume_rule instructing them to go read PROJECT_STATE.md — files a wheel
+    does not contain. Setup friction is the most-cited reason people abandon MCP
+    servers before seeing what one does.
+    https://mbsamuel.substack.com/p/how-can-the-model-context-protocol
+    """
+    # A virgin state root, because "fresh install" is the case under test and
+    # the developer's own checkout is full of positions and journaled calls.
+    monkeypatch.setattr(server, "STORE", LocalStateStore(root=tmp_path))
+    client = _make_client()
+
+    payload = mcp_server._tool_terminal_status(client, {})
+
+    assert "mission_ledger" not in payload
+    assert "current_milestone" not in payload
+    assert "final_goal_audit" not in payload
+    flat = json.dumps(payload, ensure_ascii=False)
+    assert "docs/planning" not in flat, "still pointing at files an install does not have"
+    assert "PROJECT_STATE" not in flat
+
+    start = payload["getting_started"]
+    assert start["looks_like_a_fresh_install"] is True  # nothing has been created here
+    assert start["journaled_calls"] == 0
+    assert start["try_first"], "a fresh install must be told what to do first"
+    assert "no API key" in start["no_account_needed"]
+    # The safety line stays: it is the reason to trust the thing, not noise.
+    assert payload["risk_gates"] is not None
+
+
+def test_an_unsupported_protocol_version_is_answered_with_one_we_speak() -> None:
+    """The spec's MUST, and the most common way an MCP server fails in the wild.
+
+    "If the server supports the requested protocol version, it MUST respond with
+    the same version. Otherwise, the server MUST respond with another protocol
+    version it supports." — and then, "if the client does not support the
+    version in the server's response, it SHOULD disconnect."
+
+    This used to echo whatever was asked for. A client on a version this server
+    does not implement was told yes, never got its chance to disconnect, and hit
+    the mismatch later as some unrelated call misbehaving — which is exactly the
+    reported shape: works with one client, fails inexplicably with another.
+    https://modelcontextprotocol.io/specification/2025-06-18/basic/lifecycle
+    """
+    client = _make_client()
+
+    for version in mcp_server.SUPPORTED_PROTOCOL_VERSIONS:
+        echoed = _rpc(client, "initialize", {"protocolVersion": version})
+        assert echoed is not None
+        assert echoed["result"]["protocolVersion"] == version
+
+    for unsupported in ("1.0.0", "2099-01-01", "", "not-a-version"):
+        answered = _rpc(client, "initialize", {"protocolVersion": unsupported})
+        assert answered is not None
+        got = answered["result"]["protocolVersion"]
+        assert got != unsupported, f"claimed to speak {unsupported!r}"
+        assert got == mcp_server.DEFAULT_PROTOCOL_VERSION
+
+    # A client that omits the field entirely still gets a real version back.
+    missing = _rpc(client, "initialize", {})
+    assert missing is not None
+    assert missing["result"]["protocolVersion"] == mcp_server.DEFAULT_PROTOCOL_VERSION
+
+
+def test_the_default_is_the_latest_version_we_claim() -> None:
+    """The spec says the fallback SHOULD be the latest the server supports."""
+    assert mcp_server.DEFAULT_PROTOCOL_VERSION == mcp_server.SUPPORTED_PROTOCOL_VERSIONS[-1]
+    assert list(mcp_server.SUPPORTED_PROTOCOL_VERSIONS) == sorted(
+        mcp_server.SUPPORTED_PROTOCOL_VERSIONS
+    )
+
+
 def test_initialize_and_tools_list() -> None:
     client = _make_client()
 
@@ -63,6 +140,7 @@ def test_initialize_and_tools_list() -> None:
     assert init is not None
     assert init["result"]["serverInfo"]["name"] == "otto"
     assert "tools" in init["result"]["capabilities"]
+    assert init["result"]["protocolVersion"] == "2025-06-18"
 
     # An initialized notification (no id) yields no response.
     assert _rpc(client, "notifications/initialized", request_id=None) is None
@@ -86,7 +164,10 @@ def test_terminal_status_and_routes() -> None:
     result, parsed = _call_tool(client, "terminal_status")
     assert result["isError"] is False
     assert parsed["health"]["route_count"] == 16
-    assert parsed["command_center"]["current_milestone"]
+    # The milestone tracker used to be here; the entry point now orients the
+    # caller instead. See test_the_entry_point_orients_a_stranger_not_the_maintainer.
+    assert parsed["risk_gates"] is not None
+    assert parsed["getting_started"]["try_first"]
 
     result, parsed = _call_tool(client, "list_routes")
     assert parsed["count"] == 16
