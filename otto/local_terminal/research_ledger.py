@@ -203,6 +203,15 @@ def record_call(state: dict[str, Any], payload: dict[str, Any]) -> tuple[dict[st
         raise ResearchLedgerError("ref_price (a live mark at call time) is required")
 
     invalidation = _decimal(payload.get("invalidation"))
+    # A relative thesis cannot be falsified by an absolute level: "the index is
+    # the better vehicle" survives any market-wide move. Named in excess-return
+    # points instead, so a rally that lifts both cannot mark it wrong.
+    invalidation_excess = _decimal(payload.get("invalidation_excess_pct"))
+    if invalidation_excess is not None and invalidation_excess <= 0:
+        raise ResearchLedgerError(
+            "invalidation_excess_pct is a magnitude in percentage points and must be "
+            "positive; the losing direction is inferred from the stance"
+        )
     entry_low = _decimal(payload.get("entry_low"))
     entry_high = _decimal(payload.get("entry_high"))
     horizon_days = _positive_int(payload.get("horizon_days"), default=30)
@@ -259,6 +268,9 @@ def record_call(state: dict[str, Any], payload: dict[str, Any]) -> tuple[dict[st
         "entry_low": str(entry_low) if entry_low is not None else None,
         "entry_high": str(entry_high) if entry_high is not None else None,
         "invalidation": str(invalidation) if invalidation is not None else None,
+        "invalidation_excess_pct": (
+            f"{invalidation_excess:.2f}" if invalidation_excess is not None else None
+        ),
         "weight_pct": f"{weight_pct:.2f}" if weight_pct is not None else None,
         "cap_pct": f"{cap_pct:.2f}" if cap_pct is not None else None,
         "horizon_days": horizon_days,
@@ -349,6 +361,46 @@ def _invalidation_breached(
             return price >= invalidation  # a ceiling
         return False  # struck exactly at its own invalidation: no side to read
     return False  # size_down is scored on realised risk, not on a level
+
+
+def _excess_invalidation_breached(
+    stance: str,
+    threshold: Decimal | None,
+    ref_price: Decimal | None,
+    price: Decimal,
+    benchmark_ref: Decimal | None,
+    benchmark_now: Decimal | None,
+) -> bool:
+    """Whether a *relative* thesis has been proven wrong, ignoring absolute price.
+
+    Some calls make no claim about where a price goes. "0050 is the better
+    vehicle for the same exposure" is true or false regardless of whether
+    Taiwan rallies or crashes — and an absolute level cannot express it. The
+    00982A reduce struck at 21.61 named 23.4, which is 4.8% away; a market-wide
+    5% rally reaches it with the index rising just as much, excess unchanged,
+    and the board would mark a thesis that never failed as 看錯了. That is not
+    hypothetical: the 2026-07-30 reduce was destroyed the next session by a
+    market-wide limit-up, +10% on the index it was measured against.
+
+    So a call may name a threshold in excess return instead. reduce and avoid
+    are wrong when the thing they meant to step away from outruns its market by
+    that much; accumulate and hold are wrong when the thing they meant to own
+    lags by it. Everything stays None-safe: without both benchmark ends this
+    reports nothing rather than guessing, exactly as the scorer already does.
+    """
+    if threshold is None or threshold <= 0:
+        return False
+    if ref_price is None or ref_price <= 0:
+        return False
+    if benchmark_ref is None or benchmark_now is None or benchmark_ref <= 0:
+        return False
+    excess = ((price / ref_price) - (benchmark_now / benchmark_ref)) * 100
+    win_above = _BENCHMARK_WIN_ABOVE.get(stance)
+    if win_above is None:
+        return False  # size_down makes no relative-return claim either
+    # A call that means to own something is wrong when it lags by the
+    # threshold; one that means to stay out is wrong when it leads by it.
+    return excess <= -threshold if win_above else excess >= threshold
 
 
 def _outcome(
@@ -484,6 +536,15 @@ def score_calls(
         stance = str(call.get("stance"))
         invalidation = _decimal(call.get("invalidation"))
         breached = _invalidation_breached(stance, invalidation, price, ref)
+        if not breached:
+            breached = _excess_invalidation_breached(
+                stance,
+                _decimal(call.get("invalidation_excess_pct")),
+                ref,
+                price,
+                _decimal(call.get("benchmark_ref_price")),
+                marks.get(str(call.get("benchmark_symbol") or "")),
+            )
         if not breached and not _is_mature(call, now):
             continue  # still running, thesis intact
         favor = _favor_pct(stance, ref, price)

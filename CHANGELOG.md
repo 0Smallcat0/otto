@@ -2,6 +2,29 @@
 
 ## Unreleased
 
+- A relative thesis can now name a relative invalidation (2026-08-06). Some
+  calls make no claim about where a price goes — "the index is the better
+  vehicle for the same exposure" is true or false whether the market rallies or
+  crashes — and an absolute level cannot express that. The 00982A reduce struck
+  at 21.61 named 23.4, 4.8% away; a market-wide 5% move reaches it with the
+  index rising just as much, excess unchanged, and the board would mark a thesis
+  that never failed as 看錯了. Not hypothetical: the 2026-07-30 reduce died the
+  next session to a market-wide limit-up, +10% on the index it was measured
+  against.
+  - `invalidation_excess_pct` names the threshold in percentage points of excess
+    return against the call's benchmark. The losing direction comes from the
+    stance — reduce and avoid are wrong when the thing they stepped away from
+    outruns its market, accumulate and hold when the thing they own lags it — so
+    only a positive magnitude is accepted.
+  - Without both benchmark ends it reports nothing rather than guessing, the
+    same rule the rest of the scorer runs on.
+  - The board renders the condition it is actually scored on: the 00982A row now
+    reads 贏過 0050.TW 8.00% instead of 漲過 23.4.
+  - The guard drill caught a weak test before the code: the first version used a
+    5% market-wide rally against an 8-point threshold, so it passed even with
+    the benchmark leg removed and proved nothing. Rewritten to the real event —
+    2026-07-31's +10% limit-up — which fails loudly without the benchmark.
+
 - The TWSE filing store is now wired into the packet the decision loop reads
   (2026-08-06). Accumulating those filings closed nothing on its own: asked for
   context on 2834 and 2317, `/api/news/packet` still returned `matched_count: 0`
