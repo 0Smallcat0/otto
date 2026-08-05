@@ -543,16 +543,84 @@ def _text_content(payload: Any, is_error: bool = False) -> dict[str, Any]:
     """
     if isinstance(payload, str):
         text = payload
-    else:
-        text = json.dumps(payload, ensure_ascii=False, separators=(",", ":"), default=str)
+        if len(text) > MAX_RESULT_CHARS:
+            original = len(text)
+            text = (
+                text[:MAX_RESULT_CHARS]
+                + f"\n... [truncated {original - MAX_RESULT_CHARS} of {original} chars]"
+            )
+        return {"content": [{"type": "text", "text": text}], "isError": is_error}
+
+    text = json.dumps(payload, ensure_ascii=False, separators=(",", ":"), default=str)
     if len(text) > MAX_RESULT_CHARS:
-        original = len(text)
-        text = (
-            text[:MAX_RESULT_CHARS]
-            + f"\n... [truncated {original - MAX_RESULT_CHARS} of {original} chars; use a more "
-            "specific action from list_actions to narrow the response]"
+        text = json.dumps(
+            _oversize_notice(payload, len(text)),
+            ensure_ascii=False,
+            separators=(",", ":"),
+            default=str,
         )
     return {"content": [{"type": "text", "text": text}], "isError": is_error}
+
+
+def _keys_by_size(payload: dict[str, Any]) -> list[dict[str, Any]]:
+    """Each top-level key and what it weighs, largest first."""
+    rows: list[dict[str, Any]] = []
+    for key, value in payload.items():
+        chars = len(json.dumps(value, ensure_ascii=False, separators=(",", ":"), default=str))
+        row: dict[str, Any] = {"key": str(key), "chars": chars}
+        if isinstance(value, list):
+            row["list_length"] = len(value)
+        rows.append(row)
+    rows.sort(key=lambda r: -int(r["chars"]))
+    return rows
+
+
+def _oversize_notice(payload: Any, original: int) -> dict[str, Any]:
+    """A response too big to send, described in JSON that still parses.
+
+    Cutting the serialised string at a character count guarantees the result is
+    no longer valid JSON — it ends mid-key or mid-escape. Measured across the
+    core surface, that was happening to 7 of 16 routes through get_route
+    (markets, crypto, paper, news, quant_lab, settings, profile) and to two more
+    actions besides, so an agent asking what a route holds got a severed blob it
+    could not parse and had to read as prose.
+
+    A truncation notice is the one response that must never be malformed,
+    because it is what the agent has to act on to recover. So instead of a
+    prefix of the payload, this returns its shape: which keys exist and how
+    large each one is, sorted by size, so the next call can be narrower on
+    purpose rather than by guesswork.
+    """
+    notice: dict[str, Any] = {
+        "truncated": True,
+        "reason": "response exceeded the tool result limit and was replaced by this summary",
+        "original_chars": original,
+        "limit_chars": MAX_RESULT_CHARS,
+    }
+    if isinstance(payload, dict):
+        sizes = _keys_by_size(payload)
+        notice["keys_by_size"] = sizes
+        # A wrapper whose whole weight sits in one key describes nothing:
+        # get_route returns {route_id, endpoint, status, state}, so naming
+        # `state` as the large one tells the agent what it already knew.
+        # Descend once, into the key that is actually the payload.
+        if sizes and sizes[0]["chars"] > original * 0.8:
+            inner = payload.get(sizes[0]["key"])
+            if isinstance(inner, dict):
+                notice["largest_key"] = sizes[0]["key"]
+                notice["inner_keys_by_size"] = _keys_by_size(inner)
+        notice["hint"] = (
+            "The keys above are this payload's own top level, largest first. Call "
+            "a narrower action from list_actions (route_id filter), or one that "
+            "targets the single key you need, rather than re-requesting the whole "
+            "response."
+        )
+    elif isinstance(payload, list):
+        notice["list_length"] = len(payload)
+        notice["hint"] = "A list too long to send; request a narrower action or a filtered view."
+    else:
+        notice["hint"] = "Request a narrower action from list_actions."
+    return notice
 
 
 def _wrapped_http_failure(payload: Any) -> int | None:

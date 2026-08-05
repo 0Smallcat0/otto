@@ -57,6 +57,72 @@ def _call_tool(client: mcp_server.TerminalClient, name: str,
     return result, parsed
 
 
+def test_every_route_answers_with_parseable_json() -> None:
+    """Measured: 7 of 16 routes came back severed.
+
+    get_route hands the route's own page to the model, and cutting the
+    serialised string at a character count guarantees the tail is invalid JSON.
+    markets, crypto, paper, news, quant_lab, settings and profile all arrived
+    that way — 44% of the routes, through one of only six tools — so an agent
+    asking what a route holds got a blob it could not parse.
+    """
+    client = _make_client()
+
+    for route in mcp_server._tool_list_routes(client, {})["routes"]:
+        result = mcp_server._text_content(
+            mcp_server._tool_get_route(client, {"route_id": route["route_id"]})
+        )
+        text = result["content"][0]["text"]
+        json.loads(text)  # raises if the truncation severed the structure
+
+
+def test_an_oversize_response_becomes_a_map_of_where_the_weight_is() -> None:
+    """The truncation notice is the one response that must never be malformed.
+
+    It is what the agent has to act on to recover, so instead of a prefix of the
+    payload it returns the payload's shape — which keys exist, how big each is,
+    largest first — so the next call can be narrower on purpose.
+    """
+    payload = {"small": "x", "huge": {"a": "y" * 60_000, "b": "z" * 10}}
+
+    text = mcp_server._text_content(payload)["content"][0]["text"]
+    notice = json.loads(text)
+
+    assert notice["truncated"] is True
+    assert notice["original_chars"] > mcp_server.MAX_RESULT_CHARS
+    assert len(text) < mcp_server.MAX_RESULT_CHARS
+    assert [row["key"] for row in notice["keys_by_size"]] == ["huge", "small"]
+    # One key holding nearly everything describes nothing, so it descends once.
+    assert notice["largest_key"] == "huge"
+    assert [row["key"] for row in notice["inner_keys_by_size"]] == ["a", "b"]
+
+
+def test_a_list_payload_reports_its_length_rather_than_a_severed_prefix() -> None:
+    text = mcp_server._text_content([{"x": "y" * 100} for _ in range(2_000)])["content"][0]["text"]
+    notice = json.loads(text)
+
+    assert notice["truncated"] is True
+    assert notice["list_length"] == 2_000
+
+
+def test_a_spread_out_payload_is_not_wrongly_descended_into() -> None:
+    """Descending is only right when one key really is the payload."""
+    payload = {"a": "x" * 20_000, "b": "y" * 20_000, "c": "z" * 20_000}
+
+    notice = json.loads(mcp_server._text_content(payload)["content"][0]["text"])
+
+    assert notice["truncated"] is True
+    assert "inner_keys_by_size" not in notice
+
+
+def test_an_oversize_plain_string_still_truncates_as_text() -> None:
+    """Error messages are already prose; there is no structure to preserve."""
+    text = mcp_server._text_content("e" * 60_000)["content"][0]["text"]
+
+    assert text.startswith("eeee")
+    assert "[truncated" in text
+
+
 def test_the_action_catalogue_fits_in_the_result_limit_and_still_parses() -> None:
     """The regression that matters: it used to arrive truncated into prose.
 
