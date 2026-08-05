@@ -2,6 +2,24 @@
 
 ## Unreleased
 
+- The TWSE filing store catches itself up instead of waiting for a scheduler
+  (2026-08-06). Every other cache here can be rebuilt by asking again; this one
+  cannot. TWSE serves exactly one session of `t187ap04_L` and keeps no history,
+  so a day nobody fetched is a day permanently absent.
+  - Measured: the store held 2026-08-04 with 345 filings while TWSE was already
+    serving 375 dated 2026-08-05 — a whole session hours from being lost, with
+    nothing having failed and no error anywhere.
+  - Leaving it to a scheduled task means it is lost whenever the schedule is not
+    running, which is most of the time. The catch-up now happens on the refresh
+    a decision round already makes, so it turns "somebody must remember" into
+    "it happens whenever the terminal is used".
+  - Only on an explicit refresh, only for Taiwan symbols, and only when a cheap
+    local check says the store is behind today — a burst of rounds cannot hammer
+    TWSE. An unreachable TWSE degrades to what is stored, and `sessions_held`
+    then reports the gap, which is the whole reason that field exists.
+  - Live: 345 filings across one session → 720 across two, as a side effect of
+    one packet refresh.
+
 - A backtest now says whether its sample can carry the question (2026-08-06).
   Ran the README's own three example prompts against a genuinely empty state
   root — the first time that has been checked. All three work; the second one
