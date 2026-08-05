@@ -2281,6 +2281,10 @@ class ResearchCallUpdate(BaseModel):
     entry_low: str | float | int | None = Field(default=None)
     entry_high: str | float | int | None = Field(default=None)
     invalidation: str | float | int | None = Field(default=None)
+    # For a thesis about relative performance, where an absolute level cannot
+    # express the claim: percentage points of excess return against the market's
+    # benchmark. The losing direction comes from the stance.
+    invalidation_excess_pct: str | float | int | None = Field(default=None)
     # Sizing views: the position's share of the book and the cap it breaches.
     # Required for stance=size_down — a concentration call without a number is
     # just an opinion.

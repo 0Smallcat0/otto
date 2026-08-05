@@ -570,6 +570,7 @@ interface ResearchCall {
   distributed_per_share?: string | null;
   unrealized_pct?: string | null;
   invalidation?: string | null;
+  invalidation_excess_pct?: string | null;
   matures_at: string;
   weight_pct?: string | null;
   mark_weight_pct?: string | null;
@@ -688,10 +689,27 @@ export function JudgmentBoard() {
     raw ? String(Number.parseFloat(raw)) : "—";
   // "what would prove me wrong" reads as a direction, not a bare number.
   const wrongIf = (call: ResearchCall) => {
-    if (!call.invalidation) return "—";
-    return call.stance === "avoid" || call.stance === "reduce"
-      ? `${t("漲過")} ${call.invalidation}`
-      : `${t("跌破")} ${call.invalidation}`;
+    const stayOut = call.stance === "avoid" || call.stance === "reduce";
+    const parts: string[] = [];
+    if (call.invalidation) {
+      parts.push(
+        stayOut
+          ? `${t("漲過")} ${call.invalidation}`
+          : `${t("跌破")} ${call.invalidation}`
+      );
+    }
+    // A relative thesis is not falsified by any absolute level, so the board
+    // has to show the condition the engine actually scores it on — otherwise a
+    // market-wide rally reads as "this call was wrong".
+    if (call.invalidation_excess_pct) {
+      const bench = call.benchmark_symbol ?? t("大盤");
+      parts.push(
+        stayOut
+          ? `${t("贏過")} ${bench} ${call.invalidation_excess_pct}%`
+          : `${t("輸給")} ${bench} ${call.invalidation_excess_pct}%`
+      );
+    }
+    return parts.length ? parts.join(t("，或")) : "—";
   };
   return (
     <div className="ft-card" data-testid="wall-judgments">
