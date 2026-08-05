@@ -105,7 +105,11 @@ def test_packet_is_bounded_and_small() -> None:
 
 def test_matching_is_declared_keyword_based() -> None:
     packet = news_packet_payload(_news([]), {}, symbols=["BTCUSDT"])
-    assert packet["matching"]["mode"] == "keyword"
+    # The mode must never claim more than keyword matching for the headline
+    # feed. TWSE filings are named separately because they are not matched at
+    # all — they are the company's own disclosure, keyed by symbol.
+    assert packet["matching"]["mode"].startswith("keyword")
+    assert "twse_filings" in packet["matching"]["mode"]
     assert "not evidence" in packet["matching"]["note"]
     assert packet["matching"]["terms_by_symbol"]["BTCUSDT"] == ["btc", "bitcoin"]
 

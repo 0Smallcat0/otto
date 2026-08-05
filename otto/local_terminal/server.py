@@ -4964,12 +4964,24 @@ def create_app(frontend_dist: Path | None = None) -> FastAPI:
         # degrades to a source_error note, never a failed packet.
         if update.refresh and update.symbols:
             _merge_yahoo_symbol_news(payload, update.symbols)
+        # The companies' own TWSE disclosures for the names asked about. Without
+        # them this packet answered a question about 2834 and 2317 with a
+        # lottery draw and three CoinDesk pieces while the terminal already
+        # held two real 鴻海 filings: a store nothing reads is a store that
+        # closed nothing.
+        tw_symbols = [s for s in (update.symbols or []) if str(s).upper().endswith(".TW")]
+        filings = (
+            announcements_for(STORE.read_tw_announcement_state(), tw_symbols, limit=3)["by_symbol"]
+            if tw_symbols
+            else {}
+        )
         return news_packet_payload(
             payload,
             news_digest_payload(STORE.read_news_digest_state()),
             symbols=update.symbols,
             limit=update.limit,
             symbol_names=_reference_security_names(update.symbols),
+            filings=filings,
         )
 
     @app.post("/api/news/refresh")
