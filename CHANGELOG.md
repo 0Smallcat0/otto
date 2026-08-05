@@ -2,6 +2,27 @@
 
 ## Unreleased
 
+- An oversize response is now a map, not a severed string (2026-08-05).
+  Truncating serialised JSON at a character count guarantees the tail is
+  invalid, and a sweep of the core surface found how widespread that was: **7 of
+  16 routes** came back unparseable through `get_route` — markets, crypto,
+  paper, news, quant_lab, settings, profile — plus two read-only actions
+  (`provider_refresh_lifecycle_inspect`, `command_center_preflight_matrix`).
+  Asking what a route holds returned a blob the agent could not parse.
+  - The truncation notice is the one response that must never be malformed,
+    because it is what the agent acts on to recover. It now returns the
+    payload's shape instead of a prefix: which keys exist and what each weighs,
+    largest first.
+  - When a single key holds over 80% of the payload the notice descends one
+    level, because `get_route`'s wrapper is `{route_id, endpoint, status,
+    state}` and naming `state` as the large one tells the agent nothing it did
+    not know. markets now reports `research_summary` 99,384, `stocks` 60,905,
+    `quote_reference_coverage` 29,655 — enough to choose a narrower action.
+  - Plain strings still truncate as text; an error message has no structure to
+    preserve.
+  - markets went from 40,108 characters of unparseable prose to 504 characters
+    of actionable JSON, and all 16 routes now parse.
+
 - The catalogue an agent reads to learn the terminal arrived truncated into
   prose (2026-08-05). `list_actions` unfiltered returned every field of all 134
   actions: 40,106 characters, roughly 10,000 tokens, past `MAX_RESULT_CHARS` and
