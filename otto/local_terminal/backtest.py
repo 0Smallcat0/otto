@@ -1606,6 +1606,7 @@ def _run_long_flat_strategy(
         "strategy_label": _strategy_label(config["strategy"]),
         "timeframe": config["timeframe"],
         "run_state": "complete",
+        # `sample` is stamped after the risk metrics are computed; see below.
         "initial_cash": config["initial_cash"],
         "final_equity": _money(final_equity),
         "return_pct": _percent((final_equity / Decimal(config["initial_cash"])) - Decimal("1")),
@@ -1625,6 +1626,13 @@ def _run_long_flat_strategy(
     returns_curve = _returns_curve(equity_curve)
     returns_analysis = _returns_analysis(returns_curve, summary["return_pct"], max_drawdown)
     risk_metrics = _risk_metrics(returns_curve, trades, len(candles), config["timeframe"])
+    summary["sample"] = _sample_sufficiency(
+        round_trips=_int_or_zero(risk_metrics.get("round_trip_count")),
+        candles=len(candles),
+        timeframe=str(config["timeframe"]),
+        first_opened_at=provenance["source_first_opened_at"],
+        last_closed_at=provenance["source_last_closed_at"],
+    )
     metrics = {
         "total_return_pct": summary["return_pct"],
         "max_drawdown_pct": _percent(max_drawdown / Decimal("100")),
@@ -2255,6 +2263,100 @@ _PERIODS_PER_YEAR = {
     "4h": 2190,
     "1d": 365,
 }
+
+
+def _int_or_zero(value: Any) -> int:
+    try:
+        return int(str(value))
+    except (TypeError, ValueError):
+        return 0
+
+
+# Round trips needed before a metric means anything. Not invented here: 30 is the
+# floor at which sample means begin to behave, 100 the point where performance
+# metrics are called reliable, 200+ what institutional practice asks for across
+# multiple regimes.
+#   https://www.backtestbase.com/education/how-many-trades-for-backtest
+#   https://medium.com/@trading.dude/how-many-trades-are-enough-a-guide-to-statistical-significance-in-backtesting-093c2eac6f05
+SAMPLE_FLOOR_ROUND_TRIPS = 30
+SAMPLE_RELIABLE_ROUND_TRIPS = 100
+SAMPLE_DEFENSIBLE_ROUND_TRIPS = 200
+
+# The metrics that look most like a verdict and are least stable at low n: every
+# one of them is a ratio whose denominator is a variance estimate or a small
+# count, and an annualised Sharpe from twenty hours of candles is an artifact of
+# the annualisation, not a fact about the strategy.
+SAMPLE_FRAGILE_METRICS = (
+    "sharpe_ratio",
+    "sortino_ratio",
+    "profit_factor",
+    "win_rate_pct",
+    "avg_trade_pnl",
+)
+
+
+def _sample_sufficiency(
+    *,
+    round_trips: int,
+    candles: int,
+    timeframe: str,
+    first_opened_at: str | None,
+    last_closed_at: str | None,
+) -> dict[str, Any]:
+    """Whether this run can support the question "is it any good".
+
+    A fresh install following the README verbatim — "backtest an SMA cross on
+    BTCUSDT and tell me if it's any good" — got back a −3.29% return, a Sharpe
+    of −68.81 and a 0% win rate from 79 fifteen-minute candles and 11 round
+    trips: about twenty hours of one market, in one regime. Those numbers read
+    exactly like a verdict and nothing in the response said otherwise.
+
+    The numbers are not hidden or suppressed; they are the run's real output and
+    a reader may still want them. What changes is that the response now states
+    what they can carry, which is the same rule the quote and benchmark layers
+    already follow: a weak measurement must not render identically to a strong
+    one.
+    """
+    if round_trips >= SAMPLE_DEFENSIBLE_ROUND_TRIPS:
+        verdict, reads = "defensible", "metrics can carry a conclusion"
+    elif round_trips >= SAMPLE_RELIABLE_ROUND_TRIPS:
+        verdict, reads = "reliable", "metrics are usable; regime coverage still matters"
+    elif round_trips >= SAMPLE_FLOOR_ROUND_TRIPS:
+        verdict, reads = "directional_only", "above the inference floor, below reliable"
+    else:
+        verdict, reads = "not_a_verdict", "below the floor for statistical inference"
+    span = _span_note(candles, timeframe, first_opened_at, last_closed_at)
+    return {
+        "round_trip_count": round_trips,
+        "closed_candles": candles,
+        "span": span,
+        "verdict": verdict,
+        "reads_as": reads,
+        "floor_round_trips": SAMPLE_FLOOR_ROUND_TRIPS,
+        "reliable_round_trips": SAMPLE_RELIABLE_ROUND_TRIPS,
+        "fragile_metrics": list(SAMPLE_FRAGILE_METRICS),
+        "note": (
+            f"{round_trips} round trips against a {SAMPLE_FLOOR_ROUND_TRIPS}-trip floor for "
+            f"statistical inference and {SAMPLE_RELIABLE_ROUND_TRIPS} for reliable metrics. "
+            "fragile_metrics are ratios whose denominator is a variance estimate or a small "
+            "count — an annualised Sharpe from a sample this short measures the annualisation. "
+            "The figures are real output, not a conclusion: say so when reporting them."
+        )
+        if verdict != "defensible"
+        else (
+            f"{round_trips} round trips clears the {SAMPLE_DEFENSIBLE_ROUND_TRIPS} commonly "
+            "asked for; check the span covers more than one market regime before concluding."
+        ),
+    }
+
+
+def _span_note(
+    candles: int, timeframe: str, first_opened_at: str | None, last_closed_at: str | None
+) -> str:
+    """How much real time the sample covers, in words a reader can weigh."""
+    if first_opened_at and last_closed_at:
+        return f"{candles} {timeframe} candles, {first_opened_at} to {last_closed_at}"
+    return f"{candles} {timeframe} candles"
 
 
 def _risk_metrics(

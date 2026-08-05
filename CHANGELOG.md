@@ -2,6 +2,30 @@
 
 ## Unreleased
 
+- A backtest now says whether its sample can carry the question (2026-08-06).
+  Ran the README's own three example prompts against a genuinely empty state
+  root — the first time that has been checked. All three work; the second one
+  lies by omission.
+  - "Backtest an SMA cross on BTCUSDT and tell me if it's any good" returns
+    −3.29%, a Sharpe of −68.81 and a 0% win rate. Those come from 79
+    fifteen-minute candles and 11 round trips: about twenty hours of one market
+    in one regime, 02:45 to 22:29 on a single day. Nothing in the response said
+    the sample could not support a verdict, and the figures read exactly like
+    one.
+  - `summary.sample` reports round trips, candles, the real span in wall-clock
+    terms, a verdict band, and which metrics are worst affected. Thresholds are
+    external: 30 round trips is the floor at which sample means begin to
+    behave, 100 where metrics are called reliable, 200+ what institutional
+    practice asks across regimes.
+    <https://www.backtestbase.com/education/how-many-trades-for-backtest>
+  - The numbers are not suppressed — they are the run's real output. What
+    changes is that a weak measurement no longer renders identically to a
+    strong one, the same rule the quote and benchmark layers already follow.
+  - A sample that clears 200 is still told to check its span covers more than
+    one regime; trade count alone is not sufficiency.
+  - Provenance checked while there: the fresh-install backtest runs on real
+    Binance candles with hashes, not the deterministic generator.
+
 - A relative thesis can now name a relative invalidation (2026-08-06). Some
   calls make no claim about where a price goes — "the index is the better
   vehicle for the same exposure" is true or false whether the market rallies or

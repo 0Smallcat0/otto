@@ -32,6 +32,93 @@ def _record(state, **kw):
     return record_call(state, payload)
 
 
+def _relative_call(state=None, **kw):
+    """A reduce whose thesis is about the vehicle, not the price level."""
+    payload = {
+        "symbol": "00982A.TW",
+        "market": "tw_equity",
+        "stance": "reduce",
+        "thesis": "同曝險下 0050 是較優載具，與大盤方向無關",
+        "ref_price": "21.61",
+        "benchmark_price": "100.65",
+        "invalidation_excess_pct": "8",
+        "horizon_days": 45,
+    }
+    payload.update(kw)
+    return record_call(state or default_research_ledger_state(), payload)
+
+
+def test_a_market_wide_rally_does_not_falsify_a_relative_thesis() -> None:
+    """The failure this exists to stop, in the numbers that produced it.
+
+    The 00982A reduce was struck at 21.61 against 0050 at 100.65 and named an
+    absolute 23.4 — 4.8% away. A market-wide 5% rally reaches it with the index
+    rising just as much: excess unchanged, thesis untouched, and the board would
+    mark it 看錯了. That is not hypothetical — the 2026-07-30 reduce died the
+    next session to a market-wide limit-up, +10% on the index it was measured
+    against.
+    """
+    state, _ = _relative_call()
+    # The real event, not a token move: 2026-07-31 was a market-wide limit-up,
+    # +10% on the index. Both legs rise 10%, excess is exactly zero — and the
+    # move must be larger than the 8-point threshold, or the test passes even
+    # with the benchmark leg removed and proves nothing.
+    marks = {"00982A.TW": Decimal("23.771"), "0050.TW": Decimal("110.715")}
+
+    state, scored = score_calls(state, marks, now=datetime.now(tz=UTC))
+
+    assert scored == [], "a rally that lifted both cannot falsify a relative claim"
+    assert state["calls"][0]["status"] == "open"
+
+
+def test_a_relative_thesis_is_falsified_by_relative_underperformance() -> None:
+    """It still has to be able to be wrong, or it is not a judgment."""
+    state, _ = _relative_call()
+    # 00982A +10%, 0050 flat: the thing reduced outran its index by 10 points.
+    marks = {"00982A.TW": Decimal("23.77"), "0050.TW": Decimal("100.65")}
+
+    state, scored = score_calls(state, marks, now=datetime.now(tz=UTC))
+
+    assert len(scored) == 1
+    assert scored[0]["outcome"] == "invalidated"
+
+
+def test_the_losing_direction_follows_the_stance() -> None:
+    """A hold is wrong when it lags; a reduce is wrong when it leads."""
+    state, _ = _relative_call(stance="hold", invalidation_excess_pct="8")
+    lagging = {"00982A.TW": Decimal("19.45"), "0050.TW": Decimal("100.65")}  # -10pp
+
+    _, scored = score_calls(state, lagging, now=datetime.now(tz=UTC))
+    assert len(scored) == 1, "a hold that lagged its index by 10 points is wrong"
+
+    state, _ = _relative_call(stance="hold", invalidation_excess_pct="8")
+    leading = {"00982A.TW": Decimal("23.77"), "0050.TW": Decimal("100.65")}  # +10pp
+    _, scored = score_calls(state, leading, now=datetime.now(tz=UTC))
+    assert scored == [], "a hold that beat its index is not wrong"
+
+
+def test_a_missing_benchmark_mark_never_invents_a_breach() -> None:
+    """Same rule as everywhere else here: absent data is not a verdict."""
+    state, _ = _relative_call()
+
+    _, scored = score_calls(state, {"00982A.TW": Decimal("23.77")}, now=datetime.now(tz=UTC))
+
+    assert scored == []
+
+
+def test_an_absolute_and_a_relative_level_can_both_be_named() -> None:
+    state, call = _relative_call(invalidation="23.4")
+
+    assert call["invalidation"] == "23.4"
+    assert call["invalidation_excess_pct"] == "8.00"
+
+
+def test_a_negative_excess_threshold_is_refused() -> None:
+    """The magnitude is the input; the side comes from the stance."""
+    with pytest.raises(ResearchLedgerError, match="must be positive"):
+        _relative_call(invalidation_excess_pct="-8")
+
+
 def test_record_infers_market_and_name_from_universe() -> None:
     state, call = _record(default_research_ledger_state(), symbol="2330.tw")
     assert call["symbol"] == "2330.TW"
