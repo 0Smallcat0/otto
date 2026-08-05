@@ -2334,6 +2334,66 @@ ACTION_CONTRACTS: tuple[AgentActionContract, ...] = (
         (),
     ),
     AgentActionContract(
+        "tw_announcements_refresh",
+        "paper",
+        "Accumulate today's TWSE company filings — the endpoint keeps no history",
+        "POST",
+        "/api/research/tw-announcements/refresh",
+        "no body; fetches the current session from TWSE OpenAPI t187ap04_L and appends",
+        (
+            "fetched_count",
+            "new_count",
+            "already_known_count",
+            "stored_count",
+            "sessions_held",
+            "safety",
+        ),
+        (
+            "TWSE serves one session per call and keeps no history, so a day not "
+            "fetched is a day permanently missing — this is the one action where "
+            "skipping a run loses information rather than delaying it; upstream is "
+            "read-only and the local store is append-only, existing filings are "
+            "never rewritten"
+        ),
+        True,
+        True,
+        False,
+        False,
+        "public_read_only_tw_filings_local_append_only",
+        ("provider_unavailable",),
+    ),
+    AgentActionContract(
+        "tw_announcements_read",
+        "paper",
+        "What Taiwan companies said about themselves, for names holding real money",
+        "GET",
+        "/api/research/tw-announcements",
+        (
+            "optional ?symbols=2834.TW,2317.TW (defaults to the owner's TW holdings "
+            "plus every TW symbol with an open call), ?limit=N per symbol"
+        ),
+        (
+            "by_symbol",
+            "matched_count",
+            "sessions_held",
+            "stored_count",
+            "note",
+            "source",
+        ),
+        (
+            "read-only; an empty list for a symbol means no filing on the sessions "
+            "this store actually holds — listed in sessions_held — never that the "
+            "company said nothing, so read the two together before concluding "
+            "silence"
+        ),
+        False,
+        False,
+        False,
+        False,
+        "local_tw_filing_store_read_only",
+        (),
+    ),
+    AgentActionContract(
         "research_scan",
         "paper",
         "Scan the self-sourced universe for candidates to research",

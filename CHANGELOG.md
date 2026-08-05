@@ -2,6 +2,35 @@
 
 ## Unreleased
 
+- Taiwan single-name filings, accumulated (2026-08-05). Asked for context on the
+  owner's two Taiwan holdings, the news layer returned `matched_count: 0`
+  against 120 stories, all Federal Reserve orders and CoinDesk. On the only two
+  names holding real money, the agent was blind — and the 7% "crash" that turned
+  out to be an ex-dividend was found by reading TWSE's raw API by hand.
+  - Surveying the field first rather than assuming: 116 finance MCP servers on
+    one directory, and every comparison of the leading ones describes the same
+    shape — an API passthrough with "no discussion of Taiwan, Asia-specific
+    data, portfolio tracking, paper trading functionality, or AI agents making
+    investment judgments — only data retrieval".
+    <https://shibui.finance/guide-best-mcp-server-stock-data>
+  - Taiwan is uncovered for a reason visible in the data: TWSE's open endpoints
+    "serve only the current period so historical data must be accumulated over
+    time". <https://blog.itick.org/en/stock-api/taiwan-stock-api-comparison-guide>
+    One fetch of `t187ap04_L` returns one session — 345 filings across 241
+    companies, and nothing from the day before. Accumulating turns the same free
+    endpoint into a history no passthrough can answer from.
+  - `tw_announcements_refresh` folds a session in, append-only and de-duplicated;
+    `tw_announcements_read` answers for the owner's TW holdings and every TW
+    symbol with an open call. `sessions_held` travels with every answer so an
+    empty result reads as "no filing on the days we hold" rather than "the
+    company said nothing".
+  - TWSE ships the subject column as `"主旨 "` with a trailing space. Reading the
+    obvious key raises KeyError, and swallowing that would have stored every
+    filing with a blank subject while reporting a full row count.
+  - A fetch failure raises rather than returning an empty list: "the free tier
+    silently returns incomplete data without an error" is the most-cited
+    complaint about this whole category, and silence-as-success reproduces it.
+
 - The wheel carries the dashboard (2026-08-05). It never had: the built UI lived
   in `frontend/dist`, outside the `otto` package, so every wheel shipped 75
   Python files and no screen. A `uvx` install got a working MCP server, a

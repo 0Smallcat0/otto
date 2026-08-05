@@ -221,6 +221,12 @@ from otto.local_terminal.twse_company import (
     tw_margin_balance_payload,
     tw_valuation_screen_payload,
 )
+from otto.local_terminal.twse_announcements import (
+    TwseAnnouncementError,
+    announcements_for,
+    fetch_twse_announcements,
+    merge_announcements,
+)
 from otto.local_terminal.twse_corporate_actions import (
     TwseExRightError,
     fetch_twse_ex_rights,
@@ -3865,6 +3871,55 @@ def create_app(frontend_dist: Path | None = None) -> FastAPI:
         # closed (weekend/after-hours) a scan's "movers" are last session's, so
         # the round can hold without paying to fetch quotes/news that can't move.
         return market_sessions_payload()
+
+    @app.post("/api/research/tw-announcements/refresh")
+    def refresh_tw_announcements() -> dict[str, Any]:
+        """Fold today's TWSE filings into the accumulated store.
+
+        TWSE serves one session per call and keeps no history, so a day not
+        fetched is a day permanently absent — this is the one action in the
+        terminal where not running it loses information rather than delaying it.
+        """
+        try:
+            fetched = fetch_twse_announcements()
+        except TwseAnnouncementError as exc:
+            raise HTTPException(status_code=502, detail=str(exc)) from exc
+        state, report = merge_announcements(STORE.read_tw_announcement_state(), fetched)
+        STORE.write_tw_announcement_state(state)
+        _journal_activity(
+            "tw_announcements_refresh",
+            f"TWSE 重大訊息 +{report['new_count']} 則（累積 {report['stored_count']}）",
+        )
+        return {
+            **report,
+            "read_action": "tw_announcements_read",
+            "source": "twse_openapi_t187ap04",
+            "safety": {"read_only_upstream": True, "local_append_only": True},
+        }
+
+    @app.get("/api/research/tw-announcements")
+    def read_tw_announcements(symbols: str = "", limit: int = 10) -> dict[str, Any]:
+        """What the companies themselves said, for names that hold real money.
+
+        Defaults to the owner's Taiwan holdings plus every TW symbol carrying an
+        open call, because those are the names where an unread filing costs
+        something.
+        """
+        wanted = [s.strip().upper() for s in symbols.split(",") if s.strip()]
+        if not wanted:
+            state = STORE.read_research_ledger_state()
+            owned = set(_owner_holdings_universe(STORE.read_portfolio_state()))
+            called = {
+                str(c.get("symbol", "")).upper()
+                for c in state.get("calls", [])
+                if isinstance(c, dict) and c.get("status") == "open"
+            }
+            wanted = sorted(s for s in owned | called if s.upper().endswith(".TW"))
+        return {
+            **announcements_for(STORE.read_tw_announcement_state(), wanted, limit=max(1, limit)),
+            "requested_symbols": wanted,
+            "refresh_action": "tw_announcements_refresh",
+        }
 
     @app.get("/api/research/scan")
     def scan_research_universe(refresh: bool = False) -> dict[str, Any]:
