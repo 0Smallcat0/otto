@@ -53,6 +53,21 @@ jobs:
       - name: Type check + build
         run: npm run build
 
+      # The built dashboard is committed under otto/local_terminal/ui because a
+      # `uvx --from git+https://…` install builds the wheel on a machine with no
+      # node — an uncommitted bundle is an absent one, and that is exactly how
+      # every installed user got an API and no screen. Committing a build
+      # artefact only stays honest if it cannot drift, so this rebuilds it and
+      # fails on any difference. Vite is deterministic: identical source gives
+      # byte-identical output down to the content hash in the filename.
+      - name: Committed UI bundle matches this source
+        working-directory: .
+        run: |
+          git diff --exit-code --stat otto/local_terminal/ui \
+            || { echo "::error::otto/local_terminal/ui is stale — run 'npm --prefix frontend run build' and commit the result"; exit 1; }
+          test -z "$(git status --porcelain otto/local_terminal/ui)" \
+            || { echo "::error::the build produced untracked files under otto/local_terminal/ui — commit them"; git status --porcelain otto/local_terminal/ui; exit 1; }
+
       # The rendering rules the wall and the readers decide by. Five defects
       # shipped because the backend computed a qualifying fact and the render
       # step dropped it — nothing failed, since the API was right and only the

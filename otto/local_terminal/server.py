@@ -438,7 +438,29 @@ def _port_from_env(name: str, default: int) -> int:
 DEFAULT_HOST = os.environ.get("LOCAL_TERMINAL_HOST", "").strip() or "127.0.0.1"
 DEFAULT_PORT = _port_from_env("LOCAL_TERMINAL_PORT", 8765)
 REPO_ROOT = Path(__file__).resolve().parents[2]
-DEFAULT_FRONTEND_DIST = REPO_ROOT / "frontend" / "dist"
+# The built UI ships inside the package, so an installed run has a dashboard
+# without needing node or a checkout. It used to resolve only to
+# REPO_ROOT/frontend/dist, which does not exist in a wheel — every `uvx` user
+# got an API and no screen, while the README told them to build a directory
+# they did not have. `npm run build` writes here, and the assets are committed
+# precisely because a git+https install builds the wheel on a machine that has
+# no node to build them with.
+PACKAGED_UI_DIST = Path(__file__).resolve().parent / "ui"
+LEGACY_FRONTEND_DIST = REPO_ROOT / "frontend" / "dist"
+
+
+def _resolve_frontend_dist() -> Path:
+    """Packaged UI first, then a checkout's own build directory.
+
+    The legacy path stays supported so an older checkout that still builds into
+    frontend/dist keeps its screen instead of silently losing it.
+    """
+    if (PACKAGED_UI_DIST / "index.html").is_file():
+        return PACKAGED_UI_DIST
+    return LEGACY_FRONTEND_DIST
+
+
+DEFAULT_FRONTEND_DIST = _resolve_frontend_dist()
 STORE = LocalStateStore(root=state_root_from_env())
 MARKET_FETCHER = fetch_public_crypto_tickers
 CRYPTO_DETAIL_FETCHER = fetch_public_crypto_detail
@@ -5731,13 +5753,16 @@ def main() -> None:
     import uvicorn
 
     base_url = f"http://{DEFAULT_HOST}:{DEFAULT_PORT}"
-    if (DEFAULT_FRONTEND_DIST / "index.html").is_file():
+    # Resolved at startup, not at import: a checkout that builds the UI while
+    # the server is stopped should find it on the next run.
+    ui_dist = _resolve_frontend_dist()
+    if (ui_dist / "index.html").is_file():
         print(f"[local-terminal] UI + API ready at {base_url}/")
     else:
         print(
             f"[local-terminal] API ready at {base_url}/api/health "
-            "(UI not built yet — run: npm --prefix frontend install "
-            "&& npm --prefix frontend run build)"
+            "(no built UI found — from a checkout run: npm --prefix frontend "
+            "install && npm --prefix frontend run build)"
         )
     uvicorn.run(
         "otto.local_terminal.server:app",
