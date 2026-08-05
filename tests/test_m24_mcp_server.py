@@ -57,6 +57,75 @@ def _call_tool(client: mcp_server.TerminalClient, name: str,
     return result, parsed
 
 
+def test_the_action_catalogue_fits_in_the_result_limit_and_still_parses() -> None:
+    """The regression that matters: it used to arrive truncated into prose.
+
+    list_actions is the second call an agent makes — the one where it finds out
+    what the terminal can do. Unfiltered it returned every field of all 134
+    actions: 40,106 characters, past MAX_RESULT_CHARS, cut mid-structure. The
+    agent got a mangled blob that no longer parsed and had to guess.
+
+    Each MCP tool definition is reported to cost 200-500 tokens and a handful of
+    connected servers can burn 30,000-60,000 before the first user message; a
+    single response spending 10,000 on a catalogue is the same disease.
+    https://thenewstack.io/how-to-reduce-mcp-token-bloat/
+    """
+    client = _make_client()
+
+    result, parsed = _call_tool(client, "list_actions")
+
+    text = result["content"][0]["text"]
+    assert "[truncated" not in text, "the catalogue no longer fits in one response"
+    assert len(text) < mcp_server.MAX_RESULT_CHARS
+    assert isinstance(parsed, dict), "truncation left it as prose instead of JSON"
+    assert parsed["count"] > 100
+
+
+def test_the_unfiltered_catalogue_is_an_index_and_says_how_to_drill_in() -> None:
+    client = _make_client()
+
+    _, index = _call_tool(client, "list_actions")
+    row = index["actions"][0]
+
+    # Enough to choose with...
+    assert set(row) >= {"action_id", "route_id", "label", "method"}
+    # ...and nothing to read.
+    assert "request_contract" not in row
+    assert "safety_class" not in row
+    assert "endpoint" not in row
+    assert index["route_ids"], "an index with no way to drill in is a dead end"
+    assert "route_id=" in index["detail_hint"]
+
+    _, detail = _call_tool(client, "list_actions", {"route_id": index["route_ids"][0]})
+    assert "request_contract" in detail["actions"][0]
+    assert "endpoint" in detail["actions"][0]
+    assert "detail_hint" not in detail  # already drilled in
+
+
+def test_write_and_confirm_flags_survive_the_index() -> None:
+    """The index may drop detail; it must not drop the safety-relevant bits.
+
+    Which actions write state and which need confirmation is exactly what an
+    agent needs before choosing, not after.
+    """
+    client = _make_client()
+
+    _, index = _call_tool(client, "list_actions")
+
+    assert any(row.get("local_mutation") for row in index["actions"])
+    assert any(row.get("requires_confirmation") for row in index["actions"])
+
+
+def test_tool_results_are_serialised_compactly() -> None:
+    """Indentation is 13.5-22.4% of every payload and carries no information."""
+    payload = {"a": 1, "b": [1, 2], "c": {"d": "e"}}
+
+    text = mcp_server._text_content(payload)["content"][0]["text"]
+
+    assert text == '{"a":1,"b":[1,2],"c":{"d":"e"}}'
+    assert "\n" not in text
+
+
 def test_a_failed_action_is_reported_as_a_failed_tool_call() -> None:
     """Every failure used to arrive as a successful tool call.
 
@@ -260,8 +329,15 @@ def test_list_actions_excludes_disabled_and_secret() -> None:
     ids = {action["action_id"] for action in parsed["actions"]}
     assert "markets_quote_reference_coverage" in ids
     assert "nodes_execute_disabled" not in ids
-    for action in parsed["actions"]:
-        assert "secret" not in (action["safety_class"] or "")
+    # safety_class only rides on the detailed view, so the filter is checked
+    # there — across every route, so nothing hides in one the index skipped.
+    checked = 0
+    for route_id in parsed["route_ids"]:
+        detail = mcp_server._tool_list_actions(client, {"route_id": route_id})
+        for action in detail["actions"]:
+            assert "secret" not in (action["safety_class"] or "")
+            checked += 1
+    assert checked == parsed["count"], "a route in the index returned no detail"
 
 
 def test_run_action_refuses_disabled_action() -> None:
