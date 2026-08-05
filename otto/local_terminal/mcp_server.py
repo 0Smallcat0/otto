@@ -512,6 +512,29 @@ def _text_content(payload: Any, is_error: bool = False) -> dict[str, Any]:
     return {"content": [{"type": "text", "text": text}], "isError": is_error}
 
 
+def _wrapped_http_failure(payload: Any) -> int | None:
+    """The upstream HTTP status a tool wrapped, when that status was a failure.
+
+    run_action and refresh_public_data hand back the terminal's own response
+    with its status inside. Every one of them was reported to the client as
+    isError=false, so a 422 for a malformed argument, a 404 for a mistyped
+    action, or a 400 refusing a stale-quote order all arrived as *successful*
+    tool calls with the failure buried in JSON the model had to notice on its
+    own. That is the single most-cited complaint about this whole category of
+    server — the protocol works, the data does not — and it is the difference
+    between an agent retrying with corrected arguments and an agent confidently
+    continuing on a result it never got.
+
+    Only an integer status counts: a job payload whose `status` is the string
+    "queued" is a queued job, not a failure.
+    """
+    if isinstance(payload, dict):
+        status = payload.get("status")
+        if isinstance(status, int) and not 200 <= status < 300:
+            return status
+    return None
+
+
 def handle_request(message: dict[str, Any], client: TerminalClient) -> dict[str, Any] | None:
     """Handle one JSON-RPC message. Returns a response, or None for notifications."""
 
@@ -567,7 +590,8 @@ def handle_request(message: dict[str, Any], client: TerminalClient) -> dict[str,
             return _result(request_id, _text_content(f"unknown tool '{name}'", is_error=True))
         try:
             output = handler(client, arguments)
-            return _result(request_id, _text_content(output))
+            failed = _wrapped_http_failure(output)
+            return _result(request_id, _text_content(output, is_error=failed is not None))
         except TerminalUnavailable as exc:
             return _result(request_id, _text_content(str(exc), is_error=True))
         except ValueError as exc:
