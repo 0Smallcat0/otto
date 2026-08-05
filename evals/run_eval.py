@@ -537,26 +537,61 @@ def summarize(rows: list[dict[str, Any]]) -> dict[str, Any]:
     summary: dict[str, Any] = {"models": {}, "task_count": len({r["task_id"] for r in rows})}
     for model in models:
         model_rows = [row for row in rows if row["model"] == model]
-        successes = [row for row in model_rows if row["success"]]
-        turns = [row["num_turns"] for row in model_rows if isinstance(row.get("num_turns"), int)]
-        durations = [
-            row["duration_ms"] for row in model_rows if isinstance(row.get("duration_ms"), int)
-        ]
+        # A task whose agent never ran is not a task the agent failed. An
+        # expired token produced 21 rows of `success: false`, cost $0 and one
+        # turn each, and the harness reported "0/21 (0%)" — a score for a
+        # benchmark that never executed. Anyone running this without a live
+        # login, which the README invites, would read that as the terminal
+        # being unoperable. Scoring only over what actually ran keeps a
+        # non-result from wearing the shape of a result.
+        errored = [row for row in model_rows if row.get("agent_is_error")]
+        graded = [row for row in model_rows if not row.get("agent_is_error")]
+        successes = [row for row in graded if row["success"]]
+        turns = [row["num_turns"] for row in graded if isinstance(row.get("num_turns"), int)]
+        durations = [row["duration_ms"] for row in graded if isinstance(row.get("duration_ms"), int)]
         by_category: dict[str, dict[str, int]] = {}
-        for row in model_rows:
+        for row in graded:
             bucket = by_category.setdefault(row["category"], {"total": 0, "passed": 0})
             bucket["total"] += 1
             bucket["passed"] += 1 if row["success"] else 0
         summary["models"][model] = {
             "tasks": len(model_rows),
+            "graded_tasks": len(graded),
             "passed": len(successes),
-            "success_rate": round(len(successes) / len(model_rows), 4) if model_rows else 0.0,
+            # None, not 0.0: nothing was measured, so there is no rate.
+            "success_rate": round(len(successes) / len(graded), 4) if graded else None,
             "avg_turns": round(sum(turns) / len(turns), 1) if turns else None,
             "avg_duration_ms": int(sum(durations) / len(durations)) if durations else None,
             "harness_errors": sum(1 for row in model_rows if row.get("harness_error")),
+            "agent_errors": len(errored),
+            "agent_error_note": (
+                _agent_error_note(errored) if errored else None
+            ),
             "by_category": by_category,
         }
     return summary
+
+
+def _agent_error_note(errored: list[dict[str, Any]]) -> str:
+    """Say why the agent never ran, using its own words.
+
+    The distinction that matters is between a terminal an agent could not
+    operate and an agent that never reached the terminal, and the excerpt is
+    usually explicit about which — "OAuth access token has expired" is not a
+    verdict on anything this repository ships.
+    """
+    excerpt = ""
+    for row in errored:
+        text = str(row.get("answer_excerpt") or "").strip()
+        if text:
+            excerpt = text[:200]
+            break
+    reason = f" first reported: {excerpt}" if excerpt else ""
+    return (
+        f"{len(errored)} task(s) never ran — the agent errored before reaching the "
+        f"terminal, so they are excluded from the score rather than counted as "
+        f"failures.{reason}"
+    )
 
 
 def render_report(
@@ -592,9 +627,12 @@ def render_report(
         duration = (
             f"{stats['avg_duration_ms'] / 1000:.0f}s" if stats["avg_duration_ms"] else "n/a"
         )
+        rate = (
+            "n/a" if stats["success_rate"] is None else f"{stats['success_rate'] * 100:.0f}%"
+        )
         lines.append(
-            f"| `{model}` | {stats['tasks']} | {stats['passed']} | "
-            f"{stats['success_rate'] * 100:.0f}% | {stats['avg_turns'] or 'n/a'} | {duration} |"
+            f"| `{model}` | {stats['graded_tasks']} | {stats['passed']} | "
+            f"{rate} | {stats['avg_turns'] or 'n/a'} | {duration} |"
         )
     lines.append("")
     lines.append("## By category")
@@ -756,12 +794,30 @@ def main(argv: list[str] | None = None) -> int:
                    indent=2),
         encoding="utf-8",
     )
+    unrun = 0
     for model, stats in summary["models"].items():
-        print(
-            f"{model}: {stats['passed']}/{stats['tasks']} "
-            f"({stats['success_rate'] * 100:.0f}%), avg turns {stats['avg_turns']}"
-        )
+        unrun += stats["agent_errors"]
+        if stats["success_rate"] is None:
+            print(f"{model}: no score — 0 of {stats['tasks']} tasks ran")
+        else:
+            print(
+                f"{model}: {stats['passed']}/{stats['graded_tasks']} "
+                f"({stats['success_rate'] * 100:.0f}%), avg turns {stats['avg_turns']}"
+            )
+        if stats["agent_error_note"]:
+            print(f"  ! {stats['agent_error_note']}")
     if args.report:
+        # Publishing a benchmark from a run whose agents never reached the
+        # terminal is the strongest version of the lie this whole suite exists
+        # to avoid, so the report is refused rather than written with a caveat.
+        if unrun:
+            print(
+                f"Report NOT written: {unrun} task(s) never ran, so this run cannot "
+                f"stand as a published result. Fix the agent invocation (an expired "
+                f"login is the usual cause) and re-run."
+            )
+            print(f"Raw results: {results_path}")
+            return 1
         REPORT_PATH.write_text(
             render_report(suite=suite, rows=rows, summary=summary, generated_at=generated_at),
             encoding="utf-8",

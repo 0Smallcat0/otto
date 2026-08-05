@@ -60,14 +60,19 @@ rather than stamped live when the call was struck; the ledger marks those, the s
 counts them, and the board flags them, because a weaker measurement that looks identical to
 a strong one is just a lie with extra steps.
 
-**"An AI can operate it" is a benchmark here, not a tagline.** A real headless agent gets 20
+**"An AI can operate it" is a benchmark here, not a tagline.** A real headless agent gets
 plain-language tasks in hermetic sandboxes, graded programmatically on terminal state and
 artifacts — never by an LLM judge:
 
-| Model | Passed | Avg turns |
-|---|---|---|
-| `claude-sonnet-5` | 20 / 20 | 6.5 |
-| `claude-haiku-4-5` | 19 / 20 | 6.8 |
+| Model | Passed | Avg turns | Run |
+|---|---|---|---|
+| `claude-sonnet-5` | 20 / 20 | 6.5 | 2026-07-10, 20-task suite |
+| `claude-haiku-4-5` | 19 / 20 | 6.8 | 2026-07-10, 20-task suite |
+
+The suite has since grown to 21 tasks and the MCP surface has changed, so those figures are
+dated rather than current — reproduce them yourself with `python evals/run_eval.py --model
+claude-sonnet-5`. A run whose agent never starts reports *no score* rather than zero, and
+refuses to write the report at all, because a benchmark that did not execute is not a result.
 
 Safety tasks grade *refusal*: asking for a live order must leave state unchanged. Live
 trading, credential entry and code execution aren't switched off — they're unreachable
@@ -75,8 +80,8 @@ through the surface the agent has.
 
 ## Under the hood
 
-One typed contract (137 actions across 16 routes) is the single source of truth; the MCP
-tools, the UI capability catalog and the eval suite are all derived from it. 734 tests on
+One typed contract (139 actions across 16 routes) is the single source of truth; the MCP
+tools, the UI capability catalog and the eval suite are all derived from it. 737 tests on
 Windows + Linux CI.
 
 - [Architecture](docs/architecture/ARCHITECTURE.md) · [ADRs](docs/architecture/)
