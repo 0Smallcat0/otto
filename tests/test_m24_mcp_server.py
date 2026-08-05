@@ -57,6 +57,49 @@ def _call_tool(client: mcp_server.TerminalClient, name: str,
     return result, parsed
 
 
+def test_a_failed_action_is_reported_as_a_failed_tool_call() -> None:
+    """Every failure used to arrive as a successful tool call.
+
+    run_action hands back the terminal's own response with its HTTP status
+    inside, and isError was hardcoded false — so a 422 for malformed arguments,
+    a 404 for a mistyped action id, or a 400 refusing an order all looked like
+    successes with the failure buried in JSON the model had to spot unaided.
+    That is the difference between an agent retrying with corrected arguments
+    and an agent confidently building on a result it never received, and it is
+    the most-cited complaint about this category of server: the protocol works,
+    the data does not.
+    https://shibui.finance/guide-best-mcp-server-stock-data
+    """
+    client = _make_client()
+
+    # A real mistake an agent makes: POST body fields passed as query params.
+    result, parsed = _call_tool(
+        client, "run_action", {"action_id": "markets_quote_lookup", "query": {"symbols": "2330.TW"}}
+    )
+    assert parsed["status"] == 422
+    assert result["isError"] is True, "a 422 was reported to the client as success"
+
+    # And a real success stays a success.
+    result, parsed = _call_tool(client, "run_action", {"action_id": "market_sessions"})
+    assert parsed["status"] == 200
+    assert result["isError"] is False
+
+
+def test_a_queued_job_is_not_mistaken_for_a_failure() -> None:
+    """`status` is an int for HTTP and a string for job state.
+
+    refresh_public_data returns {"status": 200, "job": {"status": "queued"}}.
+    Reading the wrong one would report every backgrounded refresh as a failed
+    call — the mirror image of the bug, and just as misleading.
+    """
+    assert mcp_server._wrapped_http_failure({"status": "queued"}) is None
+    assert mcp_server._wrapped_http_failure({"status": 200}) is None
+    assert mcp_server._wrapped_http_failure({"status": 204}) is None
+    assert mcp_server._wrapped_http_failure({"status": 404}) == 404
+    assert mcp_server._wrapped_http_failure({"status": 502}) == 502
+    assert mcp_server._wrapped_http_failure("plain text") is None
+
+
 def test_the_entry_point_orients_a_stranger_not_the_maintainer(tmp_path, monkeypatch) -> None:
     """The first call anyone makes, and what it used to hand them.
 

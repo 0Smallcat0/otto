@@ -2,6 +2,25 @@
 
 ## Unreleased
 
+- Every failed action was reported to the client as a successful tool call
+  (2026-08-05). `run_action` hands back the terminal's own response with its
+  HTTP status inside, and `isError` was hardcoded false — so a 422 for malformed
+  arguments, a 404 for a mistyped action id, or a 400 refusing an order on a
+  stale quote all arrived as successes, with the failure buried in JSON the
+  model had to notice unaided. That is the difference between an agent retrying
+  with corrected arguments and an agent confidently building on a result it
+  never received, and it is the most-cited complaint about this whole category
+  of server: the protocol works, the data does not.
+  <https://shibui.finance/guide-best-mcp-server-stock-data>
+  - Found by timing every tool against the client timeouts people actually hit
+    (10s in the Python SDK, 60s elsewhere) and noticing two calls returning in
+    0.0s. One was a genuinely queued job; the other was a 422 wearing a success.
+  - A queued job is not a failure: `status` is an integer for HTTP and a string
+    for job state, so only integers outside 2xx mark the call as an error.
+  - Timing itself came back clean — the slowest call is the first
+    `terminal_status` at 9.7s, which includes starting the backend, and
+    `refresh_public_data` already returns a job id instead of blocking.
+
 - Two things a stranger hits in the first minute (2026-08-05). Setup friction is
   the most-cited reason people abandon MCP servers before seeing what one does,
   and "different clients support different protocol versions, so a server might
