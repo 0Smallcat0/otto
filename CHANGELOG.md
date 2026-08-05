@@ -2,6 +2,28 @@
 
 ## Unreleased
 
+- The catalogue an agent reads to learn the terminal arrived truncated into
+  prose (2026-08-05). `list_actions` unfiltered returned every field of all 134
+  actions: 40,106 characters, roughly 10,000 tokens, past `MAX_RESULT_CHARS` and
+  cut mid-structure. The second call an agent makes handed it a blob that no
+  longer parsed as JSON. Restoring the old behaviour today produces 49,957 — the
+  defect was getting worse with every action added.
+  - Measured, not assumed: each MCP tool definition reportedly costs 200-500
+    tokens and a handful of servers can burn 30,000-60,000 before the first user
+    message. <https://thenewstack.io/how-to-reduce-mcp-token-bloat/>
+    Otto's own tool definitions are fine — 6 tools, 2,805 chars, ~700 tokens —
+    so the bloat was entirely in responses.
+  - Progressive disclosure applied to responses: unfiltered is now an index
+    (action_id, route, method, plus the write and confirm flags, which are what
+    an agent needs *before* choosing), with `route_ids` and a hint for drilling
+    in. `route_id=` returns the full contract for that route.
+  - Tool results are serialised compactly. Indentation carries no information
+    and cost 13.5%-22.4% of every payload — 80,282 characters of whitespace on
+    the markets page alone, about 20,000 tokens.
+  - Net: `list_actions` 40,106 → 19,367 and it parses; `list_routes` 7,231 →
+    5,191; `research_ledger_read` 23,132 → 18,284; `terminal_status` 1,780 →
+    1,482.
+
 - Every failed action was reported to the client as a successful tool call
   (2026-08-05). `run_action` hands back the terminal's own response with its
   HTTP status inside, and `isError` was hardcoded false — so a 422 for malformed

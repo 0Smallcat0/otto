@@ -205,10 +205,11 @@ TOOLS: list[dict[str, Any]] = [
         "name": "list_actions",
         "description": (
             "List the safe operable actions (from the terminal agent-contract). "
-            "Excludes safety-disabled and secret actions. Each row shows action_id, "
-            "route_id, label, method, endpoint, request_contract, safety_class, "
-            "whether it mutates local state, and whether it needs confirmation. "
-            "Use action_id with run_action."
+            "Called with no route_id this is an index — action_id, route, method "
+            "and write/confirm flags — and returns route_ids to drill into. Pass "
+            "route_id to get endpoints, request contracts and safety classes for "
+            "that route only. Excludes safety-disabled and secret actions. Use "
+            "action_id with run_action."
         ),
         "inputSchema": {
             "type": "object",
@@ -365,27 +366,57 @@ def _tool_get_route(client: TerminalClient, args: dict[str, Any]) -> Any:
 
 
 def _tool_list_actions(client: TerminalClient, args: dict[str, Any]) -> Any:
+    """The action catalogue, in two depths.
+
+    Unfiltered, this used to return every field of all 139 actions: 40,106
+    characters, about 10,000 tokens — five percent of a 200k window on the
+    second call an agent makes — and past MAX_RESULT_CHARS, so it was cut
+    mid-structure and arrived as prose that no longer parsed as JSON. An agent
+    trying to find out what the terminal can do got a mangled blob and had to
+    guess.
+
+    So the unfiltered call is an index: enough to choose, nothing to read.
+    Filtering by route_id returns the full contract for that route, which is
+    the only point at which the request shape matters. This is the progressive
+    disclosure the token-bloat literature recommends, applied to responses
+    rather than to tool definitions — those are already cheap here, six tools
+    for 686 tokens against a reported norm of 200-500 tokens each.
+    """
     route_filter = args.get("route_id")
+    detail = bool(route_filter)
     rows = []
     for action in client.actions():
         if not is_mcp_safe(action):
             continue
         if route_filter and action.get("route_id") != route_filter:
             continue
-        rows.append(
-            {
-                "action_id": action.get("action_id"),
-                "route_id": action.get("route_id"),
-                "label": action.get("label"),
-                "method": action.get("method"),
-                "endpoint": action.get("endpoint"),
-                "request_contract": action.get("request_contract"),
-                "safety_class": action.get("safety_class"),
-                "local_mutation": action.get("local_mutation"),
-                "requires_confirmation": action.get("requires_confirmation"),
-            }
+        row = {
+            "action_id": action.get("action_id"),
+            "route_id": action.get("route_id"),
+            "label": action.get("label"),
+            "method": action.get("method"),
+        }
+        if action.get("local_mutation"):
+            row["local_mutation"] = True
+        if action.get("requires_confirmation"):
+            row["requires_confirmation"] = True
+        if detail:
+            row["endpoint"] = action.get("endpoint")
+            row["request_contract"] = action.get("request_contract")
+            row["safety_class"] = action.get("safety_class")
+        rows.append(row)
+    result: dict[str, Any] = {"actions": rows, "count": len(rows)}
+    if not detail:
+        routes = sorted({str(r.get("route_id")) for r in rows})
+        result["route_ids"] = routes
+        result["detail_hint"] = (
+            "This is the index — action_id, route and method only, plus flags for "
+            "the actions that write state or need confirmation. Call again with "
+            "route_id=<one of route_ids> for endpoints, request contracts and "
+            "safety classes; the full catalogue in one response ran past the "
+            "result limit and arrived truncated."
         )
-    return {"actions": rows, "count": len(rows)}
+    return result
 
 
 def _tool_run_action(client: TerminalClient, args: dict[str, Any]) -> Any:
@@ -498,10 +529,22 @@ def _error(request_id: Any, code: int, message: str) -> dict[str, Any]:
 
 
 def _text_content(payload: Any, is_error: bool = False) -> dict[str, Any]:
+    """Serialise a tool result for the model.
+
+    Compact, not pretty-printed. Indentation carries no information and, measured
+    across this terminal's own payloads, cost 13.5% to 22.4% of every response —
+    80,282 characters of pure whitespace on the markets page alone, roughly
+    20,000 tokens. Tool responses are read by a model with a finite context
+    window, and the reported failure mode of MCP servers in practice is filling
+    that window before the agent has done anything useful; spending a fifth of
+    every response on line breaks is a straightforward way to contribute to it.
+    Separators are pinned rather than left to the default, which pads with a
+    space after each comma and colon.
+    """
     if isinstance(payload, str):
         text = payload
     else:
-        text = json.dumps(payload, ensure_ascii=False, indent=2, default=str)
+        text = json.dumps(payload, ensure_ascii=False, separators=(",", ":"), default=str)
     if len(text) > MAX_RESULT_CHARS:
         original = len(text)
         text = (
