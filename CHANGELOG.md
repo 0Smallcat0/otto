@@ -2,6 +2,25 @@
 
 ## Unreleased
 
+- Swept the class the previous change found, and stopped where a fix would have
+  been fake (2026-08-06). Adding a reader for the holdings raised the obvious
+  question: how many other routes can an agent not read?
+  - Measured across all sixteen: three core routes had no param-free GET reader
+    at all — `dashboard`, `crypto` and `profile`. The shell routes
+    (`ai_chat`, `nodes`, `code`, `quant_lab`, `quantlib`, `forum`) are excluded
+    by standing decision and were not counted.
+  - Only `dashboard` gets one. `/api/dashboard` is 10,440 characters compact,
+    comfortably inside the tool result limit, so `dashboard_read` returns the
+    overview an agent asked for.
+  - `crypto` and `profile` deliberately do not. `/api/crypto` is 64,633
+    characters and `/api/governance` 365,060 — both far past the limit, so a
+    catalogue entry there would hand back a truncation notice instead of the
+    state. An action that cannot answer is not a fix, and the crypto book is
+    already readable through `paper_account_summary` at ~1.5KB.
+  - The first sweep was run against a backend still holding pre-`portfolio_read`
+    code and reported 16 of 16; restarting first gave 15. Measurements taken
+    against stale processes are not measurements.
+
 - The holdings had no reader in the action catalogue (2026-08-06). "What do you
   make of my holdings?" is the third of three prompts the README offers a
   newcomer, and it was the one with no way in.

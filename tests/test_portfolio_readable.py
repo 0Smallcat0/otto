@@ -61,6 +61,32 @@ def test_reading_holdings_on_a_fresh_install_answers_rather_than_failing(
     assert [a["action_id"] for a in body["actions"]] == ["create", "import", "demo"]
 
 
+def test_the_overview_has_a_reader_too(tmp_path, monkeypatch) -> None:
+    """Same shape, found by sweeping the class rather than stopping at one case.
+
+    Of sixteen routes, three core ones had no param-free GET reader at all:
+    dashboard, crypto and profile. Only dashboard gets one — /api/crypto is
+    64,633 characters compact and /api/governance 365,060, both far past the
+    tool result limit, so a reader there would hand the agent a truncation
+    notice instead of the state. A catalogue entry that cannot answer is not a
+    fix.
+    """
+    monkeypatch.setattr(server, "STORE", LocalStateStore(root=tmp_path))
+    client = TestClient(server.create_app())
+
+    readers = [
+        a
+        for a in _actions(client, "dashboard")
+        if a["method"] == "GET" and "{" not in a["endpoint"] and is_mcp_safe(a)
+    ]
+
+    assert any(a["action_id"] == "dashboard_read" for a in readers)
+    body = client.get("/api/dashboard").json()
+    assert "summary" in body
+    # Freshness is what separates a quiet dashboard from a stale one.
+    assert "freshness" in body
+
+
 def test_the_contract_describes_what_that_reader_returns(tmp_path, monkeypatch) -> None:
     """Response keys are a promise; the truth test checks them against reality."""
     monkeypatch.setattr(server, "STORE", LocalStateStore(root=tmp_path))
