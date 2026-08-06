@@ -2,6 +2,23 @@
 
 ## Unreleased
 
+- The backtest page shows whether its own headline numbers mean anything
+  (2026-08-06). Sample sufficiency was computed one round earlier and only ever
+  reached the API — the screen kept rendering 總報酬 / 最大回撤 / 勝率 / 交易數
+  as four large figures with nothing to qualify them, so 11 round trips over
+  twenty hours looked exactly like 400 over three years.
+  - That is the same defect this repo has now shipped fifteen times, and this
+    one was mine, one commit old: the engine computed the qualifying fact, put
+    it in the payload, and the render step dropped it.
+  - The caveat sits directly under the KPI row, because that row is the surface
+    that reads as a verdict. It names the round trips, the inference floor, the
+    real span, and the metrics least able to bear weight — one of which is the
+    win rate shown immediately above it.
+  - `sampleCaveat` is a pure exported function so the decision has a guard in
+    `rendering-rules.test.ts`, the suite that exists for exactly this shape.
+    Confirmed by making it always return null and watching two tests fail.
+  - Verified in the DOM on a real run, not through the API.
+
 - The TWSE filing store catches itself up instead of waiting for a scheduler
   (2026-08-06). Every other cache here can be rebuilt by asking again; this one
   cannot. TWSE serves exactly one session of `t187ap04_L` and keeps no history,
