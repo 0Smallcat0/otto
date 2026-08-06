@@ -3233,7 +3233,13 @@ ACTION_CONTRACTS: tuple[AgentActionContract, ...] = (
         "Save local Algo strategy",
         "POST",
         "/api/algo/strategy",
-        '{"name":"...","strategy_id" optional,"timeframe":"15m","entry":"...","exit":"...","parameters":{...}}; local strategy library only',
+        # entry/exit/parameters were the names printed here; the body takes
+        # entry_conditions and exit_conditions, and they are lists. Sent as
+        # printed, the call answers 400 "Entry conditions are required" while
+        # the caller believes it just supplied them.
+        '{"name":"...","strategy_id" optional,"symbol":"BTCUSDT","timeframe":"15m",'
+        '"entry_conditions":["sma_fast > sma_slow"],"exit_conditions":["sma_fast < sma_slow"],'
+        '"risk_settings":{...} optional}; local strategy library only',
         ("strategies", "active_strategy"),
         "writes a local closed-candle strategy definition; no live action",
         True,

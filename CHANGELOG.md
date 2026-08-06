@@ -2,6 +2,24 @@
 
 ## Unreleased
 
+- An action advertised parameter names it refuses (2026-08-06).
+  `request_contract` is the only thing an agent reads before calling an action,
+  and `algo_save_strategy` printed `"entry":"...","exit":"...","parameters":{}`
+  while the body takes `entry_conditions` and `exit_conditions`, as lists.
+  - Sent exactly as printed it answers 400, "Entry conditions are required" —
+    naming a field that never appeared in the contract, to a caller that
+    believed it had just supplied them. There is no way out of that from the
+    printed text alone.
+  - Corrected and re-run as printed: 200, with the conditions landing in the
+    stored strategy.
+  - Swept all 142 actions from both sides. No action names a query parameter
+    its endpoint rejects — that half was already honest. One other body example
+    looked wrong and was not: `portfolio_import` nests `name` and `positions`
+    inside `portfolio`, so the key reader now only counts the outermost brace.
+  - The guard reads the advertised names off the agent contract and the
+    accepted ones off the OpenAPI schema FastAPI derives from the endpoint
+    signatures, so neither side can drift without the other noticing.
+
 - Two of the 87 links the terminal advertises as documentation were not
   documentation (2026-08-06). Every `official_docs` and `docs_url` value in the
   package was fetched. Eighty-five answered.
