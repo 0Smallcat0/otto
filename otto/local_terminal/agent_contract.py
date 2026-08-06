@@ -179,6 +179,7 @@ ROUTE_CONTRACTS: tuple[RouteAgentContract, ...] = (
             "tw_company_facts",
             "tw_valuation_screen",
             "tw_margin_balance",
+            "tw_margin_read",
             "market_sessions",
             "crypto_submit_paper_order",
             "crypto_process_paper_orders",
@@ -2498,6 +2499,38 @@ ACTION_CONTRACTS: tuple[AgentActionContract, ...] = (
         False,
         "public_read_only_market_data",
         ("provider_unavailable",),
+    ),
+    AgentActionContract(
+        "tw_margin_read",
+        "paper",
+        "Has TW deleveraging gone further than the fall that caused it",
+        "GET",
+        "/api/research/tw-margin-history",
+        "no parameters; reads the accumulated sessions without going to TWSE",
+        (
+            "deleveraging",
+            "trend",
+            "sessions_held_count",
+            "last_fetch_at",
+            "refresh_action",
+            "safety",
+        ),
+        (
+            "read-only, no network. deleveraging.verdict is the comparison "
+            "Taiwan desks run: 'incomplete' means the index has fallen further "
+            "than margin has unwound, 'margin_led' means forced selling ran "
+            "ahead of the tape, 'unknown' means the store is too short or the "
+            "index cache does not cover the window — read deleveraging.reason "
+            "before treating any of it as a signal. sessions_held is every "
+            "session ever fetched; TWSE keeps no archive, so a gap is a day "
+            "nobody fetched, not a quiet market"
+        ),
+        False,
+        False,
+        False,
+        False,
+        "local_read_only_no_network",
+        (),
     ),
     AgentActionContract(
         "tw_valuation_screen",

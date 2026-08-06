@@ -2,6 +2,34 @@
 
 ## Unreleased
 
+- The margin series reached no screen, and the number it would have shown was
+  the wrong one (2026-08-06). `/api/research/tw-margin` had zero references in
+  the entire frontend — the store shipped the round before was invisible.
+  - Taiwan desks do not read deleveraging off a streak. The comparison is
+    whether margin's cumulative unwind has run further than the fall that
+    caused it: on 2026-07-28 the weighted index was 12.86% off its wave high
+    against margin's 9.93%, and the read was that it had further to go
+    (<https://www.setn.com/news/1880517>).
+  - `consecutive_reducing_sessions` counts days and cannot see distance. Three
+    sessions of −0.1% is a streak of three that gives back 0.3% against a
+    market down 12% — a number that reads on a screen like progress and is
+    close to none. `deleveraging_progress` measures both legs peak-to-latest
+    over the window the margin store itself spans.
+  - The index leg is `0050`, the series this terminal already keeps and already
+    benchmarks calls against. It is a large-cap ETF and not the weighted index,
+    and the payload says so rather than letting the reader assume.
+  - A cache that stops short of the window is reported as an uncovered window,
+    never compared anyway. Removing that check made the stale case answer
+    `margin_led` — deleveraging complete, the bullish read — off dates that
+    were never covered.
+  - `tw_margin_read` / `GET /api/research/tw-margin-history` reads the stored
+    sessions without going to TWSE, the same split as `tw_announcements_read`.
+    The fetching endpoint hits the exchange on every call and cannot back
+    anything that renders on a screen left open.
+  - The real book banner on the wall carries one line for holders of TW
+    listings, and nothing at all for anyone else — the whole statistic is about
+    one exchange's leverage.
+
 - Margin balance is the second one-shot source, and it was keeping nothing
   (2026-08-06). Sweeping the class the filing store belonged to: what else here
   is published once, never archived, and permanently gone if a day is missed?

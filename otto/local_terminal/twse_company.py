@@ -484,6 +484,121 @@ def margin_trend(state: dict[str, Any], *, sessions: int = 5) -> dict[str, Any]:
     }
 
 
+def deleveraging_progress(
+    state: dict[str, Any],
+    index_candles: list[dict[str, Any]] | None,
+    *,
+    index_symbol: str = "0050",
+) -> dict[str, Any]:
+    """Has margin fallen further than the market it was leveraging?
+
+    This is the comparison Taiwan desks actually run, and it is not a streak.
+    The rule of thumb is that a bottom cannot be called while the index has
+    fallen further than margin has unwound: on 2026-07-28 the weighted index
+    was 12.86% off its wave high while margin balance had given back 9.93%,
+    and the read was that deleveraging had further to go
+    (https://www.setn.com/news/1880517).
+
+    `consecutive_reducing_sessions` cannot answer that. Three sessions of
+    -0.1% is a streak of three and is nearly nothing; one session of -5%
+    against a market down 3% is a single session and means the forced sellers
+    are done ahead of the tape. The streak counts days; this measures distance.
+
+    Both legs are peak-to-latest over the *same* window, and the window is the
+    margin store's own — a comparison drawn across two different spans is the
+    kind of number that looks identical to a real one. `0050` stands in for the
+    index because it is the series this terminal already keeps and already
+    benchmarks calls against; it is a large-cap ETF, not the weighted index,
+    and the payload says so rather than letting the reader assume.
+    """
+    store = normalize_margin_history_state(state)
+    sessions = store["sessions"]
+    unknown = {
+        "verdict": "unknown",
+        "margin_decline_pct": None,
+        "index_decline_pct": None,
+        "index_symbol": index_symbol,
+        "window": None,
+    }
+    if len(sessions) < 2:
+        return unknown | {
+            "reason": (
+                f"{len(sessions)} session(s) held; a cumulative decline needs at "
+                "least two, and TWSE keeps no archive to backfill from"
+            )
+        }
+
+    lots = [(str(r.get("session")), _margin_int(r.get("margin_lots_today"))) for r in sessions]
+    lots = [(session, value) for session, value in lots if value]
+    if len(lots) < 2:
+        return unknown | {"reason": "stored sessions carry no usable margin lot counts"}
+
+    peak_at, peak = max(lots, key=lambda row: row[1])
+    latest_at, latest = lots[-1]
+    if peak_at >= latest_at:
+        return unknown | {
+            "reason": f"margin peaked on the latest session held ({latest_at}); no decline to measure"
+        }
+    margin_decline = (latest / peak - 1) * 100
+
+    closes = [
+        (str(c.get("closed_at")), _margin_float(c.get("close")))
+        for c in (index_candles or [])
+        if isinstance(c, dict)
+    ]
+    closes = [(day, value) for day, value in closes if day and value]
+    in_window = [(day, value) for day, value in closes if peak_at <= day <= latest_at]
+    covers_latest = any(day >= latest_at for day, _ in closes)
+    if not in_window or not covers_latest:
+        newest = max((day for day, _ in closes), default="never fetched")
+        return unknown | {
+            "margin_decline_pct": f"{margin_decline:.2f}",
+            "window": [peak_at, latest_at],
+            "reason": (
+                f"{index_symbol} history ends {newest}, so it cannot cover the "
+                f"{peak_at}..{latest_at} window the margin store spans; refresh it "
+                "with markets_history_refresh before reading this comparison"
+            ),
+        }
+
+    index_peak = max(value for _, value in in_window)
+    index_latest = in_window[-1][1]
+    index_decline = (index_latest / index_peak - 1) * 100
+
+    if index_decline >= 0:
+        verdict = "not_a_drawdown"
+    elif margin_decline < index_decline:
+        verdict = "margin_led"
+    else:
+        verdict = "incomplete"
+    return {
+        "verdict": verdict,
+        "margin_decline_pct": f"{margin_decline:.2f}",
+        "index_decline_pct": f"{index_decline:.2f}",
+        "index_symbol": index_symbol,
+        "window": [peak_at, latest_at],
+        "reason": None,
+        "note": (
+            "Deleveraging is read as unfinished while the index has fallen "
+            "further than margin has unwound; margin_led means the forced "
+            "selling ran ahead of the tape. 0050 is a large-cap ETF standing in "
+            "for the weighted index, and both legs are peak-to-latest inside "
+            "the window the margin store itself spans."
+        ),
+    }
+
+
+def _margin_float(value: Any) -> float | None:
+    text = str(value or "").strip().replace(",", "")
+    if not text:
+        return None
+    try:
+        parsed = float(text)
+    except ValueError:
+        return None
+    return parsed if parsed > 0 else None
+
+
 def _margin_int(value: Any) -> int | None:
     text = str(value or "").strip().replace(",", "")
     if not text:

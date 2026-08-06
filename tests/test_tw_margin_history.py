@@ -17,17 +17,24 @@ from datetime import UTC, datetime
 
 from otto.local_terminal.twse_company import (
     default_margin_history_state,
+    deleveraging_progress,
     margin_session_row,
     margin_trend,
     merge_margin_session,
 )
 
 
-def _payload(stamp: str, change_pct: str, code: str = "0050", sym_pct: str = "-14.79") -> dict:
+def _payload(
+    stamp: str,
+    change_pct: str,
+    code: str = "0050",
+    sym_pct: str = "-14.79",
+    lots: int = 8901190,
+) -> dict:
     return {
         "published_at": stamp,
         "issue_count": 1291,
-        "margin_lots_today": 8901190,
+        "margin_lots_today": lots,
         "margin_lots_prev": 9032004,
         "change_pct": change_pct,
         "reduced_symbol_count": 515,
@@ -137,3 +144,110 @@ def test_the_store_is_capped(monkeypatch) -> None:
         )
 
     assert [r["session"] for r in state["sessions"]] == ["2026-08-04", "2026-08-05"]
+
+
+# ── the comparison the streak could not make ──
+
+
+def _series(*rows: tuple[str, str, int]):
+    """(day, change_pct, lots) folded into a store, oldest first."""
+    state = default_margin_history_state()
+    for day, pct, lots in rows:
+        state, _ = merge_margin_session(
+            state,
+            margin_session_row(_payload(f"Mon, {day} Aug 2026 21:00:00 GMT", pct, lots=lots)),
+        )
+    return state
+
+
+def _candles(*rows: tuple[str, str]):
+    return [{"closed_at": day, "close": close} for day, close in rows]
+
+
+def test_the_index_falling_further_than_margin_reads_as_unfinished() -> None:
+    """The real 2026-07-28 read: index -12.86%, margin -9.93%, not done.
+
+    https://www.setn.com/news/1880517 — a bottom is not called while the tape
+    has fallen further than the leverage behind it has unwound.
+    """
+    state = _series(
+        ("03", "-3.00", 1_000_000),
+        ("04", "-4.00", 950_000),
+        ("05", "-2.93", 900_700),
+    )
+    progress = deleveraging_progress(
+        state, _candles(("2026-08-03", "100.00"), ("2026-08-04", "92.00"), ("2026-08-05", "87.14"))
+    )
+
+    assert progress["margin_decline_pct"] == "-9.93"
+    assert progress["index_decline_pct"] == "-12.86"
+    assert progress["verdict"] == "incomplete"
+    assert progress["window"] == ["2026-08-03", "2026-08-05"]
+
+
+def test_margin_unwinding_faster_than_the_tape_is_the_other_answer() -> None:
+    state = _series(("03", "-5.00", 1_000_000), ("04", "-8.00", 850_000))
+    progress = deleveraging_progress(
+        state, _candles(("2026-08-03", "100.00"), ("2026-08-04", "95.00"))
+    )
+
+    assert progress["verdict"] == "margin_led"
+
+
+def test_a_long_streak_of_nothing_is_not_progress() -> None:
+    """The number this replaces: three reducing sessions, deleveraging barely begun.
+
+    consecutive_reducing_sessions counts days and cannot see distance. Three
+    sessions of roughly -0.1% is a streak of three and gives back 0.3% against
+    a market down 12%, which is the opposite of what a streak of three reads
+    like on a screen.
+    """
+    state = _series(
+        ("03", "-0.10", 1_000_000),
+        ("04", "-0.10", 999_000),
+        ("05", "-0.10", 998_000),
+    )
+
+    assert margin_trend(state)["consecutive_reducing_sessions"] == 3
+
+    progress = deleveraging_progress(
+        state, _candles(("2026-08-03", "100.00"), ("2026-08-05", "88.00"))
+    )
+
+    assert progress["margin_decline_pct"] == "-0.20"
+    assert progress["verdict"] == "incomplete", (
+        "a streak of three sessions must not read as deleveraging when the "
+        "market has fallen sixty times further than margin has unwound"
+    )
+
+
+def test_an_index_cache_that_stops_short_is_said_so_not_compared_anyway() -> None:
+    """A stale index leg silently compared over the wrong dates is a fake number."""
+    state = _series(("03", "-3.00", 1_000_000), ("06", "-2.00", 900_000))
+    progress = deleveraging_progress(
+        state, _candles(("2026-08-03", "100.00"), ("2026-08-04", "92.00"))
+    )
+
+    assert progress["verdict"] == "unknown"
+    assert progress["index_decline_pct"] is None
+    assert "2026-08-04" in progress["reason"]
+    assert "markets_history_refresh" in progress["reason"]
+    # The half it does know is still reported rather than thrown away.
+    assert progress["margin_decline_pct"] == "-10.00"
+
+
+def test_one_session_cannot_have_a_cumulative_decline() -> None:
+    state = _series(("05", "-1.45", 8_901_190))
+    progress = deleveraging_progress(state, _candles(("2026-08-05", "100.00")))
+
+    assert progress["verdict"] == "unknown"
+    assert "at least two" in progress["reason"]
+
+
+def test_a_rising_index_is_not_a_drawdown_to_measure_against() -> None:
+    state = _series(("03", "-1.00", 1_000_000), ("04", "-1.00", 990_000))
+    progress = deleveraging_progress(
+        state, _candles(("2026-08-03", "100.00"), ("2026-08-04", "104.00"))
+    )
+
+    assert progress["verdict"] == "not_a_drawdown"

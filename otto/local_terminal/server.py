@@ -217,6 +217,7 @@ from otto.local_terminal.research_ledger import (
 )
 from otto.local_terminal.twse_company import (
     TwseCompanyError,
+    deleveraging_progress,
     margin_session_row,
     margin_trend,
     merge_margin_session,
@@ -3749,6 +3750,17 @@ def create_app(frontend_dist: Path | None = None) -> FastAPI:
         }
         return sorted(symbols | set(BENCHMARK_BY_MARKET.values()))
 
+    def _tw_index_candles() -> list[dict[str, Any]]:
+        """Daily closes for the index leg of the deleveraging comparison.
+
+        Cache only — the margin read must not reach the network, and a stale
+        cache is reported as an uncovered window rather than quietly compared
+        against the wrong dates.
+        """
+        cached = STORE.read_history_cache("0050")
+        candles = cached.get("candles") if isinstance(cached, dict) else None
+        return [c for c in (candles or []) if isinstance(c, dict)]
+
     def _tw_ex_events(state: dict[str, Any]) -> list[dict[str, Any]]:
         """TWSE payouts covering every open TW call's window.
 
@@ -3975,7 +3987,36 @@ def create_app(frontend_dist: Path | None = None) -> FastAPI:
         if report["added"]:
             STORE.write_tw_margin_history_state(state)
         payload["trend"] = margin_trend(state)
+        payload["trend"]["deleveraging"] = deleveraging_progress(state, _tw_index_candles())
         return payload
+
+    @app.get("/api/research/tw-margin-history")
+    def tw_margin_history() -> dict[str, Any]:
+        """The stored series and what it says, without going to TWSE.
+
+        The fetching endpoint above is the only place this data existed, and it
+        hits TWSE on every call — unusable for anything that renders on a screen
+        the owner leaves open. Same split as tw_announcements_read: one action
+        goes and gets the session, another reads what has been kept.
+        """
+        state = STORE.read_tw_margin_history_state()
+        trend = margin_trend(state)
+        # Top level, not nested under trend: the verdict is the answer, and a
+        # reader that has to know it lives one level down is a reader that will
+        # not find it.
+        deleveraging = deleveraging_progress(state, _tw_index_candles())
+        return {
+            "deleveraging": deleveraging,
+            "trend": trend,
+            "sessions_held_count": len(trend["sessions_held"]),
+            "last_fetch_at": state.get("last_fetch_at"),
+            "refresh_action": "tw_margin_balance",
+            "safety": {
+                "read_only": True,
+                "external_calls": False,
+                "mutates_local_state": False,
+            },
+        }
 
     @app.get("/api/market/sessions")
     def market_sessions() -> dict[str, Any]:

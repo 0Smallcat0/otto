@@ -2,6 +2,7 @@ import { describe, expect, it } from "vitest";
 
 import { rankHeadlines, sessionSpan, sessionStamp, staleCandles } from "../../src/ui/api";
 import { runProvenance, sampleCaveat } from "../../src/ui/readers";
+import { deleveragingLine, isTwSymbol } from "../../src/ui/wall";
 
 // Five defects fixed on 2026-07-27 were all the same shape: the backend had
 // computed the qualifying fact, put it in the payload, and the render step
@@ -211,5 +212,58 @@ describe("runProvenance", () => {
       trusted: true
     });
     expect(runProvenance({}).label).toBe("—");
+  });
+});
+
+// The margin series shipped one round before this one and reached no screen at
+// all: /api/research/tw-margin had zero references in the whole frontend. The
+// number it put on the wall first was also the wrong one — a streak counts
+// days, and Taiwan desks compare distance (index -12.86% vs margin -9.93% on
+// 2026-07-28, https://www.setn.com/news/1880517).
+
+describe("deleveragingLine", () => {
+  const incomplete = {
+    verdict: "incomplete",
+    margin_decline_pct: "-9.93",
+    index_decline_pct: "-12.86",
+    index_symbol: "0050"
+  };
+
+  it("says the tape has fallen further than the leverage behind it", () => {
+    const line = deleveragingLine(incomplete, 2);
+    expect(line?.labelKey).toBe("去槓桿未完成");
+    expect(line?.detail).toBe("-9.93% vs 0050 -12.86%");
+    expect(line?.cls).toBe("ft-down");
+  });
+
+  it("colours the other answer the other way", () => {
+    const line = deleveragingLine({ ...incomplete, verdict: "margin_led" }, 1);
+    expect(line?.labelKey).toBe("融資已先跌過大盤");
+    expect(line?.cls).toBe("ft-up");
+  });
+
+  it("stays silent for a book with nothing on that exchange", () => {
+    expect(deleveragingLine(incomplete, 0)).toBeNull();
+  });
+
+  it("shows why it cannot answer rather than a blank", () => {
+    const line = deleveragingLine(
+      { verdict: "unknown", reason: "0050 history ends 2026-07-28" },
+      1
+    );
+    expect(line?.cls).toBe("ft-dim");
+    expect(line?.detail).toContain("2026-07-28");
+  });
+
+  it("renders nothing when the backend sent no verdict", () => {
+    expect(deleveragingLine(null, 3)).toBeNull();
+    expect(deleveragingLine({ verdict: "" }, 3)).toBeNull();
+  });
+});
+
+describe("isTwSymbol", () => {
+  it("counts the shapes the book actually stores", () => {
+    expect(["2834", "0050", "00982A", "2317.TW", "6488.TWO"].every(isTwSymbol)).toBe(true);
+    expect(["AAPL", "BTCUSDT", "SPY", ""].some(isTwSymbol)).toBe(false);
   });
 });
