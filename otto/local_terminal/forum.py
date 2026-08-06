@@ -688,14 +688,14 @@ def _channel_label(channel_id: str) -> str:
 def _post_id(raw: Any) -> str:
     value = str(raw or "").strip()
     if not re.fullmatch(r"post-[a-f0-9]{12}", value):
-        raise ForumError("Forum post id is invalid")
+        raise ForumError("post_id is invalid")
     return value
 
 
 def _reply_id(raw: Any) -> str:
     value = str(raw or "").strip()
     if not re.fullmatch(r"reply-[a-f0-9]{12}", value):
-        raise ForumError("Forum reply id is invalid")
+        raise ForumError("reply_id is invalid")
     return value
 
 

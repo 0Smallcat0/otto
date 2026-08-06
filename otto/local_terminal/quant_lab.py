@@ -954,9 +954,9 @@ def _safe_artifact_path(raw: Any, run_id: str, suffix: str | None = None) -> str
 def _safe_slug(raw: Any) -> str:
     value = str(raw or "").strip()
     if not value or len(value) > 80:
-        raise QuantLabError("Module slug is required")
+        raise QuantLabError("module_slug is required")
     if not all(ch.isalnum() or ch == "-" for ch in value):
-        raise QuantLabError("Module slug is invalid")
+        raise QuantLabError("module_slug is invalid")
     return value
 
 

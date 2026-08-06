@@ -2,6 +2,26 @@
 
 ## Unreleased
 
+- Four refusals described a field instead of naming it (2026-08-06). The
+  previous round fixed the contract that taught the wrong parameter names;
+  this is the other half — a caller who gets a name wrong anyway has only the
+  error message to recover from.
+  - Replayed every POST action against an empty terminal. Seventeen refusals
+    named no body field. Thirteen were fine: "Workflow is required" against a
+    `workflow` key differs only by capitalisation, and "No complete backtest
+    artifacts to link" is about state, where naming a field would be wrong.
+  - Four made the caller turn prose into snake_case: `Entry conditions are
+    required` for `entry_conditions`, `Strategy id is required` for
+    `strategy_id`, `Module slug is required` for `module_slug`, and `Forum post
+    id is invalid` for `post_id`. Those now say the key.
+  - The guard replays the same empty bodies and fires only when a message
+    spells a real body key out as prose, so state messages and capitalisation
+    never trip it.
+  - Two other sweeps this round found nothing to fix and were left alone. All
+    eighteen literal `HTTPException` details in `server.py` point at something
+    the contract has, and every action that requires confirmation names
+    `confirm` in its contract exactly when its body takes one.
+
 - An action advertised parameter names it refuses (2026-08-06).
   `request_contract` is the only thing an agent reads before calling an action,
   and `algo_save_strategy` printed `"entry":"...","exit":"...","parameters":{}`
