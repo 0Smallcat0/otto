@@ -49,6 +49,10 @@ from otto.local_terminal.twse_announcements import (
     default_announcement_state,
     normalize_announcement_state,
 )
+from otto.local_terminal.twse_company import (
+    default_margin_history_state,
+    normalize_margin_history_state,
+)
 from otto.local_terminal.watchlist import default_watchlist_state, normalize_watchlist_state
 from otto.local_terminal.forum import default_forum_state, normalize_forum_state
 from otto.local_terminal.markets import default_markets_layout, normalize_markets_layout
@@ -174,6 +178,12 @@ class LocalStateStore:
     @property
     def research_ledger_path(self) -> Path:
         return self.root / "artifacts" / "research" / "research_ledger.json"
+
+    @property
+    def tw_margin_history_path(self) -> Path:
+        # Same reason as the filing store: TWSE publishes one session and keeps
+        # no archive, so what is not kept here cannot be recovered tomorrow.
+        return self.root / "artifacts" / "research" / "tw_margin_history.json"
 
     @property
     def tw_announcement_path(self) -> Path:
@@ -1081,6 +1091,17 @@ class LocalStateStore:
             keep_backups=STATE_BACKUP_COUNT,
         )
 
+    def read_tw_margin_history_state(self) -> dict[str, Any]:
+        return _read_json(self.tw_margin_history_path, default_margin_history_state())
+
+    def write_tw_margin_history_state(self, payload: dict[str, Any]) -> dict[str, Any]:
+        return _write_json(
+            self.tw_margin_history_path,
+            normalize_margin_history_state(payload),
+            self.root,
+            keep_backups=STATE_BACKUP_COUNT,
+        )
+
     def read_tw_announcement_state(self) -> dict[str, Any]:
         return _read_json(self.tw_announcement_path, default_announcement_state())
 
@@ -1149,6 +1170,7 @@ class LocalStateStore:
             ("paper_history", self.paper_history_path),
             ("research_ledger", self.research_ledger_path),
             ("tw_announcements", self.tw_announcement_path),
+            ("tw_margin_history", self.tw_margin_history_path),
             ("portfolio_state", self.portfolio_state_path),
             ("watchlist_state", self.watchlist_state_path),
             ("news_digest_state", self.news_digest_state_path),

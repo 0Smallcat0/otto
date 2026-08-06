@@ -2,6 +2,30 @@
 
 ## Unreleased
 
+- Margin balance is the second one-shot source, and it was keeping nothing
+  (2026-08-06). Sweeping the class the filing store belonged to: what else here
+  is published once, never archived, and permanently gone if a day is missed?
+  - `/api/research/tw-margin` returned today's snapshot — 1,291 issues, 515
+    reducing — and stored none of it. Every session nobody fetched was already
+    unrecoverable, with every test green and the endpoint healthy.
+  - A snapshot also cannot answer the question the data exists for. Price
+    cannot separate capitulation from continuation; both close at the low. A
+    run of sessions where forced sellers stop being forced can. On 2026-07-30
+    the market-wide balance fell 0.72% while 406 issues *added* margin and
+    0050's own rose 15.99% — visible only as a series, and there was no series.
+  - Sessions accumulate on the call that already goes to TWSE, keyed on the
+    HTTP `Last-Modified` stamp because the rows say 今日餘額 and carry no date
+    at all. A payload without one is refused rather than filed under a guess.
+  - Only the aggregate plus the symbols the caller asked about are stored: the
+    full 1,291-issue file is not worth keeping daily, and the two questions —
+    is deleveraging slowing, is my own holding still being forced out — need
+    neither.
+  - `trend.consecutive_reducing_sessions` resets the moment a session stops
+    reducing, because that reset *is* the signal; burying it inside a streak
+    would hide the only thing the series is for.
+  - A published balance is a fact: an existing session is never rewritten, and
+    a gap in `sessions_held` reads as a day nobody fetched, not a quiet market.
+
 - The owner's own companies' filings now reach the page the owner reads
   (2026-08-06). The filing store and the agent's news packet were wired together
   first, which served the agent and nobody else.

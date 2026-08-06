@@ -132,10 +132,10 @@ def test_backup_index_endpoint_is_metadata_only(tmp_path, monkeypatch) -> None:
     assert empty.status_code == 200
     body = empty.json()
     # 15 original + watchlist + news digest + US/TW equity paper + paper history
-    # + research ledger + TW announcements. The last one is not merely local
-    # state: TWSE serves one session at a time, so anything this store loses
-    # cannot be re-fetched tomorrow.
-    assert body["summary"]["protected_file_count"] == 22
+    # + research ledger + TW announcements + TW margin history. The last two are
+    # not merely local state: TWSE serves one session at a time and keeps no
+    # archive, so anything those stores lose cannot be re-fetched tomorrow.
+    assert body["summary"]["protected_file_count"] == 23
     assert body["summary"]["backup_file_count"] == 0
     assert body["summary"]["keep_backups"] == STATE_BACKUP_COUNT
     assert body["safety"]["restore_endpoint_available"] is True
