@@ -23,6 +23,7 @@ from __future__ import annotations
 
 import json
 from datetime import UTC, datetime
+from email.utils import parsedate_to_datetime
 from typing import Any
 from urllib.error import HTTPError, URLError
 from urllib.request import Request, urlopen
@@ -355,6 +356,132 @@ def fetch_twse_margin(*, timeout: float = 25.0) -> tuple[list[dict[str, Any]], s
     if not isinstance(payload, list):
         raise TwseCompanyError(f"TWSE response for {TWSE_MARGIN_URL} is not a list")
     return [row for row in payload if isinstance(row, dict)], published
+
+
+MAX_MARGIN_SESSIONS = 400
+
+
+def default_margin_history_state() -> dict[str, Any]:
+    return {"sessions": [], "last_fetch_at": None}
+
+
+def normalize_margin_history_state(payload: Any) -> dict[str, Any]:
+    state = payload if isinstance(payload, dict) else {}
+    rows = state.get("sessions")
+    rows = [r for r in rows if isinstance(r, dict) and r.get("session")] if isinstance(rows, list) else []
+    rows.sort(key=lambda r: str(r.get("session")))
+    return {"sessions": rows, "last_fetch_at": state.get("last_fetch_at") or None}
+
+
+def margin_session_row(payload: dict[str, Any]) -> dict[str, Any] | None:
+    """One day of margin balance, compact enough to keep for a year.
+
+    Only the aggregate and whatever symbols the caller asked about: the full
+    1,291-issue file is not worth storing daily, and the two questions this
+    answers — is market-wide deleveraging slowing, and is my own holding still
+    being forced out — need the aggregate and a handful of names.
+
+    Keyed on the published session. TWSE's rows are labelled 今日餘額 and carry
+    no date at all, so the HTTP Last-Modified stamp is the only date there is;
+    a payload without one is refused rather than filed under a guess.
+    """
+    session = _published_session(payload.get("published_at"))
+    if not session:
+        return None
+    symbols = payload.get("symbols") if isinstance(payload.get("symbols"), list) else []
+    return {
+        "session": session,
+        "published_at": str(payload.get("published_at") or ""),
+        "issue_count": payload.get("issue_count"),
+        "margin_lots_today": payload.get("margin_lots_today"),
+        "margin_lots_prev": payload.get("margin_lots_prev"),
+        "change_pct": payload.get("change_pct"),
+        "reduced_symbol_count": payload.get("reduced_symbol_count"),
+        "increased_symbol_count": payload.get("increased_symbol_count"),
+        "symbols": [
+            {
+                "code": s.get("code"),
+                "margin_lots_today": s.get("margin_lots_today"),
+                "change_pct": s.get("change_pct"),
+            }
+            for s in symbols
+            if isinstance(s, dict) and s.get("code")
+        ],
+    }
+
+
+def _published_session(stamp: Any) -> str | None:
+    """`Wed, 05 Aug 2026 21:23:22 GMT` -> `2026-08-05`."""
+    text = str(stamp or "").strip()
+    if not text:
+        return None
+    try:
+        return parsedate_to_datetime(text).astimezone(UTC).strftime("%Y-%m-%d")
+    except (TypeError, ValueError):
+        return None
+
+
+def merge_margin_session(
+    state: dict[str, Any], row: dict[str, Any] | None, *, now: datetime | None = None
+) -> tuple[dict[str, Any], dict[str, Any]]:
+    """Fold one session in. Existing sessions are never rewritten.
+
+    TWSE publishes one file and keeps no archive, so a session nobody fetched
+    is a session permanently absent — and a single snapshot cannot answer the
+    question the data exists for. Price cannot separate capitulation from
+    continuation; a run of sessions where forced sellers stop being forced can.
+    """
+    store = normalize_margin_history_state(state)
+    stamp = (now or datetime.now(tz=UTC)).isoformat(timespec="seconds")
+    if row is None:
+        store["last_fetch_at"] = stamp
+        return store, {"added": False, "reason": "no published session stamp", "held": len(store["sessions"])}
+    known = {str(r.get("session")) for r in store["sessions"]}
+    added = str(row["session"]) not in known
+    if added:
+        store["sessions"].append(row)
+        store["sessions"].sort(key=lambda r: str(r.get("session")))
+        dropped = max(0, len(store["sessions"]) - MAX_MARGIN_SESSIONS)
+        if dropped:
+            store["sessions"] = store["sessions"][dropped:]
+    store["last_fetch_at"] = stamp
+    return store, {
+        "added": added,
+        "session": row["session"],
+        "held": len(store["sessions"]),
+        "reason": None if added else "already held",
+    }
+
+
+def margin_trend(state: dict[str, Any], *, sessions: int = 5) -> dict[str, Any]:
+    """The shape a single snapshot cannot show.
+
+    consecutive_reducing counts sessions ending today where market-wide margin
+    fell. Deleveraging that has run for days and then stops is the distinction
+    price charts cannot make — every capitulation candle and every continuation
+    candle closes at the low.
+    """
+    store = normalize_margin_history_state(state)
+    rows = store["sessions"][-max(1, sessions):]
+    streak = 0
+    for row in reversed(store["sessions"]):
+        pct = str(row.get("change_pct") or "")
+        if pct.startswith("-"):
+            streak += 1
+        else:
+            break
+    return {
+        "sessions_held": [r["session"] for r in store["sessions"]],
+        "recent": rows,
+        "consecutive_reducing_sessions": streak,
+        "note": (
+            "TWSE publishes one session and keeps no archive, so sessions_held is "
+            "everything this store has ever seen — a gap is a day nobody fetched, "
+            "not a quiet market. Balances are LOT counts, not money, so the "
+            "aggregate is dimensionally crude; read it beside "
+            "reduced_symbol_count, which is dimensionless."
+        ),
+    }
 
 
 def _margin_int(value: Any) -> int | None:

@@ -217,6 +217,9 @@ from otto.local_terminal.research_ledger import (
 )
 from otto.local_terminal.twse_company import (
     TwseCompanyError,
+    margin_session_row,
+    margin_trend,
+    merge_margin_session,
     tw_company_facts_payload,
     tw_margin_balance_payload,
     tw_valuation_screen_payload,
@@ -3958,9 +3961,21 @@ def create_app(frontend_dist: Path | None = None) -> FastAPI:
             state = STORE.read_research_ledger_state()
             requested = [s for s in _open_call_symbols(state) if s.endswith(".TW")]
         try:
-            return tw_margin_balance_payload(requested)
+            payload = tw_margin_balance_payload(requested)
         except TwseCompanyError as exc:
             raise HTTPException(status_code=502, detail=str(exc)) from exc
+        # This call already went to TWSE, and TWSE keeps no archive: the session
+        # it just returned is gone tomorrow. A single snapshot cannot answer the
+        # question margin data exists for — price cannot separate capitulation
+        # from continuation, but a run of sessions where forced selling stops
+        # can, and there was no run because nothing was kept.
+        state, report = merge_margin_session(
+            STORE.read_tw_margin_history_state(), margin_session_row(payload)
+        )
+        if report["added"]:
+            STORE.write_tw_margin_history_state(state)
+        payload["trend"] = margin_trend(state)
+        return payload
 
     @app.get("/api/market/sessions")
     def market_sessions() -> dict[str, Any]:
