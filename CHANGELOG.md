@@ -2,6 +2,25 @@
 
 ## Unreleased
 
+- The holdings had no reader in the action catalogue (2026-08-06). "What do you
+  make of my holdings?" is the third of three prompts the README offers a
+  newcomer, and it was the one with no way in.
+  - Measured on an empty install: the portfolio route exposes twelve actions and
+    not one of them read the portfolio. create, load_demo, select, import,
+    delete, link_backtest, link_paper and report all mutate; report_index and
+    report_health describe reports rather than positions; export needs an active
+    portfolio and `book_detail` needs a `{portfolio_id}` obtainable only by
+    reading the portfolio first.
+  - The state was reachable the whole time — `get_route portfolio` returns it —
+    but an agent looking for what it can *do* looks at `list_actions`, and there
+    the holdings had no reader. Nothing failed; the path simply was not where
+    anyone would look.
+  - `portfolio_read` exposes the existing `GET /api/portfolio`. No new endpoint;
+    a catalogue entry so the read is discoverable where the agent searches.
+  - On a fresh install it answers `first_use: true` with create / import / demo
+    rather than an empty payload, so "no holdings" is a starting point instead
+    of a dead end.
+
 - The backtest page shows whether its own headline numbers mean anything
   (2026-08-06). Sample sufficiency was computed one round earlier and only ever
   reached the API — the screen kept rendering 總報酬 / 最大回撤 / 勝率 / 交易數

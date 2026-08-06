@@ -3045,6 +3045,32 @@ ACTION_CONTRACTS: tuple[AgentActionContract, ...] = (
         ("400 confirmation_required", "400 unknown_portfolio"),
     ),
     AgentActionContract(
+        "portfolio_read",
+        "portfolio",
+        "Read the holdings: books, active positions and their marks",
+        "GET",
+        "/api/portfolio",
+        "empty query; the active portfolio's books, positions and summary, plus "
+        "first_use when nothing has been created yet",
+        (
+            "portfolios",
+            "active_portfolio_id",
+            "positions",
+            "summary",
+            "first_use",
+            "actions",
+        ),
+        "read-only; first_use=true means this install has no portfolio yet, which "
+        "is a fresh terminal rather than an empty one — create, import or load the "
+        "demo from the actions listed in the response",
+        False,
+        False,
+        False,
+        False,
+        "local_portfolio_state_only",
+        (),
+    ),
+    AgentActionContract(
         "portfolio_export",
         "portfolio",
         "Export active portfolio JSON",
