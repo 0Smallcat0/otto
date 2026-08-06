@@ -2,6 +2,30 @@
 
 ## Unreleased
 
+- The front page printed two commands that cannot run the way the front page
+  says to install (2026-08-06). Measured by doing what a stranger does: `uvx
+  --from git+...` built and handshook cleanly, the packaged dashboard served
+  its own assets, and a fresh state root landed in `~/.otto` with the
+  first-run guidance correct — and then two of the four printed commands
+  failed on their first line.
+  - `[tool.setuptools.packages.find]` ships `otto` and nothing else. `python
+    evals/run_eval.py`, offered as the way to reproduce the eval table, and
+    `python -m pytest -q` under Under the hood both need a repository the
+    reader was never told to clone.
+  - Both now say so and carry the clone, and the eval instruction was checked
+    by running it: `evals/run_eval.py --help` exits 0 from a fresh public
+    checkout.
+  - The guard derives what ships from `pyproject.toml` rather than a hardcoded
+    list, and only applies to a README that hands the reader a package —
+    a developer README whose every command assumes a checkout is not lying to
+    anyone.
+  - Swept the class this round was meant to be about and found nothing to fix:
+    the margin store already keeps the owner's holdings, `tw-screen` reports
+    `screened_count` / `match_count` / `excluded_missing_count` beside its
+    `returned_count`, the packet reports `available_count`, and the
+    announcements limit never binds at the volume the store holds. R17 was the
+    only instance.
+
 - The daily refresh ran every morning and the owner's own holdings never moved
   (2026-08-06). Same class as the two one-shot sources, inverted: nothing was
   being lost, something was silently frozen.
