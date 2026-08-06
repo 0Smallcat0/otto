@@ -33,6 +33,62 @@ export interface RealBookSlice {
   positions?: Record<string, string>[];
 }
 
+export interface DeleveragingProgress {
+  verdict?: string;
+  margin_decline_pct?: string | null;
+  index_decline_pct?: string | null;
+  index_symbol?: string;
+  reason?: string | null;
+}
+
+const DELEVERAGING_CLASS: Record<string, string> = {
+  incomplete: "ft-down",
+  margin_led: "ft-up",
+  not_a_drawdown: "ft-dim",
+  unknown: "ft-dim"
+};
+
+/** Whether TW deleveraging has run further than the fall that caused it.
+ *
+ * Taiwan desks do not read this off a streak: a bottom is not called while the
+ * index has fallen further than margin has unwound (2026-07-28, index -12.86%
+ * against margin -9.93%, https://www.setn.com/news/1880517). The backend
+ * computes the comparison; this decides whether the banner says it, and says
+ * nothing at all to a holder with no TW position — the whole statistic is
+ * about one exchange's leverage.
+ *
+ * Exported because the previous round shipped the series and left every screen
+ * without it, which is the defect this function exists to not repeat.
+ */
+/** TW listings as the book writes them: bare 4-6 digit codes, or a .TW suffix. */
+export function isTwSymbol(symbol: string): boolean {
+  const text = String(symbol || "").toUpperCase();
+  return /^\d{4,6}[A-Z]?$/.test(text) || text.endsWith(".TW") || text.endsWith(".TWO");
+}
+
+export function deleveragingLine(
+  progress: DeleveragingProgress | null | undefined,
+  twPositionCount: number
+): { labelKey: string; detail: string; cls: string } | null {
+  if (twPositionCount <= 0) return null;
+  const verdict = progress?.verdict;
+  if (!verdict || !(verdict in DELEVERAGING_CLASS)) return null;
+  const cls = DELEVERAGING_CLASS[verdict];
+  if (verdict === "unknown") {
+    return { labelKey: "去槓桿進度不明", detail: String(progress?.reason ?? ""), cls };
+  }
+  if (verdict === "not_a_drawdown") {
+    return { labelKey: "不在回檔波段", detail: "", cls };
+  }
+  const index = progress?.index_symbol ?? "0050";
+  const labelKey = verdict === "incomplete" ? "去槓桿未完成" : "融資已先跌過大盤";
+  return {
+    labelKey,
+    detail: `${progress?.margin_decline_pct}% vs ${index} ${progress?.index_decline_pct}%`,
+    cls
+  };
+}
+
 /** Owner's real holdings book, priced off whatever quote caches we hold. */
 export function RealBookBanner({ book, markets }: { book: RealBookSlice | null; markets: MarketsSlice | null }) {
   const { t } = useT();
@@ -63,6 +119,21 @@ export function RealBookBanner({ book, markets }: { book: RealBookSlice | null; 
       alive = false;
     };
   }, [symbolsKey]);
+  // Local read of the accumulated MI_MARGN sessions. Deliberately not the
+  // fetching endpoint: that one goes to TWSE on every call, and this renders
+  // on a banner the owner leaves open.
+  const [deleveraging, setDeleveraging] = useState<DeleveragingProgress | null>(null);
+  useEffect(() => {
+    let alive = true;
+    void getJson<{ deleveraging?: DeleveragingProgress }>(
+      "/api/research/tw-margin-history"
+    ).then((data) => {
+      if (alive) setDeleveraging(data?.deleveraging ?? null);
+    });
+    return () => {
+      alive = false;
+    };
+  }, []);
   if (!positions.length) return null;
   const research = markets?.research_summary;
   const priceMap = new Map<string, number>();
@@ -109,6 +180,10 @@ export function RealBookBanner({ book, markets }: { book: RealBookSlice | null; 
   const netPnl = pnl - estimatedExitFees;
   const cls = pnl > 0 ? "ft-up" : pnl < 0 ? "ft-down" : "ft-dim";
   const currency = book?.portfolio?.currency ?? "TWD";
+  const deleveragingView = deleveragingLine(
+    deleveraging,
+    priced.filter((row) => isTwSymbol(row.symbol)).length
+  );
   return (
     <div className="ft-book" data-testid="wall-real-book">
       <div>
@@ -128,6 +203,13 @@ export function RealBookBanner({ book, markets }: { book: RealBookSlice | null; 
         <div className="k">{t("持倉")}</div>
         <div className="v">{priced.length}</div>
         <div className="s">{t("日收盤計價")}</div>
+        {deleveragingView ? (
+          <div className={`s ${deleveragingView.cls}`} data-testid="wall-deleveraging"
+            title={deleveragingView.detail}>
+            {t(deleveragingView.labelKey)}
+            {deleveragingView.detail ? ` ${deleveragingView.detail}` : ""}
+          </div>
+        ) : null}
       </div>
       <div className="ft-pos">
         <table>
