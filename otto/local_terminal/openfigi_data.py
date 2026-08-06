@@ -160,7 +160,9 @@ def normalize_openfigi_mapping(
 def openfigi_provider_entry_summary() -> dict[str, Any]:
     return {
         "provider_id": OPENFIGI_PROVIDER_ID,
-        "official_docs": [OPENFIGI_DOCS_URL, OPENFIGI_MAPPING_URL],
+        # OPENFIGI_MAPPING_URL is the POST endpoint this module calls; opened
+        # in a browser it answers 405, so it is not documentation.
+        "official_docs": [OPENFIGI_DOCS_URL],
         "docs_checked_at": OPENFIGI_DOCS_CHECKED_AT,
         "auth_mode": "public-no-key",
         "rate_limit": (

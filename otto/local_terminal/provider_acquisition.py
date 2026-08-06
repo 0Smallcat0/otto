@@ -19,9 +19,11 @@ PROVIDER_CANDIDATES: tuple[dict[str, Any], ...] = (
         "asset_family": "Stocks",
         "runtime_role": "cross_company_fundamental_frames",
         "auth_mode": "public_no_key",
+        # The frames API prefix used to sit here as if it were documentation.
+        # Opened, it answers 404 — the path only resolves with a taxonomy, tag,
+        # unit and period appended, and that is a response, not a page to read.
         "official_docs": [
             "https://www.sec.gov/search-filings/edgar-application-programming-interfaces",
-            "https://data.sec.gov/api/xbrl/frames/",
         ],
         "quote_semantics": "not_quote",
         "cache_policy": {
@@ -565,9 +567,10 @@ PROVIDER_CANDIDATES: tuple[dict[str, Any], ...] = (
         "asset_family": "Stocks",
         "runtime_role": "identifier_mapping",
         "auth_mode": "public_no_key",
+        # The v3 mapping endpoint is POST-only and answers 405 to anyone who
+        # opens it; the documentation is the page above it.
         "official_docs": [
             "https://www.openfigi.com/api/documentation",
-            "https://api.openfigi.com/v3/mapping",
         ],
         "quote_semantics": "not_quote",
         "cache_policy": {

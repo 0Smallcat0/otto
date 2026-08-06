@@ -1176,9 +1176,10 @@ PROVIDER_REGISTRY: tuple[dict[str, Any], ...] = (
         "adapter_id": "openfigi_identifier_mapping_public",
         "implementation_status": "implemented",
         "coverage": ["stocks", "listed securities", "FIGI identifier reference"],
+        # POST-only endpoint; opened in a browser it answers 405, so it is not
+        # documentation and does not belong in a list that promises some.
         "official_docs": [
             "https://www.openfigi.com/api/documentation",
-            "https://api.openfigi.com/v3/mapping",
         ],
         "docs_checked_at": "2026-05-27",
         "auth_mode": "no-key",
