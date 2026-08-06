@@ -313,21 +313,27 @@ def _getting_started(client: TerminalClient) -> dict[str, Any]:
             "all work with no API key and no sign-up. Optional keys only widen "
             "data coverage; nothing here is gated behind one."
         ),
+        # Written to be run as printed. The previous wording named a query
+        # string inside the action id (`research_scan?refresh=true`, which
+        # answers "unknown action_id"), described a POST taking a `symbols`
+        # array as "with a symbol" (422, field required), and pointed at a
+        # health url the health payload did not carry.
         "try_first": (
             [
-                "refresh_public_data, then run_action markets_quote_lookup with a "
-                "symbol you care about — TSLA, 2330.TW and BTC-USD all resolve",
+                'refresh_public_data, then run_action markets_quote_lookup with '
+                'body {"symbols": ["TSLA", "2330.TW", "BTC-USD"]} — US, TW and '
+                "crypto all resolve with no key",
                 "run_action research_scan to see the research universe ranked by "
                 "today's move",
-                "list_actions to see everything operable, or open the dashboard at "
-                "the health url",
+                "list_actions to see everything operable, or open health.url from "
+                "this payload in a browser for the dashboard",
             ]
             if fresh
             else [
                 "run_action research_ledger_read for the journaled calls and their "
                 "scorecard",
-                "run_action research_scan?refresh=true for today's movers and any "
-                "holding with no journaled view",
+                'run_action research_scan with query {"refresh": "true"} for '
+                "today's movers and any holding with no journaled view",
             ]
         ),
         "note": (

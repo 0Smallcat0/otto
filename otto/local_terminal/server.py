@@ -2716,6 +2716,9 @@ def health_payload() -> dict[str, Any]:
         # caller can read instead of a mistake it has to remember not to make.
         "source_stale": _newest_source_mtime() > _SOURCE_MTIME_AT_IMPORT,
         "restart_hint": "python -m otto.local_terminal",
+        # The first thing a new operator is told is to open the dashboard at
+        # "the health url", and there was no url in this payload to open.
+        "url": f"http://{DEFAULT_HOST}:{DEFAULT_PORT}/",
     }
 
 

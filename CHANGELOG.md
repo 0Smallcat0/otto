@@ -2,6 +2,27 @@
 
 ## Unreleased
 
+- Three of the five lines an operator reads first did not run as printed
+  (2026-08-06). `terminal_status` ends with `getting_started.try_first`, which
+  is the first instruction any agent receives after connecting. Ran them.
+  - `run_action research_scan?refresh=true` answers `unknown action_id`. The
+    query string belongs in `run_action`'s own `query` argument, not inside the
+    id, and the line now shows it that way.
+  - "run_action markets_quote_lookup with a symbol you care about" describes a
+    POST whose body is a `symbols` array. Taken literally it returns 422,
+    `Field required`. The line now carries the body, with all three symbols it
+    already promised resolve.
+  - "open the dashboard at the health url" pointed at a field `/api/health`
+    did not have. It does now — `http://127.0.0.1:8765/`, built from the host
+    and port the server actually bound, and it answers 200.
+  - The guard reads the action ids and the health keys off the running
+    terminal, so it cannot drift from what is really offered. Restoring each
+    original line turns a different test red.
+  - One of the guards was written tautologically on the first pass and could
+    never fail. A test that cannot go red is not a test, so it was rewritten to
+    check that every underscored token in the instructions is a real MCP tool
+    or a real contract action — prose carries no underscores.
+
 - The front page printed two commands that cannot run the way the front page
   says to install (2026-08-06). Measured by doing what a stranger does: `uvx
   --from git+...` built and handshook cleanly, the packaged dashboard served
