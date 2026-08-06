@@ -2,6 +2,29 @@
 
 ## Unreleased
 
+- Two of the 87 links the terminal advertises as documentation were not
+  documentation (2026-08-06). Every `official_docs` and `docs_url` value in the
+  package was fetched. Eighty-five answered.
+  - `https://data.sec.gov/api/xbrl/frames/` answers 404 — the path resolves
+    only with a taxonomy, tag, unit and period appended. `https://api.openfigi.
+    com/v3/mapping` answers 405; it takes POST. Both sat beside the real
+    documentation page in the same list, so the fix was to stop claiming the
+    endpoint was one.
+  - Fifteen more looked broken and were not. sec.gov and bls.gov answer 403 to
+    an unrecognised User-Agent and 200 to the terminal's own; FRED timed out
+    once and answered on retry; ECB failed local certificate verification. A
+    probe that cannot tell "blocked" from "gone" is not evidence, so every
+    failure was re-run before anything was called dead.
+  - `api.census.gov` is unreachable from the machine this ran on while
+    `www.census.gov` answers. That is a fact about the machine, not about the
+    link, so its two entries were left alone.
+  - No general offline guard exists for this. Two attempts at deriving one
+    statically — is the doc URL a prefix of a request template, is it a request
+    target — each returned mostly false positives, because a documentation page
+    and an API endpoint are not distinguishable without asking the network. The
+    guard pins the two that were measured instead of pretending to a rule, and
+    on its first run it found a fourth site still carrying one.
+
 - Three of the five lines an operator reads first did not run as printed
   (2026-08-06). `terminal_status` ends with `getting_started.try_first`, which
   is the first instruction any agent receives after connecting. Ran them.
