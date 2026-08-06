@@ -1083,15 +1083,6 @@ def generate_closed_candles(symbol: str) -> list[dict[str, str]]:
     return candles
 
 
-def candles_from_provider_cache(
-    provider_cache: dict[str, Any] | None,
-    *,
-    symbol: str,
-    timeframe: str,
-) -> list[dict[str, str]]:
-    return backtest_data_snapshot(provider_cache, symbol=symbol, timeframe=timeframe)["candles"]
-
-
 def backtest_data_snapshot(
     provider_cache: dict[str, Any] | None,
     *,

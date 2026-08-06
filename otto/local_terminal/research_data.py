@@ -215,10 +215,6 @@ def sec_xbrl_frame_cache_path(
     )
 
 
-def sec_company_submission_watchlist() -> tuple[dict[str, str], ...]:
-    return tuple(dict(company) for company in SEC_DEFAULT_COMPANY_WATCHLIST)
-
-
 def research_data_payload(
     sec_cache: dict[str, Any] | None = None,
     dbnomics_cache: dict[str, Any] | None = None,

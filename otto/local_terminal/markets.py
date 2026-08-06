@@ -2174,32 +2174,6 @@ def quote_reference_coverage_payload(
     }
 
 
-def quote_snapshot_board_payload(
-    source_coverage_matrix: list[dict[str, Any]],
-) -> dict[str, Any]:
-    rows = [row for row in source_coverage_matrix if isinstance(row, dict)]
-    quote_lanes = [
-        _coverage_supervision_lane(row)
-        for row in rows
-        if str(row.get("quote_semantics") or "") == "quote_not_orderable"
-    ]
-    reference_lanes = [
-        _coverage_supervision_lane(row)
-        for row in rows
-        if str(row.get("quote_semantics") or "") == "reference_only"
-    ]
-    context_lanes = [
-        _coverage_supervision_lane(row)
-        for row in rows
-        if str(row.get("quote_semantics") or "") == "not_quote"
-    ]
-    return _quote_snapshot_board_payload(
-        quote_lanes,
-        reference_lanes=reference_lanes,
-        context_lanes=context_lanes,
-    )
-
-
 def _quote_snapshot_board_payload(
     quote_lanes: list[dict[str, Any]],
     *,
