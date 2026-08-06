@@ -1,7 +1,7 @@
 import { describe, expect, it } from "vitest";
 
 import { rankHeadlines, sessionSpan, sessionStamp, staleCandles } from "../../src/ui/api";
-import { runProvenance } from "../../src/ui/readers";
+import { runProvenance, sampleCaveat } from "../../src/ui/readers";
 
 // Five defects fixed on 2026-07-27 were all the same shape: the backend had
 // computed the qualifying fact, put it in the payload, and the render step
@@ -144,6 +144,41 @@ describe("staleCandles", () => {
     expect(staleCandles("", now)).toBe(false);
     expect(staleCandles("not a date", now)).toBe(false);
   });
+
+describe("sampleCaveat", () => {
+  // Same shape as the five defects above, committed one round ago and by me:
+  // the engine computed whether a backtest's sample could carry a verdict, put
+  // it in the payload, and the render step dropped it. On screen, 11 round
+  // trips over twenty hours produced a win rate and a Sharpe that looked
+  // exactly like a run of 400 trades over three years.
+  it("qualifies a run too small to be a verdict", () => {
+    const caveat = sampleCaveat({
+      sample: {
+        verdict: "not_a_verdict",
+        round_trip_count: 11,
+        floor_round_trips: 30,
+        fragile_metrics: ["sharpe_ratio", "win_rate_pct"]
+      }
+    });
+
+    expect(caveat).not.toBeNull();
+    expect(caveat?.round_trip_count).toBe(11);
+    // The KPI row shows a win rate; naming it is what connects the two.
+    expect(caveat?.fragile_metrics).toContain("win_rate_pct");
+  });
+
+  it("stays quiet only when the sample can actually carry a conclusion", () => {
+    expect(sampleCaveat({ sample: { verdict: "defensible" } })).toBeNull();
+    expect(sampleCaveat({ sample: { verdict: "reliable" } })).not.toBeNull();
+    expect(sampleCaveat({ sample: { verdict: "directional_only" } })).not.toBeNull();
+  });
+
+  it("says nothing when the engine said nothing", () => {
+    expect(sampleCaveat(undefined)).toBeNull();
+    expect(sampleCaveat({})).toBeNull();
+    expect(sampleCaveat({ sample: {} })).toBeNull();
+  });
+});
 
   it("reads a full timestamp, not just a bare date", () => {
     expect(staleCandles("2026-07-08T13:30:00+08:00", now)).toBe(true);

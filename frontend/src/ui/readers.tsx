@@ -54,6 +54,38 @@ interface BacktestDetail {
   report_md?: string;
 }
 
+export interface SampleSufficiency {
+  verdict: string;
+  round_trip_count?: number;
+  floor_round_trips?: number;
+  span?: string;
+  fragile_metrics?: string[];
+}
+
+const SAMPLE_VERDICT_LABEL: Record<string, string> = {
+  not_a_verdict: "樣本太小,這些數字不是結論",
+  directional_only: "剛過推論門檻,只能當方向參考",
+  reliable: "樣本可用,仍要看涵蓋幾種盤勢",
+};
+
+/** Whether a backtest's headline numbers need qualifying, and with what.
+ *
+ * The KPI row — return, drawdown, win rate, trade count — is the surface that
+ * reads as a verdict, and 11 round trips over twenty hours renders identically
+ * to 400 over three years. The engine computes the difference; this decides
+ * whether the screen says it. Exported so the decision has a guard: the
+ * previous round shipped the engine half and left the render step dropping it,
+ * which is the defect this file's test suite exists for.
+ */
+export function sampleCaveat(
+  summary: Record<string, unknown> | undefined
+): SampleSufficiency | null {
+  const sample = summary?.sample as SampleSufficiency | undefined;
+  if (!sample || typeof sample.verdict !== "string") return null;
+  // A defensible sample needs no banner; anything else does.
+  return sample.verdict === "defensible" ? null : sample;
+}
+
 function metricOf(detail: BacktestDetail, key: string): unknown {
   const analysis = detail.returns_analysis ?? {};
   const metrics = (analysis as { metrics?: Record<string, unknown> }).metrics ?? analysis;
@@ -117,6 +149,7 @@ export function BacktestRunReader({ runId, onBack }: { runId: string; onBack: ()
     ?? report.match(/Overfit check:\s*(.+)/)?.[1]
     ?? ""
   );
+  const sample = sampleCaveat(summary);
   const trades = detail.trades ?? [];
   const tradeCols = trades.length
     ? Object.keys(trades[0]).filter((key) =>
@@ -136,6 +169,26 @@ export function BacktestRunReader({ runId, onBack }: { runId: string; onBack: ()
         <div className="ft-kpi"><div className="k">{t("勝率")}</div><div className="n">{winRate != null ? `${winRate}%` : "—"}</div></div>
         <div className="ft-kpi"><div className="k">{t("交易數")}</div><div className="n">{String(summary.trade_count ?? trades.length)}</div></div>
       </div>
+      {/* The KPIs above are the surface that reads as a verdict, so the caveat
+          belongs directly under them. A run of 11 round trips over twenty hours
+          produces a win rate and a Sharpe that look exactly like a run of 400
+          over three years; the engine knows the difference and the screen used
+          to drop it. */}
+      {sample ? (
+        <div className="ft-ainote">
+          <div className="who">{t("樣本足夠性")}</div>
+          {t(SAMPLE_VERDICT_LABEL[sample.verdict] ?? sample.verdict)}
+          {" — "}
+          {sample.round_trip_count} {t("個來回")}
+          {sample.floor_round_trips ? ` / ${t("統計推論門檻")} ${sample.floor_round_trips}` : ""}
+          {sample.span ? ` · ${sample.span}` : ""}
+          {sample.fragile_metrics?.length ? (
+            <div className="s" style={{ marginTop: 4 }}>
+              {t("最不可信的指標")}: {sample.fragile_metrics.join(", ")}
+            </div>
+          ) : null}
+        </div>
+      ) : null}
       {overfit ? (
         <div className="ft-ainote"><div className="who">{t("過擬合警示(引擎判定)")}</div>{overfit}</div>
       ) : null}
