@@ -411,7 +411,7 @@ def delete_strategy(state: dict[str, Any], strategy_id: str) -> dict[str, Any]:
     algo_state = normalize_algo_state(copy.deepcopy(state))
     target_id = _strategy_id(strategy_id)
     if not target_id:
-        raise AlgoError("Strategy id is required")
+        raise AlgoError("strategy_id is required")
     if target_id not in algo_state["strategies"]:
         raise AlgoError("Strategy not found")
     del algo_state["strategies"][target_id]
@@ -640,8 +640,8 @@ def normalize_strategy(raw: dict[str, Any], fallback_id: str | None = None) -> d
         "description": _optional_text(raw.get("description"), "", 240),
         "symbol": symbol,
         "timeframe": timeframe,
-        "entry_conditions": _conditions(raw.get("entry_conditions", []), "Entry conditions"),
-        "exit_conditions": _conditions(raw.get("exit_conditions", []), "Exit conditions"),
+        "entry_conditions": _conditions(raw.get("entry_conditions", []), "entry_conditions"),
+        "exit_conditions": _conditions(raw.get("exit_conditions", []), "exit_conditions"),
         "risk_settings": _risk_settings(raw.get("risk_settings", {})),
         "backtest": backtest,
         "version": str(raw.get("version") or "1.0")[:12],
@@ -1265,9 +1265,9 @@ def _timeframe(raw: Any) -> str:
 def _strategy_id(raw: Any) -> str:
     value = str(raw or "").strip()
     if not value or len(value) > 48:
-        raise AlgoError("Strategy id is required")
+        raise AlgoError("strategy_id is required")
     if not all(ch.isalnum() or ch in {"-", "_"} for ch in value):
-        raise AlgoError("Strategy id is invalid")
+        raise AlgoError("strategy_id is invalid")
     return value
 
 

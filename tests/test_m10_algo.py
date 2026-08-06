@@ -834,8 +834,9 @@ def test_algo_rejects_unsafe_strategy_inputs_without_artifacts(tmp_path: Path, m
         "Description appears to contain credential material"
     )
     assert condition_secret.status_code == 400
+    # Named as the key the caller sends, not as prose it would have to convert.
     assert condition_secret.json()["detail"] == (
-        "Entry conditions appears to contain credential material"
+        "entry_conditions appears to contain credential material"
     )
     assert unsupported_symbol.status_code == 400
     assert unsupported_symbol.json()["detail"] == "Unsupported algo symbol"
