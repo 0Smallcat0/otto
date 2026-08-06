@@ -2,6 +2,33 @@
 
 ## Unreleased
 
+- The daily refresh ran every morning and the owner's own holdings never moved
+  (2026-08-06). Same class as the two one-shot sources, inverted: nothing was
+  being lost, something was silently frozen.
+  - `markets_history_refresh` took the first `MAX_HISTORY_SYMBOLS` of the
+    watchlist concatenated as US + FX + TW. Eleven symbols against a budget of
+    eight meant the last three fell off every single time, and TW is last. The
+    caches told the whole story: eight symbols stamped that morning, and 0050,
+    00982A and 2834 still stamped 2026-07-28 — nine sessions stale, the owner's
+    two real positions and the index his TW calls are graded against.
+  - Every result in the response read `live` and `count` said 8. The three that
+    were never attempted appeared nowhere in it, so a refresh that covered
+    two-thirds of the list was indistinguishable from a complete one.
+  - The budget is Twelve Data's free tier — eight requests a minute
+    (<https://support.twelvedata.com/en/articles/5615854-credits>). TW listings
+    ride TWSE's keyless endpoint and spend none of it, so they were being
+    dropped to protect a quota they never touched. The key budget now binds
+    only the symbols that spend it.
+  - Real positions, then symbols carrying an open call, then the indices those
+    calls are graded against, and only then the watch list. Whatever still
+    exceeds a budget comes back by name in `skipped`, with the reason.
+  - `2834.TW` and `2834` are one cache file; the refresh now agrees. Left
+    unnormalised a held name asked for by suffix neither matched the cache nor
+    routed to TWSE, and would have been billed to the key.
+  - Measured after: twelve symbols live, nothing skipped, every cache at
+    2026-08-05. 2834's chart gained the nine sessions it was missing, and the
+    deleveraging read on the wall stopped being blocked by an uncovered window.
+
 - The margin series reached no screen, and the number it would have shown was
   the wrong one (2026-08-06). `/api/research/tw-margin` had zero references in
   the entire frontend — the store shipped the round before was invisible.

@@ -40,11 +40,12 @@ from otto.local_terminal.twse_history import (
     fetch_twse_stock_day,
 )
 from otto.local_terminal.twelve_data_history import (
-    MAX_HISTORY_SYMBOLS,
     TwelveDataHistoryError,
     fetch_twelve_data_time_series,
     history_refresh_summary,
+    is_twse_history_symbol,
     normalize_time_series,
+    select_history_symbols,
 )
 from otto.local_terminal.news_digest import (
     NewsDigestError,
@@ -3750,6 +3751,31 @@ def create_app(frontend_dist: Path | None = None) -> FastAPI:
         }
         return sorted(symbols | set(BENCHMARK_BY_MARKET.values()))
 
+    def _history_priority_symbols() -> list[str]:
+        """Symbols the refresh budget must be spent on before anything else.
+
+        Real positions first, then every symbol carrying an open call and the
+        indices those calls are graded against — the three things whose staleness
+        shows up as a wrong number on a screen rather than a missing chart.
+        """
+        priority: list[str] = []
+        pf_state = STORE.read_portfolio_state()
+        portfolios = pf_state.get("portfolios") or {}
+        active = portfolios.get(pf_state.get("active_portfolio_id")) or {}
+        for position in active.get("positions") or []:
+            if isinstance(position, dict) and position.get("symbol"):
+                priority.append(str(position["symbol"]))
+        # The crypto benchmark rides its own cache and is not a daily-candle
+        # symbol here; spending a slot on it would drop an equity to fetch
+        # something this endpoint cannot store anyway.
+        crypto_benchmark = BENCHMARK_BY_MARKET.get("crypto", "")
+        priority.extend(
+            symbol
+            for symbol in _open_call_symbols(STORE.read_research_ledger_state())
+            if symbol != crypto_benchmark
+        )
+        return priority
+
     def _tw_index_candles() -> list[dict[str, Any]]:
         """Daily closes for the index leg of the deleveraging comparison.
 
@@ -4668,21 +4694,23 @@ def create_app(frontend_dist: Path | None = None) -> FastAPI:
     @app.post("/api/markets/history/refresh")
     def markets_history_refresh(update: HistoryRefreshUpdate | None = None) -> dict[str, Any]:
         watch = STORE.read_watchlist_state()
-        raw_symbols = (
-            update.symbols
-            if update and update.symbols
-            else [*watch["us"], *watch["fx"], *watch["tw"]]
-        )
-        if isinstance(raw_symbols, str):
-            raw_symbols = [part.strip() for part in raw_symbols.split(",") if part.strip()]
-        symbols = [str(s).upper() for s in raw_symbols][:MAX_HISTORY_SYMBOLS]
+        asked = update.symbols if update and update.symbols else None
+        if isinstance(asked, str):
+            asked = [part.strip() for part in asked.split(",") if part.strip()]
+        # Named symbols are the caller's own priority; the default sweep puts
+        # what money is in ahead of what is merely being watched, because the
+        # cap used to fall on whatever the concatenation left last.
+        if asked:
+            symbols, dropped = select_history_symbols(asked)
+        else:
+            symbols, dropped = select_history_symbols(
+                [*watch["us"], *watch["fx"], *watch["tw"]],
+                priority=_history_priority_symbols(),
+            )
         # TW listings (4-6 digits, optional letter suffix like 00982A) ride the
         # no-key TWSE endpoint; everything else needs the sealed Twelve Data
         # key. A missing key marks only the affected symbols, not the batch.
-        def _is_tw(symbol: str) -> bool:
-            body = symbol.replace("/", "")
-            return len(body) >= 4 and body[:4].isdigit() and body.isalnum()
-
+        _is_tw = is_twse_history_symbol
         needs_key = [s for s in symbols if not _is_tw(s)]
         credential_value = ""
         if needs_key and TWELVE_DATA_PROVIDER_ID in set(
@@ -4715,7 +4743,7 @@ def create_app(frontend_dist: Path | None = None) -> FastAPI:
                 results[symbol] = "rate_limited" if str(exc).startswith("rate_limited") else "unavailable"
             except (OSError, TimeoutError, urllib.error.URLError, json.JSONDecodeError):
                 results[symbol] = "unavailable"
-        return history_refresh_summary(results)
+        return history_refresh_summary(results, dropped)
 
     @app.get("/api/markets/watchlist")
     def markets_watchlist_index() -> dict[str, Any]:
