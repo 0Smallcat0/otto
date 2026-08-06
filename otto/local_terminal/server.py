@@ -295,6 +295,7 @@ from otto.local_terminal.news import (
 )
 from otto.local_terminal.news_packet import (
     PACKET_MAX_ITEMS,
+    TWSE_FILING_URL,
     news_packet_payload,
     news_relevance,
     symbol_terms,
@@ -532,9 +533,63 @@ def _news_payload_from_store(*, refresh: bool) -> dict[str, Any]:
         refresh=refresh,
     )
     payload["research"] = _research_payload_from_store(refresh=refresh)
+    _merge_tw_filings_for_holdings(payload)
     if refresh and payload.get("cache"):
         STORE.write_news_cache(payload["cache"])
     return payload
+
+
+def _merge_tw_filings_for_holdings(payload: dict[str, Any]) -> None:
+    """Put the owner's own companies' filings on the page he reads.
+
+    The filing store and the packet were wired together first, which served the
+    agent and nobody else: the news page showed 103 headlines — CoinDesk, SEC,
+    an ETF explainer — while the terminal held 720 TWSE filings and never
+    surfaced one. Yahoo cannot resolve a Taiwan ticker, so for a TW holding the
+    company's own material disclosure is the only single-name news that exists.
+
+    Marked `mine` so it rides the ranking the feed already has, where a holding
+    outranks anything merely fresher. Best-effort: no holdings, no store, or a
+    malformed row leaves the feed exactly as it was.
+    """
+    try:
+        owned = _owner_holdings_universe(STORE.read_portfolio_state())
+    except Exception:  # pragma: no cover - a portfolio read must not break news
+        return
+    tw = sorted(s for s in owned if str(s).upper().endswith(".TW"))
+    if not tw:
+        return
+    answer = announcements_for(STORE.read_tw_announcement_state(), tw, limit=3)
+    items: list[dict[str, Any]] = []
+    for symbol, filings in answer["by_symbol"].items():
+        for filing in filings:
+            subject = str(filing.get("subject") or "").replace("\r\n", " ").replace("\n", " ")
+            if not subject:
+                continue
+            items.append(
+                {
+                    "item_id": f"twse-{filing.get('announcement_id')}"[:96],
+                    "title": subject,
+                    "source": "TWSE 重大訊息",
+                    "category": "EARN",
+                    "published_at": f"{filing.get('spoken_at')}T00:00:00Z",
+                    "url": TWSE_FILING_URL,
+                    "summary": str(filing.get("detail") or "").replace("\n", " ")[:400],
+                    "tags": [str(filing.get("code") or ""), str(filing.get("name") or "")],
+                    "alert": False,
+                    "watched": True,
+                    "relevance": "mine",
+                    "held_symbols": [symbol],
+                    "watched_symbols": [],
+                    "provider_id": "twse_openapi_t187ap04",
+                    "source_country": "TW",
+                    "language": "zh",
+                    "is_company_filing": True,
+                }
+            )
+    if items:
+        existing = payload.get("items") if isinstance(payload.get("items"), list) else []
+        payload["items"] = items + existing
 
 
 def _public_research_payload(payload: dict[str, Any]) -> dict[str, Any]:

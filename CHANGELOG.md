@@ -2,6 +2,27 @@
 
 ## Unreleased
 
+- The owner's own companies' filings now reach the page the owner reads
+  (2026-08-06). The filing store and the agent's news packet were wired together
+  first, which served the agent and nobody else.
+  - Measured on the running terminal: `/api/news` returned 103 headlines —
+    CoinDesk, SEC, an ETF explainer — while the same terminal held 720 TWSE
+    filings and surfaced none. Nothing failed; the data was one API away from
+    the wrong screen. That is the third time in four rounds the render step was
+    the gap.
+  - Filings for held TW symbols are merged into the news feed as items marked
+    `relevance: "mine"`, so they ride the ranking the feed already has, where a
+    holding outranks anything merely fresher. Yahoo cannot resolve a Taiwan
+    ticker at all, so for a TW holding the company's own disclosure is the only
+    single-name news there is.
+  - **No frontend change was needed.** Getting the item shape right meant the
+    existing relevance renderer picked them up: the news page now opens with
+    「跟你有關(持股與追蹤中)」 and two 「我的持股 2317」 rows above every
+    headline. Verified in the DOM.
+  - The owner's two current holdings filed nothing on the sessions the store
+    holds, so the live check used an isolated instance seeded with 2317 rather
+    than pretending his feed had changed.
+
 - Swept the class the previous change found, and stopped where a fix would have
   been fake (2026-08-06). Adding a reader for the holdings raised the obvious
   question: how many other routes can an agent not read?
