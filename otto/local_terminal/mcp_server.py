@@ -177,8 +177,9 @@ TOOLS: list[dict[str, Any]] = [
     {
         "name": "list_routes",
         "description": (
-            "List the 15 terminal routes with their route_id, label, category, and "
-            "primary endpoint. Use route_id with get_route."
+            "List the terminal routes with their route_id, label, category, and "
+            "primary endpoint. The response's own count field carries the exact "
+            "number of routes on this backend. Use route_id with get_route."
         ),
         "inputSchema": {"type": "object", "properties": {}, "additionalProperties": False},
     },
@@ -264,6 +265,24 @@ TOOLS: list[dict[str, Any]] = [
 # --- Tool handlers ----------------------------------------------------------
 
 
+def _without_restart_hint(health: Any) -> Any:
+    """Drop the maintainer-facing restart_hint before it reaches an agent.
+
+    ``/api/health`` carries ``restart_hint: "python -m otto.local_terminal"``
+    for a developer who can see a traceback and knows what a reload is. This
+    tool is the first thing a stranger's agent calls — the tool description
+    tells it to — and the product's selling point is that code execution is
+    unreachable through this surface; handing back an instruction to run a
+    module as the very first payload contradicts that. ``server.py`` itself
+    is left untouched (its own tests read ``restart_hint`` straight off
+    ``health_payload()``); this only trims what actually crosses the MCP
+    boundary.
+    """
+    if not isinstance(health, dict):
+        return health
+    return {key: value for key, value in health.items() if key != "restart_hint"}
+
+
 def _tool_terminal_status(client: TerminalClient, _args: dict[str, Any]) -> Any:
     """Orient whoever just connected — not this project's own build backlog.
 
@@ -282,7 +301,7 @@ def _tool_terminal_status(client: TerminalClient, _args: dict[str, Any]) -> Any:
     """
     _, health = client.call("GET", "/api/health")
     _, center = client.call("GET", "/api/command-center")
-    summary: dict[str, Any] = {"health": health}
+    summary: dict[str, Any] = {"health": _without_restart_hint(health)}
     if isinstance(center, dict):
         summary["risk_gates"] = center.get("risk_gates")
         summary["recovery_queue_count"] = _safe_len(center.get("recovery_queue"))
@@ -721,11 +740,37 @@ def handle_request(message: dict[str, Any], client: TerminalClient) -> dict[str,
     return _error(request_id, -32601, f"method not found: {method}")
 
 
+def _force_utf8_stdio(stdin: Any, stdout: Any) -> None:
+    """Make the wire encoding UTF-8, regardless of the host's console codepage.
+
+    The MCP stdio transport is UTF-8. Tool descriptions and payload text carry
+    non-ASCII characters (the em dashes throughout this file, for one), and on
+    a Windows account whose default codepage is not UTF-8 (cp950 measured on
+    this machine), ``sys.stdout`` otherwise encodes with that codepage instead
+    — writing a byte sequence that is not valid UTF-8 (confirmed here: byte
+    0xa1 where an em dash should be). The process still exits 0 and
+    ``tools/list`` still "succeeds", so nothing in an exit code catches this;
+    a client doing a strict UTF-8 decode breaks on the first non-ASCII
+    character, before an agent ever gets to call a tool. ``reconfigure`` is
+    best-effort because objects a test injects in place of the real streams
+    (e.g. ``io.StringIO``) do not all implement it.
+    """
+    try:
+        stdin.reconfigure(encoding="utf-8")
+    except AttributeError:
+        pass
+    try:
+        stdout.reconfigure(encoding="utf-8", newline="\n")
+    except AttributeError:
+        pass
+
+
 def serve(client: TerminalClient, stdin: Any = None, stdout: Any = None) -> None:
     """Read newline-delimited JSON-RPC messages until stdin closes."""
 
     stdin = stdin if stdin is not None else sys.stdin
     stdout = stdout if stdout is not None else sys.stdout
+    _force_utf8_stdio(stdin, stdout)
     for raw_line in stdin:
         line = raw_line.strip()
         if not line:
