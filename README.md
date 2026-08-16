@@ -1,4 +1,5 @@
 # Otto
+<!-- mcp-name: io.github.0Smallcat0/otto -->
 
 [![CI](https://github.com/0Smallcat0/otto/actions/workflows/ci.yml/badge.svg)](https://github.com/0Smallcat0/otto/actions/workflows/ci.yml)
 
