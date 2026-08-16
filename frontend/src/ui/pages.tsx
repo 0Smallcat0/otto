@@ -852,7 +852,9 @@ export function SettingsPage({ heading }: { heading: ReactNode }) {
         <span className={broken > 0 ? "ft-down" : activeProviders > 0 ? "ft-up" : "ft-dim"}>●</span> {t("資料源")}: <b>{activeProviders}</b> {t("活躍")} · <b>{staleCache}</b> {t("快取偏舊")} · <b>{keyRequired}</b> {t("待接 key")}
         {broken > 0 ? <> · <b className="ft-down">{broken}</b> <span className="ft-down">{t("不能用")}</span></> : null}
         {superseded > 0 ? <> · <b className="ft-faint">{superseded}</b> <span className="ft-faint">{t("已由後繼來源取代")}</span></> : null}
-        {" "}<span className="ft-faint">({implemented} {t("家已實作")} / {catalog} {t("目錄")})</span>
+        {" "}<span className="ft-faint">({implemented} {t("家已實作")} / {catalog} {t("目錄")})</span><br />
+        <span className="ft-up">●</span> {t("開源專案")}: {t("在 GitHub 上按 star，讓下一個路過的人知道這東西還有人在用，不是掛在那裡沒人管。")}{" "}
+        <a className="ft-link" href="https://github.com/0Smallcat0/otto" target="_blank" rel="noreferrer noopener">{t("前往 GitHub 加星 →")}</a>
       </div>
       <div className="ft-h2" style={{ marginTop: 8 }}>{t("可以改什麼(對 AI 說的例句)")}</div>
       <Table cols={[t("可改項"), t("例句")]}>

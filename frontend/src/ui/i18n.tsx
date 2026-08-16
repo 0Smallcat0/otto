@@ -310,6 +310,10 @@ const EN: Record<string, string> = {
   "快取": "cached",
   "待接 key": "need a key",
   "資料 Keys": "DATA KEYS",
+  "開源專案": "OPEN SOURCE",
+  "在 GitHub 上按 star，讓下一個路過的人知道這東西還有人在用，不是掛在那裡沒人管。":
+    "Star it on GitHub — it tells the next person passing through that this is actually maintained, not just sitting here unattended.",
+  "前往 GitHub 加星 →": "Open GitHub to star it →",
   "想看任一項的完整明細(哪個來源多舊、哪個檔的備份在哪),在對話問 AI 就會攤開給你。": "For the full detail behind any line (how stale a source is, where a backup lives), just ask the AI.",
   "Profile 已與 Settings 合併;此路由保留給 AI 契約與深連結。": "Profile merged into Settings; this route stays for the AI contract and deep links.",
   "這裡是所有回測的索引——不論你在對話直接請 AI 跑,或 AI 從 Algo 策略觸發,每一次 run 都會留在這裡。點「開報告」看完整文件。": "Every backtest run lands here — whether you asked for it directly or the AI triggered it from an Algo strategy. Open a report to read the full document.",
