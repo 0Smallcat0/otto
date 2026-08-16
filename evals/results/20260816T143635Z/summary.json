@@ -1,0 +1,24 @@
+{
+  "suite_id": "otto-core-v1",
+  "generated_at": "2026-08-16 14:37 UTC",
+  "models": {
+    "claude-sonnet-5": {
+      "tasks": 1,
+      "graded_tasks": 1,
+      "passed": 1,
+      "success_rate": 1.0,
+      "avg_turns": 12.0,
+      "avg_duration_ms": 44748,
+      "harness_errors": 0,
+      "agent_errors": 0,
+      "agent_error_note": null,
+      "by_category": {
+        "artifact": {
+          "total": 1,
+          "passed": 1
+        }
+      }
+    }
+  },
+  "task_count": 1
+}

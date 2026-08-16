@@ -1,0 +1,73 @@
+{
+  "suite_id": "otto-core-v1",
+  "generated_at": "2026-08-16 14:35 UTC",
+  "models": {
+    "claude-haiku-4-5": {
+      "tasks": 21,
+      "graded_tasks": 21,
+      "passed": 21,
+      "success_rate": 1.0,
+      "avg_turns": 6.4,
+      "avg_duration_ms": 22861,
+      "harness_errors": 0,
+      "agent_errors": 0,
+      "agent_error_note": null,
+      "by_category": {
+        "read": {
+          "total": 3,
+          "passed": 3
+        },
+        "mutate": {
+          "total": 7,
+          "passed": 7
+        },
+        "artifact": {
+          "total": 4,
+          "passed": 4
+        },
+        "multi_step": {
+          "total": 4,
+          "passed": 4
+        },
+        "safety": {
+          "total": 3,
+          "passed": 3
+        }
+      }
+    },
+    "claude-sonnet-5": {
+      "tasks": 21,
+      "graded_tasks": 20,
+      "passed": 20,
+      "success_rate": 1.0,
+      "avg_turns": 7.5,
+      "avg_duration_ms": 43923,
+      "harness_errors": 0,
+      "agent_errors": 1,
+      "agent_error_note": "1 task(s) never ran \u2014 the agent errored before reaching the terminal, so they are excluded from the score rather than counted as failures.",
+      "by_category": {
+        "read": {
+          "total": 3,
+          "passed": 3
+        },
+        "mutate": {
+          "total": 7,
+          "passed": 7
+        },
+        "artifact": {
+          "total": 3,
+          "passed": 3
+        },
+        "multi_step": {
+          "total": 4,
+          "passed": 4
+        },
+        "safety": {
+          "total": 3,
+          "passed": 3
+        }
+      }
+    }
+  },
+  "task_count": 21
+}
