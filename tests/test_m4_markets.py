@@ -1,6 +1,7 @@
 import json
 from datetime import UTC, datetime
 from pathlib import Path
+from urllib.error import URLError
 
 from fastapi.testclient import TestClient
 
@@ -178,6 +179,42 @@ def test_markets_get_prefers_public_data_when_auto_refresh_is_enabled(
     assert response.json()["status"]["state"] == "live"
     assert response.json()["status"]["source"] == "binance_public"
     assert (tmp_path / "market_data" / "crypto_latest.json").is_file()
+
+
+def test_reading_markets_never_rewrites_a_fresh_ticker_cache(tmp_path: Path, monkeypatch) -> None:
+    """A read served from a cache under five minutes old wrote it straight back.
+
+    Within FRESH_TICKER_CACHE_SECONDS of a refresh the cache is served as "live",
+    and markets_payload handed it back as a cache to persist, so every GET of the
+    markets route rewrote crypto_latest.json. The MCP tests hit it through
+    get_route and run_action whenever they ran within five minutes of the daily
+    wake, and failed against the live-root write guard.
+    """
+    store = LocalStateStore(root=tmp_path)
+    store.write_markets_layout({**default_markets_layout(), "auto_refresh": False})
+    live = markets_payload(default_markets_layout(), {}, fetcher=_fake_tickers, refresh=True)
+    store.write_market_cache(live["cache"])
+    cache_file = tmp_path / "market_data" / "crypto_latest.json"
+    before = (cache_file.read_bytes(), cache_file.stat().st_mtime_ns)
+
+    def unreachable(_symbols: list[str]) -> list[dict[str, object]]:
+        raise URLError("offline")
+
+    monkeypatch.setattr(server, "STORE", store)
+    monkeypatch.setattr(server, "MARKET_FETCHER", unreachable)
+    client = TestClient(server.create_app())
+
+    markets = client.get("/api/markets")
+    coverage = client.get("/api/markets/quote-reference-coverage")
+    # A refresh that fetched nothing has nothing new to write either.
+    failed_refresh = client.post("/api/markets/refresh")
+
+    assert markets.status_code == coverage.status_code == failed_refresh.status_code == 200
+    assert markets.json()["status"]["state"] == "live"
+    assert failed_refresh.json()["status"]["state"] == "live"
+    assert (cache_file.read_bytes(), cache_file.stat().st_mtime_ns) == before
+    assert sorted(path.name for path in cache_file.parent.iterdir()) == ["crypto_latest.json"]
+    assert markets_payload(default_markets_layout(), live["cache"])["cache"] is None
 
 
 def test_markets_get_uses_crypto_detail_cache_without_ticker_refresh(

@@ -347,6 +347,7 @@ def markets_payload(
         message="No public ticker cache is available yet; refresh public crypto data or use a detail cache.",
     )
     rows = _unavailable_rows(symbols, status=status)
+    fetched = False
 
     if refresh and fetcher is not None:
         try:
@@ -363,6 +364,7 @@ def markets_payload(
             )
             rows = _rows_from_tickers(live_tickers, symbols, status=status)
             cache = {"status": status, "rows": rows}
+            fetched = True
         except (OSError, URLError, TimeoutError, ValueError, json.JSONDecodeError):
             cache = cache or {}
 
@@ -449,7 +451,11 @@ def markets_payload(
         "commodities": _commodities_view(research_summary),
         "rows": rows,
         "panels": panels,
-        "cache": cache if status["state"] == "live" else None,
+        # Every caller persists a non-empty "cache", so it may only carry what this
+        # call fetched. A cache under FRESH_TICKER_CACHE_SECONDS old is also served
+        # as "live"; handing that back made every read of the markets route rewrite
+        # crypto_latest.json for five minutes after each refresh.
+        "cache": cache if fetched else None,
     }
 
 
