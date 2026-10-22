@@ -57,5 +57,5 @@ Optional tools such as AI Chat, Nodes execution, Code execution, Quant Lab execu
 3. **零破壞原則**:不刪除/重寫你不理解的檔案;baseline 讀不到 ⇒ 什麼都不刪;含 delete/reset 的動作不進自動批次。
 4. **壞了先還原**:17 個狀態檔各有 `.json.bak1..3` 三層備份;`git log` 每步可回。修不動就回滾,不要硬改。
 5. **改後端必重啟** `:8765`(不會自動 reload);改前端必 rebuild。跨午夜改 Python 後若行為詭異,先清 `__pycache__`。
-6. **護欄是朋友**:445+ pytest、真值測試(contract=實地)、清潔室之牆(品牌/秘密掃描)會擋住錯誤——測試紅了是在救你,不要繞過或刪測試。
+6. **護欄是朋友**:全量 pytest、真值測試(contract=實地)、清潔室之牆(品牌/秘密掃描)會擋住錯誤——測試紅了是在救你,不要繞過或刪測試。
 7. **錢的數字**:一律用手上最新收盤;來源與資料日必須標示;對不上 owner 的券商 APP 時先對口徑(毛/淨、費用、資料日),不要亂改資料。

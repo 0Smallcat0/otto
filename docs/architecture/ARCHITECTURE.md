@@ -18,7 +18,7 @@ flowchart LR
     end
 
     subgraph Terminal["Local terminal (FastAPI + Uvicorn, 127.0.0.1)"]
-        CONTRACT["Agent contract\n(routes + 113 typed actions,\nsafety classes, confirmation flags)"]
+        CONTRACT["Agent contract\n(routes + typed actions,\nsafety classes, confirmation flags)"]
         API["HTTP API (/api/*)"]
         DOMAIN["Domain modules\nwatchlist, portfolio, paper ledger,\nbacktest, algo, news, quant, governance"]
         STORE["Local state store\nsettings / layouts / profiles\n(rotating backups)"]
@@ -97,8 +97,8 @@ The backtest engine is deliberately conservative:
 
 ## Verification
 
-- 450+ pytest tests (contract truths, storage, domain rules, MCP server) and
-  ruff, on CI.
+- pytest (contract truths, storage, domain rules, MCP server) and ruff, on
+  Windows + Linux CI.
 - Playwright e2e for the UI shell.
 - Agent-operability suite (`evals/`) for the operator path.
 

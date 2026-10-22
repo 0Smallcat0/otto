@@ -10,66 +10,58 @@ books, news — driven in plain language, running entirely on your machine.
 
 ## Try it
 
-Needs [uv](https://docs.astral.sh/uv/) and Python 3.12. No clone, no build, no server to start:
+Needs [uv](https://docs.astral.sh/uv/), Python 3.12 and [Claude Code](https://docs.anthropic.com/en/docs/claude-code). Install once, then register it:
 
 ```bash
-claude mcp add otto -- uvx --from git+https://github.com/0Smallcat0/otto otto-terminal
+uv tool install git+https://github.com/0Smallcat0/otto
+claude mcp add otto -- otto-terminal
 ```
+
+Install first, in a terminal: on a slow connection the first download can outlast the
+30 or so seconds Claude Code gives an MCP server to start. If uv says its bin directory is
+not on your PATH, run `uv tool update-shell` and open a new terminal. Update later with
+`uv tool upgrade otto-terminal`.
 
 Then ask for things:
 
 - *"Refresh market data and show me the BTC snapshot."*
 - *"Backtest an SMA cross on BTCUSDT and tell me if it's any good."*
-- *"What do you make of my holdings?"*
+- *"Use my paper book to buy $5,000 of AAPL, say why in one line, then show me the book."*
 
-**The dashboard comes with it.** The built UI ships inside the package, so there is nothing
-to compile: the MCP server starts the backend the first time your agent touches the
-terminal, and <http://127.0.0.1:8765/> is the screen. Working from a clone instead? Build it
-once with `npm --prefix frontend install && npm --prefix frontend run build`, then
-`uv run otto`.
+**The dashboard comes with it.** The MCP server starts the backend for you, and
+<http://127.0.0.1:8765/> is the screen: books, calls and every order the agent placed.
+
+## Run a round every day
+
+A round is what the terminal is for: grade the open calls, scan for names with no view,
+record a call only where there is a real thesis, place paper orders with a reason, then
+snapshot the books. To run one, ask:
+
+> *"Run one Otto decision round: grade my open calls, scan for gaps, record a call only
+> where you have a real thesis, place paper orders with a rationale, then snapshot the
+> books and report each against its benchmark."*
+
+To have it run every morning on its own (Windows, PowerShell), save the runner and
+register it once:
+
+```powershell
+iwr https://raw.githubusercontent.com/0Smallcat0/otto/main/scripts/run_decision_loop.ps1 -OutFile "$HOME\otto-round.ps1"
+$run = New-ScheduledTaskAction -Execute powershell -Argument "-NoProfile -ExecutionPolicy Bypass -File `"$HOME\otto-round.ps1`""
+Register-ScheduledTask OttoDailyRound -Action $run -Trigger (New-ScheduledTaskTrigger -Daily -At 9am)
+```
+
+Each run is one headless `claude -p` session on your Claude account (a test round on
+2026-10-22 took 3 minutes, 33 turns and $1.18). It writes the theses in your Windows
+display language — add `-Language English` after the `.ps1` path to pick another — and
+appends its duration, turns and cost to `~/.otto/artifacts/loop/runs.jsonl`.
 
 ## Why this one
 
-**It keeps score, and the score is published even when it is bad.** The agent records dated
-calls — a stance, the reasoning, the price level that would prove it wrong, a horizon — and
-every call is later graded against the price the market actually printed. Calls without
-reasoning are refused rather than guessed, moves inside a flat band don't count as skill,
-and a call graded long after it matured is excluded because it measured a window its thesis
-never claimed.
-
-Here is the entire record so far. It is a small, unflattering sample, and that is the point
-of showing it:
-
-<!-- otto:ledger -->
-| | |
-|---|---|
-| Calls journaled | 13 (5 still open, 4 withdrawn and never scored) |
-| Hit rate | **0%** — 0 of 4 graded theses held |
-| Beat its index | **2 of 3** measurable calls, average excess **−0.22%** |
-<!-- otto:ledger -->
-
-*Sample size: 4 graded calls out of 13 journaled — too few to be a track record in either
-direction. Shown at this size because the machinery publishes whatever it actually has, not
-because the size proves anything.*
-
-Those two lines disagree on purpose, and the disagreement is the reason the second one
-exists. A hold graded a 6.6% loss over a window its index fell 7.9% did worse than nothing
-and better than the alternative; a hit rate can only see the first half. Excess return is
-measured against `0050.TW`, `SPY` or `BTC-USD` over the call's own window, and a call that
-meant to *stay out* beats the index when the thing it avoided lagged — so a negative excess
-is a win for that stance, and the board colours by verdict rather than by sign.
-
-These are one operator's calls on one operator's holdings, so the ledger behind them stays
-on that machine and is not in this repo — what ships is the machinery that produces and
-grades them, and `GET /api/research/ledger` reports the same block for yours. All three
-graded comparisons rest on an index level reconstructed from that session's published close
-rather than stamped live when the call was struck; the ledger marks those, the scorecard
-counts them, and the board flags them, because a weaker measurement that looks identical to
-a strong one is just a lie with extra steps.
-
-**"An AI can operate it" is a benchmark here, not a tagline.** A real headless agent gets
-plain-language tasks in hermetic sandboxes, graded programmatically on terminal state and
-artifacts — never by an LLM judge:
+**It keeps score.** Every call the agent records — a stance, the reasoning, the price that
+would prove it wrong, a horizon — is graded later against the price the market actually
+printed and against its index (`0050.TW`, `SPY`, `BTC-USD`); a call without reasoning is
+refused. **"An AI can operate it" is measured:** a real headless agent runs plain-language
+tasks in hermetic sandboxes, graded on terminal state and artifacts, never by an LLM judge.
 
 <!-- otto:eval -->
 | Model | Passed | Avg turns | Run |
@@ -78,27 +70,14 @@ artifacts — never by an LLM judge:
 | `claude-haiku-4-5` | 21 / 21 | 6.4 | 2026-08-16, 21-task suite |
 <!-- otto:eval -->
 
-This table is regenerated by re-running the suite below, against the current task count and
-MCP surface, and committing the new `evals/EVAL.md` alongside it. Reproducing it takes a
-clone, not the package — the wheel ships the terminal, not the harness that grades it:
-
-```bash
-git clone https://github.com/0Smallcat0/otto && cd otto
-python evals/run_eval.py --model claude-sonnet-5
-```
-
-A run whose agent never starts reports *no score* rather than zero, and refuses to write the
-report at all, because a benchmark that did not execute is not a result.
-
-Safety tasks grade *refusal*: asking for a live order must leave state unchanged. Live
-trading, credential entry and code execution aren't switched off — they're unreachable
-through the surface the agent has.
+Live trading, credential entry and code execution aren't switched off — they're
+unreachable through the surface the agent has.
 
 ## Under the hood
 
 <!-- otto:counts -->
 One typed contract (142 actions across 16 routes) is the single source of truth; the MCP
-tools, the UI capability catalog and the eval suite are all derived from it. 809 tests on
+tools, the UI capability catalog and the eval suite are all derived from it. 803 tests on
 Windows + Linux CI.
 <!-- otto:counts -->
 
@@ -109,10 +88,14 @@ Windows + Linux CI.
   never by reading or porting its code; a [test](tests/test_clean_room_source_wall.py) fails
   the build if that wall is crossed.
 
-The tests live in the repository rather than the wheel, so this one is from the clone too:
+The tests and the eval harness are not in the installed package, so these run from a
+clone. The built dashboard is committed, so `uv run otto` needs no frontend build:
 
 ```bash
-python -m pytest -q && python -m ruff check .
+git clone https://github.com/0Smallcat0/otto && cd otto
+uv run otto
+uv run --extra dev python -m pytest -q
+python evals/run_eval.py --model claude-sonnet-5
 ```
 
 ## License

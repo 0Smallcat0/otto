@@ -43,10 +43,9 @@ def test_dist_name_matches_pyproject() -> None:
 
 
 def test_console_script_named_after_the_distribution() -> None:
-    """`uvx otto-terminal` only works if a console script carries that exact name.
+    """The README registers `otto-terminal`, so a console script carries that name.
 
-    Both the README one-liner and the MCP registry entry run the package with
-    no --from and no explicit command, which resolves to the console script
+    `uv tool install` puts it on PATH and `uvx --from git+…` runs the script
     matching the distribution name. Rename the distribution without renaming
     the script and the published install instructions break for everyone while
     every test still passes.

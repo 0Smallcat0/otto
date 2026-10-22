@@ -8,6 +8,8 @@ __pycache__/
 dist/
 build/
 *.egg-info/
+# `uv run` writes one from a clone; the project pins nothing beyond pyproject.
+uv.lock
 node_modules/
 frontend/dist/
 frontend/.vite/

@@ -22,10 +22,10 @@ dependencies = [
 [project.scripts]
 otto = "otto.local_terminal.server:main"
 otto-mcp = "otto.local_terminal.mcp_server:main"
-# Same target as otto-mcp, named to match the distribution so `uvx otto-terminal`
-# resolves with no --from. Both the README one-liner and the MCP registry entry
-# depend on a console script whose name equals the package name; `uvx otto-mcp`
-# must never be documented, because that name belongs to an unrelated project.
+# Same target as otto-mcp, named to match the distribution: the README installs
+# from GitHub (not on PyPI) and registers `otto-terminal`, which is also what
+# `uvx --from git+…` runs by default. `otto-mcp` must never be documented as a
+# uvx name, because on PyPI that name belongs to an unrelated project.
 otto-terminal = "otto.local_terminal.mcp_server:main"
 
 [project.optional-dependencies]
