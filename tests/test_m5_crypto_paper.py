@@ -88,6 +88,9 @@ def test_crypto_market_buy_fills_and_writes_local_paper_artifact(
         "short": False,
         "derivatives": False,
     }
+    feed = client.get("/api/agent-activity").json()["events"]
+    assert feed[0]["action_id"] == "crypto_submit_paper_order"
+    assert feed[0]["summary"] == "BUY 0.1 BTCUSDT → FILLED"
 
 
 def test_crypto_rejects_oversell_and_negative_cash(tmp_path: Path, monkeypatch) -> None:

@@ -2856,6 +2856,12 @@ def create_app(frontend_dist: Path | None = None) -> FastAPI:
                 },
             )
 
+    def _order_line(order: dict[str, Any]) -> str:
+        """A paper order as one feed line. The rationale stays off it: it is free
+        text, and the feed's sensitive-text filter would drop the whole line."""
+        side, quantity = order.get("side"), order.get("quantity")
+        return f"{side} {quantity} {order.get('symbol')} → {order.get('status')}"
+
     @app.get("/api/command-center")
     def command_center() -> dict[str, Any]:
         context = _advanced_context_from_store()
@@ -2977,7 +2983,7 @@ def create_app(frontend_dist: Path | None = None) -> FastAPI:
         # actually watching, and news about them is news he wants.
         watched = [
             symbol
-            for symbol in _open_call_symbols(STORE.read_research_ledger_state())
+            for symbol in _called_symbols(STORE.read_research_ledger_state())
             if symbol not in held
         ]
         if not held and not watched:
@@ -3490,6 +3496,7 @@ def create_app(frontend_dist: Path | None = None) -> FastAPI:
         except EquityOrderError as exc:
             raise HTTPException(status_code=400, detail=str(exc)) from exc
         STORE.write_equity_paper_state(state)
+        _journal_activity("equity_submit_paper_order", _order_line(order))
         held = sorted(state.get("positions", {}))
         marks = (
             _yahoo_quote_snapshot_payload_from_store(refresh=False, symbols=held).get(
@@ -3529,6 +3536,7 @@ def create_app(frontend_dist: Path | None = None) -> FastAPI:
         except EquityOrderError as exc:
             raise HTTPException(status_code=400, detail=str(exc)) from exc
         STORE.write_tw_equity_paper_state(state)
+        _journal_activity("tw_equity_submit_paper_order", _order_line(order))
         held = sorted(state.get("positions", {}))
         marks = (
             _yahoo_quote_snapshot_payload_from_store(refresh=False, symbols=held).get(
@@ -3743,16 +3751,26 @@ def create_app(frontend_dist: Path | None = None) -> FastAPI:
                 weights[symbol] = None
         return weights
 
+    def _called_symbols(state: dict[str, Any]) -> list[str]:
+        """Symbols with an open call, and nothing else.
+
+        The scan marks these has_open_call and leaves them out of
+        owned_without_call; given the benchmarks too, a fresh install showed
+        0050.TW and BTC-USD as already journaled with zero calls recorded.
+        """
+        return sorted(
+            {
+                str(c.get("symbol", "")).upper()
+                for c in state.get("calls", [])
+                if isinstance(c, dict) and c.get("status") == "open"
+            }
+        )
+
     def _open_call_symbols(state: dict[str, Any]) -> list[str]:
         # The benchmarks ride along: scoring needs the index level for the same
         # instant as the call's mark, and fetching it in a second pass would
         # compare two different moments.
-        symbols = {
-            str(c.get("symbol", "")).upper()
-            for c in state.get("calls", [])
-            if isinstance(c, dict) and c.get("status") == "open"
-        }
-        return sorted(symbols | set(BENCHMARK_BY_MARKET.values()))
+        return sorted(set(_called_symbols(state)) | set(BENCHMARK_BY_MARKET.values()))
 
     def _history_priority_symbols() -> list[str]:
         """Symbols the refresh budget must be spent on before anything else.
@@ -3965,7 +3983,7 @@ def create_app(frontend_dist: Path | None = None) -> FastAPI:
         if not requested:
             state = STORE.read_research_ledger_state()
             requested = [
-                symbol for symbol in _open_call_symbols(state) if symbol.endswith(".TW")
+                symbol for symbol in _called_symbols(state) if symbol.endswith(".TW")
             ]
         return tw_company_facts_payload(requested)
 
@@ -4000,7 +4018,7 @@ def create_app(frontend_dist: Path | None = None) -> FastAPI:
         requested = [part for part in str(symbols or "").replace(";", ",").split(",") if part]
         if not requested:
             state = STORE.read_research_ledger_state()
-            requested = [s for s in _open_call_symbols(state) if s.endswith(".TW")]
+            requested = [s for s in _called_symbols(state) if s.endswith(".TW")]
         try:
             payload = tw_margin_balance_payload(requested)
         except TwseCompanyError as exc:
@@ -4126,7 +4144,7 @@ def create_app(frontend_dist: Path | None = None) -> FastAPI:
                     }
         state = STORE.read_research_ledger_state()
         payload = research_scan_payload(
-            quotes, _open_call_symbols(state), owned, ex_events=_tw_ex_events_today()
+            quotes, _called_symbols(state), owned, ex_events=_tw_ex_events_today()
         )
         # Stamp session state so a closed-market scan cannot be mistaken for a
         # fresh tape — its change_pct is the last session's move.
@@ -5824,6 +5842,7 @@ def create_app(frontend_dist: Path | None = None) -> FastAPI:
         except PaperOrderError as exc:
             raise HTTPException(status_code=400, detail=str(exc)) from exc
         STORE.write_paper_state(state)
+        _journal_activity("crypto_submit_paper_order", _order_line(order))
         payload = crypto_payload(
             state,
             STORE.read_market_cache(),

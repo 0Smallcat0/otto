@@ -1675,7 +1675,8 @@ ACTION_CONTRACTS: tuple[AgentActionContract, ...] = (
         "POST",
         "/api/backtest/run",
         (
-            "symbol, timeframe, strategy, schema-bound parameters, local economics; "
+            "symbol BTCUSDT|ETHUSDT|SOLUSDT, timeframe 15m (the only one supported; "
+            "others are refused), strategy, schema-bound parameters, local economics; "
             "optional research_lineage may reference a validated local Algo scan seed"
         ),
         (
@@ -1735,7 +1736,8 @@ ACTION_CONTRACTS: tuple[AgentActionContract, ...] = (
         "Run fixed-parameter walk-forward validation",
         "POST",
         "/api/backtest/walk-forward",
-        "symbol, timeframe, strategy, schema-bound parameters, local economics, fold_count 2-8",
+        "symbol BTCUSDT|ETHUSDT|SOLUSDT, timeframe 15m only, strategy, schema-bound "
+        "parameters, local economics, fold_count 2-8",
         ("summary", "folds", "artifacts", "provenance", "manifest", "safety"),
         "writes walk-forward summary/folds/report/manifest/provenance artifacts",
         True,
@@ -1751,7 +1753,8 @@ ACTION_CONTRACTS: tuple[AgentActionContract, ...] = (
         "Optimize strategy parameters by local grid search",
         "POST",
         "/api/backtest/optimize",
-        "symbol, timeframe, strategy, optional parameter_grid {param: [ints]}, objective; "
+        "symbol BTCUSDT|ETHUSDT|SOLUSDT, timeframe 15m only, strategy, optional "
+        "parameter_grid {param: [ints]}, objective; "
         "bounded to the strategy schema and a max combination cap",
         ("summary", "parameter_grid", "ranked", "best", "safety"),
         "runs a bounded closed-candle grid search and writes optimize.json/rows.csv/"
@@ -2238,7 +2241,7 @@ ACTION_CONTRACTS: tuple[AgentActionContract, ...] = (
             '"refresh":true}; ref_price is fetched live at record time (Yahoo path, '
             "crypto as -USD) unless supplied explicitly; market is inferred for "
             "universe symbols. Write the thesis in the operator's language "
-            "(Traditional Chinese for this install) — the ledger exists to be read, "
+            "— the ledger exists to be read, "
             'and a judgment that needs translating does not land. stance "size_down" '
             "is a risk view — the position is "
             "too large for the book, with no directional claim — and requires "

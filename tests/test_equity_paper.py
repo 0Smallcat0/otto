@@ -145,6 +145,13 @@ def test_endpoint_fills_via_injected_live_lookup(tmp_path, monkeypatch) -> None:
     assert summary["positions"][0]["quantity"] == "1"
     assert summary["asset_class"] == "us_equity"
 
+    # The order lands on the dashboard's activity feed by itself; a feed that
+    # depends on the agent journaling by hand read "0 actions today" after a
+    # round of real orders.
+    feed = client.get("/api/agent-activity").json()["events"]
+    assert feed[0]["action_id"] == "equity_submit_paper_order"
+    assert feed[0]["summary"] == "BUY 1 AAPL → FILLED"
+
     extra = client.post(
         "/api/equity/orders",
         json={"symbol": "AAPL", "side": "BUY", "quantity": "1", "leverage": 5},
@@ -324,6 +331,10 @@ def test_tw_endpoint_fills_via_injected_lookup(tmp_path, monkeypatch) -> None:
     assert summary["positions"][0]["quantity"] == "1500"
     assert summary["account"]["quote_asset"] == "TWD"
     assert "allowed" in summary["scope"]["odd_lot"]
+
+    feed = client.get("/api/agent-activity").json()["events"]
+    assert [event["action_id"] for event in feed] == ["tw_equity_submit_paper_order"] * 2
+    assert feed[1]["summary"] == "BUY 1000 2330.TW → FILLED"
 
 
 def test_tw_state_is_backup_protected(tmp_path) -> None:

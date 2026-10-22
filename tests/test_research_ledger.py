@@ -6,7 +6,9 @@ from datetime import UTC, datetime, timedelta
 from decimal import Decimal
 
 import pytest
+from fastapi.testclient import TestClient
 
+from otto.local_terminal import server
 from otto.local_terminal.research_ledger import (
     DEFAULT_UNIVERSE,
     ResearchLedgerError,
@@ -18,6 +20,7 @@ from otto.local_terminal.research_ledger import (
     scan_candidates,
     score_calls,
 )
+from otto.local_terminal.storage import LocalStateStore
 
 
 def _record(state, **kw):
@@ -358,6 +361,22 @@ def test_scan_payload_counts_priced_and_notes_signal() -> None:
     assert payload["priced_count"] == 1
     assert "not a call" in payload["note"].lower()
     assert payload["safety"]["paper_only"] is True
+
+
+def test_scan_does_not_count_a_benchmark_as_a_journaled_call(tmp_path, monkeypatch) -> None:
+    # Scoring fetches the benchmarks beside the calls' own symbols. Handed the
+    # same list, the scan marked 0050.TW and BTC-USD "already journaled" on an
+    # install with zero calls, and an owner holding 0050 would never have seen
+    # it listed in owned_without_call.
+    monkeypatch.setattr(server, "STORE", LocalStateStore(root=tmp_path))
+    monkeypatch.setattr(server, "fetch_twse_ex_rights", lambda **_: [])
+    client = TestClient(server.create_app())
+
+    rows = client.get("/api/research/scan").json()["candidates"]
+
+    flagged = [row["symbol"] for row in rows if row["has_open_call"]]
+    assert {"0050.TW", "BTC-USD", "SPY"} & {row["symbol"] for row in rows}
+    assert flagged == []
 
 
 def test_normalize_drops_junk_and_caps() -> None:

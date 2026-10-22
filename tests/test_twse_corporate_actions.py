@@ -291,7 +291,10 @@ def test_the_board_stops_flagging_a_payout_as_drift() -> None:
         },
     )
     call["as_of"] = "2026-07-25T05:00:00+00:00"
-    call["matures_at"] = "2026-09-08T05:00:00+00:00"
+    # The payload reads the wall clock, so a real 45-day horizon elapsed on
+    # 2026-09-08 and flagged the call for that instead. Far enough out that
+    # only the payout is under test.
+    call["matures_at"] = "2099-01-01T05:00:00+00:00"
     marks = {"2834.TW": Decimal("16.90")}
 
     naive = research_ledger_payload(json.loads(json.dumps(state)), marks)["open_calls"][0]
