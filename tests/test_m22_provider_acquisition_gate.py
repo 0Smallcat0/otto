@@ -27,8 +27,8 @@ def test_provider_acquisition_gate_ranks_public_no_key_before_optional_keys() ->
     assert payload["docs_checked_at"] == "2026-06-01"
     assert payload["summary"]["next_candidate_id"] == ""
     assert payload["summary"]["approved_next_count"] == 0
-    assert payload["summary"]["implemented_count"] == 16
-    assert payload["summary"]["blocked_count"] == 5
+    assert payload["summary"]["implemented_count"] == 17
+    assert payload["summary"]["blocked_count"] == 4
     assert payload["summary"]["resume_state"] == "backlog_exhausted_needs_research"
     assert payload["summary"]["requires_official_research"] is True
     assert payload["summary"]["implementation_allowed"] is False
@@ -62,17 +62,17 @@ def test_provider_acquisition_gate_ranks_public_no_key_before_optional_keys() ->
     assert closure["provider_backlog"]["candidate_count"] == 21
     assert closure["provider_backlog"]["implemented_or_blocked_count"] == 21
     assert closure["provider_backlog"]["approved_next_count"] == 0
-    assert closure["provider_backlog"]["blocked_count"] == 5
-    assert closure["provider_backlog"]["blocked_market_data_gate_count"] == 5
-    assert closure["provider_backlog"]["implemented_quote_lane_count"] >= 6
+    assert closure["provider_backlog"]["blocked_count"] == 4
+    assert closure["provider_backlog"]["blocked_market_data_gate_count"] == 4
+    assert closure["provider_backlog"]["implemented_quote_lane_count"] >= 7
     assert set(closure["blocked_gate_ids"]) == {
         "cboe_delayed_quotes_gate",
         "iex_tops_market_data_gate",
         "nasdaq_data_link_dataset_gate",
         "jpx_jquants_market_data_gate",
-        "yahoo_finance_market_data_gate",
     }
     assert "stooq_public_quote_snapshot" in closure["implemented_quote_candidate_ids"]
+    assert "yahoo_finance_public_quote_snapshot" in closure["implemented_quote_candidate_ids"]
     assert "fmp_stock_quote_optional_key" in closure["implemented_quote_candidate_ids"]
     assert "orderable quote parity is outside" in closure["agent_rule"]
     assert "live_order" in closure["stop_gates"]
@@ -202,14 +202,13 @@ def test_provider_acquisition_gate_ranks_public_no_key_before_optional_keys() ->
     assert "jpx-jquants.com" in " ".join(jpx_jquants["official_docs"])
     assert "CSV bulk downloader" in jpx_jquants["implementation_gate"]
     assert "blocked provider-entry record" in jpx_jquants["next_safe_action"]
-    yahoo_finance = candidates["yahoo_finance_market_data_gate"]
-    assert yahoo_finance["status"] == "blocked_terms_credentials_gate"
-    assert yahoo_finance["auth_mode"] == "application_id_or_api_credentials_required"
-    assert yahoo_finance["quote_semantics"] == "quote_blocked_by_terms_credentials"
-    assert yahoo_finance["cache_policy"]["path"] == ""
-    assert "legal.yahoo.com" in " ".join(yahoo_finance["official_docs"])
-    assert "query endpoint crawler" in yahoo_finance["implementation_gate"]
-    assert "blocked provider-entry record" in yahoo_finance["next_safe_action"]
+    yahoo_finance = candidates["yahoo_finance_public_quote_snapshot"]
+    assert yahoo_finance["status"] == "implemented_bounded_public_no_key_snapshot"
+    assert yahoo_finance["auth_mode"] == "public_no_key"
+    assert yahoo_finance["quote_semantics"] == "quote_not_orderable"
+    assert yahoo_finance["cache_policy"]["path"] == "market_data/quotes/yahoo/{symbol}.json"
+    assert "v8/finance/chart" in " ".join(yahoo_finance["official_docs"])
+    assert "never orderable" in yahoo_finance["implementation_gate"]
     nasdaq = candidates["nasdaq_trader_symbol_directory_public"]
     assert nasdaq["status"] == "implemented_public_no_key_reference"
     assert nasdaq["auth_mode"] == "public_no_key"

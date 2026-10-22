@@ -666,45 +666,40 @@ PROVIDER_CANDIDATES: tuple[dict[str, Any], ...] = (
         "safety_class": "blocked_account_plan_market_data_gate",
     },
     {
-        "candidate_id": "yahoo_finance_market_data_gate",
-        "label": "Yahoo Finance market data gate",
+        # Recorded as blocked on 2026-06-01; the chart-snapshot adapter in
+        # yahoo_data.py shipped later and now prices the US paper book and the
+        # benchmarks, so the record says what the code does.
+        "candidate_id": "yahoo_finance_public_quote_snapshot",
+        "label": "Yahoo Finance Public Chart Snapshot",
         "priority": 20,
-        "status": "blocked_terms_credentials_gate",
+        "status": "implemented_bounded_public_no_key_snapshot",
         "asset_family": "Multi-Asset",
-        "runtime_role": "unofficial_quote_endpoint_gate",
-        "auth_mode": "application_id_or_api_credentials_required",
+        "runtime_role": "delayed_public_quote_snapshot",
+        "auth_mode": "public_no_key",
         "official_docs": [
+            "https://query1.finance.yahoo.com/v8/finance/chart/AAPL",
             "https://legal.yahoo.com/us/en/yahoo/terms/product-atos/apiforydn/index.html",
-            "https://legal.yahoo.com/us/en/yahoo/guidelines/ydn/index.html",
-            "https://legal.yahoo.com/us/en/yahoo/privacy/products/developer/",
-            "https://legal.yahoo.com/us/en/yahoo/terms/product-atos/apitnc/index.html",
         ],
-        "quote_semantics": "quote_blocked_by_terms_credentials",
+        "quote_semantics": "quote_not_orderable",
         "cache_policy": {
-            "path": "",
-            "ttl_seconds": 0,
-            "retention": "no cache; record-only provider-entry gate",
+            "path": "market_data/quotes/yahoo/{symbol}.json",
+            "ttl_seconds": 900,
+            "retention": "bounded per-symbol chart meta snapshots, at most 8 symbols a refresh",
         },
         "route_workflow_need": (
-            "Markets quote breadth needs a visible gate for Yahoo Finance because "
-            "common query endpoints are often treated as public no-key quote APIs, "
-            "but current official Yahoo API materials route API usage through "
-            "application identity, API documentation, credentials, and usage limits."
+            "US equity paper fills and benchmark scoring need a no-key delayed "
+            "quote that covers the symbols the paper book holds."
         ),
         "implementation_gate": (
-            "Do not add a Yahoo Finance adapter, query endpoint crawler, chart/quote "
-            "scraper, crumb/cookie flow, cache, refresh row, or source coverage row "
-            "until Yahoo publishes or grants a concrete finance market-data API "
-            "contract with auth mode, route need, cache schema, quote semantics, "
-            "display/retention terms, and no-subscription boundary reviewed."
+            "One symbol per request from the public v8 chart endpoint's meta block; "
+            "delayed/reference only, never orderable, no crumb/cookie flow, no "
+            "account or credential."
         ),
         "next_safe_action": (
-            "Keep this as a blocked provider-entry record; use implemented official "
-            "public/optional-key quote lanes first or run a separate approved Yahoo "
-            "finance API contract review if official finance API access becomes "
-            "available."
+            "Maintain the bounded snapshot cache/tests; do not add crumb/cookie "
+            "flows, page scraping, or treat these rows as executable quotes."
         ),
-        "safety_class": "blocked_terms_credentials_market_data_gate",
+        "safety_class": "public_read_only_delayed_quote",
     },
 )
 

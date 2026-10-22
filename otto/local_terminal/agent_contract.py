@@ -1677,7 +1677,10 @@ ACTION_CONTRACTS: tuple[AgentActionContract, ...] = (
         (
             "symbol BTCUSDT|ETHUSDT|SOLUSDT, timeframe 15m (the only one supported; "
             "others are refused), strategy, schema-bound parameters, local economics; "
-            "optional research_lineage may reference a validated local Algo scan seed"
+            "optional research_lineage may reference a validated local Algo scan seed. "
+            "Runs on the cached public 15m candles, so call crypto_refresh_public first: "
+            "with no cache it runs on 40 generated offline candles and "
+            "provenance.deterministic_fallback is true"
         ),
         (
             "run_id",

@@ -217,9 +217,9 @@ def test_command_center_payload_composes_existing_supervision_state(tmp_path: Pa
     assert payload["provider_acquisition_gate"]["quote_breadth_closure"][
         "provider_backlog"
     ]["candidate_count"] == 21
-    assert "yahoo_finance_market_data_gate" in payload["provider_acquisition_gate"][
+    assert "yahoo_finance_public_quote_snapshot" in payload["provider_acquisition_gate"][
         "quote_breadth_closure"
-    ]["blocked_gate_ids"]
+    ]["implemented_quote_candidate_ids"]
     candidate_by_id = {
         candidate["candidate_id"]: candidate
         for candidate in payload["provider_acquisition_gate"]["candidates"]
