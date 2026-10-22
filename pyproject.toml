@@ -9,7 +9,7 @@ build-backend = "setuptools.build_meta"
 # `otto`; only the wheel is named otto-terminal.
 name = "otto-terminal"
 version = "1.0.0"
-description = "A local financial terminal your AI agent operates for you over MCP: market data, backtests, paper books and news."
+description = "A local financial terminal your AI agent operates for you over MCP."
 readme = "README.md"
 requires-python = ">=3.12,<3.13"
 dependencies = [
