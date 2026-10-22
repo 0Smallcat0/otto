@@ -1439,6 +1439,25 @@ def _reference_security_names(symbols: list[str]) -> dict[str, list[str]]:
     return names
 
 
+def _cache_missing_tw_names(symbols: list[str]) -> None:
+    """Fetch the TWSE daily row for .TW codes no cached row names yet.
+
+    The quote cache only held the watchlist (2330, 2317, 0050), so a held 2834
+    was matched against news as the bare digits and its Chinese headlines were
+    missed. One STOCK_DAY_ALL call names them all; a failed fetch writes
+    nothing and the packet falls back to the code, as before.
+    """
+    known = _reference_security_names(symbols)
+    missing = [
+        str(symbol).strip().upper().split(".")[0]
+        for symbol in symbols
+        if str(symbol).strip().upper().endswith(".TW")
+        and str(symbol).strip().upper() not in known
+    ]
+    if missing:
+        _twse_quote_snapshot_payload_from_store(refresh=True, symbols=missing)
+
+
 def _portfolio_equity_price_rows(state: dict[str, Any]) -> list[dict[str, Any]]:
     """Live marks for the active book's equity positions, as market-cache rows.
 
@@ -5181,6 +5200,8 @@ def create_app(frontend_dist: Path | None = None) -> FastAPI:
             if tw_symbols
             else {}
         )
+        if update.refresh and tw_symbols:
+            _cache_missing_tw_names(tw_symbols)
         return news_packet_payload(
             payload,
             news_digest_payload(STORE.read_news_digest_state()),

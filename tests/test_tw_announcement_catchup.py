@@ -40,9 +40,10 @@ def _row(code: str, day: str, time: str = "160532") -> dict[str, str]:
     }
 
 
-def _client(tmp_path, monkeypatch, fetcher):
+def _client(tmp_path, monkeypatch, fetcher, quote_fetcher=lambda: []):
     monkeypatch.setattr(server, "STORE", LocalStateStore(root=tmp_path))
     monkeypatch.setattr(server, "fetch_twse_announcements", fetcher)
+    monkeypatch.setattr(server, "TWSE_FETCHER", quote_fetcher)
     return TestClient(server.create_app())
 
 
@@ -140,3 +141,35 @@ def test_a_packet_with_no_taiwan_symbols_never_fetches(tmp_path, monkeypatch) ->
     client.post("/api/news/packet", json={"symbols": ["AAPL"], "refresh": True})
 
     assert calls == []
+
+
+def test_a_held_code_outside_the_watchlist_gets_its_chinese_name(tmp_path, monkeypatch) -> None:
+    """Only the watchlist's quote rows were cached, so 2834 matched news as bare digits."""
+    _seed_yesterday(tmp_path)
+    quote_calls: list[int] = []
+
+    def _quotes():
+        quote_calls.append(1)
+        return [
+            {
+                "Date": "20260806",
+                "Code": "2834",
+                "Name": "臺企銀",
+                "TradeVolume": "1,000",
+                "TradeValue": "15,000",
+                "OpeningPrice": "15.00",
+                "HighestPrice": "15.10",
+                "LowestPrice": "14.90",
+                "ClosingPrice": "15.05",
+                "Change": "+0.05",
+                "Transaction": "120",
+            }
+        ]
+
+    client = _client(tmp_path, monkeypatch, lambda **_kw: [], quote_fetcher=_quotes)
+
+    client.post("/api/news/packet", json={"symbols": ["2834.TW"], "refresh": True})
+    assert server._reference_security_names(["2834.TW"]) == {"2834.TW": ["臺企銀"]}
+
+    client.post("/api/news/packet", json={"symbols": ["2834.TW"], "refresh": True})
+    assert quote_calls == [1], "a code already named is not fetched again"
