@@ -461,6 +461,8 @@ const ACTION_VERBS: Record<string, string> = {
   algo_scan: "訊號掃描",
   algo_run_backtest: "策略回測",
   crypto_submit_paper_order: "紙上下單",
+  equity_submit_paper_order: "紙上下單 美股",
+  tw_equity_submit_paper_order: "紙上下單 台股",
   crypto_cancel_paper_order: "紙上撤單",
   portfolio_report: "Portfolio 報告",
   news_research_brief: "新聞簡報",

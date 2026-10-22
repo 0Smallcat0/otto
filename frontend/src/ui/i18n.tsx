@@ -121,6 +121,8 @@ const EN: Record<string, string> = {
   "訊號掃描": "Signal scan",
   "策略回測": "Strategy backtest",
   "紙上下單": "Paper order",
+  "紙上下單 美股": "US paper order",
+  "紙上下單 台股": "TW paper order",
   "紙上撤單": "Paper cancel",
   "Portfolio 報告": "Portfolio report",
   "新聞簡報": "News brief",
