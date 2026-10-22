@@ -77,7 +77,7 @@ unreachable through the surface the agent has.
 
 <!-- otto:counts -->
 One typed contract (142 actions across 16 routes) is the single source of truth; the MCP
-tools, the UI capability catalog and the eval suite are all derived from it. 803 tests on
+tools, the UI capability catalog and the eval suite are all derived from it. 805 tests on
 Windows + Linux CI.
 <!-- otto:counts -->
 
