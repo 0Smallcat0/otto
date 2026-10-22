@@ -95,6 +95,24 @@ def test_an_oversize_response_becomes_a_map_of_where_the_weight_is() -> None:
     # One key holding nearly everything describes nothing, so it descends once.
     assert notice["largest_key"] == "huge"
     assert [row["key"] for row in notice["inner_keys_by_size"]] == ["a", "b"]
+    # The small keys still arrive as they are; only the oversized one is described.
+    assert notice["small_values"] == {"small": "x"}
+    assert notice["inner_small_values"] == {"b": "z" * 10}
+
+
+def test_a_submitted_order_survives_its_oversize_route_state() -> None:
+    """A crypto order answers with the whole route (hundreds of candles) plus the
+    order; the notice used to drop the order, so the agent never saw it fill."""
+    order = {"order_id": "paper-1", "symbol": "BTCUSDT", "status": "FILLED"}
+    response = {"candles": [{"close": "1"}] * 20_000, "submitted_order": order}
+    payload = {"action_id": "crypto_submit_paper_order", "status": 200, "response": response}
+
+    text = mcp_server._text_content(payload)["content"][0]["text"]
+    notice = json.loads(text)
+
+    assert len(text) < mcp_server.MAX_RESULT_CHARS
+    assert notice["small_values"]["status"] == 200
+    assert notice["inner_small_values"]["submitted_order"] == order
 
 
 def test_a_list_payload_reports_its_length_rather_than_a_severed_prefix() -> None:

@@ -600,6 +600,27 @@ def _keys_by_size(payload: dict[str, Any]) -> list[dict[str, Any]]:
     return rows
 
 
+# What a notice still carries verbatim: a submitted crypto order comes back
+# with the whole route state (720 candles, ~166K chars) and the order itself
+# in one small key, so a notice of sizes alone hid whether the order filled.
+SMALL_VALUE_CHARS = 4_000
+SMALL_VALUES_BUDGET = 16_000
+
+
+def _small_values(
+    payload: dict[str, Any], sizes: list[dict[str, Any]], budget: int
+) -> tuple[dict[str, Any], int]:
+    """The payload's small keys as they are, smallest first, and the budget left."""
+    kept: dict[str, Any] = {}
+    for row in reversed(sizes):
+        chars = int(row["chars"])
+        if chars > SMALL_VALUE_CHARS or chars > budget:
+            break
+        kept[row["key"]] = payload.get(row["key"])
+        budget -= chars
+    return kept, budget
+
+
 def _oversize_notice(payload: Any, original: int) -> dict[str, Any]:
     """A response too big to send, described in JSON that still parses.
 
@@ -625,6 +646,7 @@ def _oversize_notice(payload: Any, original: int) -> dict[str, Any]:
     if isinstance(payload, dict):
         sizes = _keys_by_size(payload)
         notice["keys_by_size"] = sizes
+        notice["small_values"], budget = _small_values(payload, sizes, SMALL_VALUES_BUDGET)
         # A wrapper whose whole weight sits in one key describes nothing:
         # get_route returns {route_id, endpoint, status, state}, so naming
         # `state` as the large one tells the agent what it already knew.
@@ -632,8 +654,10 @@ def _oversize_notice(payload: Any, original: int) -> dict[str, Any]:
         if sizes and sizes[0]["chars"] > original * 0.8:
             inner = payload.get(sizes[0]["key"])
             if isinstance(inner, dict):
+                inner_sizes = _keys_by_size(inner)
                 notice["largest_key"] = sizes[0]["key"]
-                notice["inner_keys_by_size"] = _keys_by_size(inner)
+                notice["inner_keys_by_size"] = inner_sizes
+                notice["inner_small_values"], _ = _small_values(inner, inner_sizes, budget)
         notice["hint"] = (
             "The keys above are this payload's own top level, largest first. Call "
             "a narrower action from list_actions (route_id filter), or one that "
